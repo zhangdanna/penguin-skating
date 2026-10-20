@@ -89,10 +89,26 @@ export default class MenuScene {
       }
     }))
 
-    // 个人中心按钮
+    // 成就按钮
     this.buttons.push(new Button({
       x: centerX - buttonWidth / 2,
       y: 350 + (buttonHeight + buttonSpacing) * 4,
+      width: buttonWidth,
+      height: buttonHeight,
+      text: '成就',
+      fontSize: 24,
+      bgColor: '#e67e22',
+      hoverColor: '#d35400',
+      borderColor: '#ba4a00',
+      onClick: () => {
+        this.sceneManager.switchTo('achievement')
+      }
+    }))
+
+    // 个人中心按钮
+    this.buttons.push(new Button({
+      x: centerX - buttonWidth / 2,
+      y: 350 + (buttonHeight + buttonSpacing) * 5,
       width: buttonWidth,
       height: buttonHeight,
       text: '个人中心',

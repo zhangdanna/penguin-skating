@@ -8,6 +8,7 @@ import { ObstacleFactory } from './js/runtime/obstacle'
 import AudioManager from './js/utils/audio-manager'
 import WechatService from './js/utils/wechat-service'
 import FoodManager from './js/utils/food-manager'
+import AchievementManager from './js/utils/achievement-manager'
 
 // UI组件
 import SceneManager from './js/ui/scene-manager'
@@ -17,6 +18,8 @@ import PauseScene from './js/ui/pause-scene'
 import ResultScene from './js/ui/result-scene'
 import LoginScene from './js/ui/login-scene'
 import RankScene from './js/ui/rank-scene'
+import AchievementScene from './js/ui/achievement-scene'
+import AchievementNotification from './js/ui/achievement-notification'
 import GameHUD from './js/ui/game-hud'
 import FoodDisplay from './js/ui/food-display'
 
@@ -54,6 +57,11 @@ export default class Main {
   foodManager = null
   foodDisplay = null
 
+  // 成就系统
+  achievementManager = null
+  achievementScene = null
+  achievementNotification = null
+
   // 游戏状态
   gameState = 'menu'  // menu, levelSelect, playing, paused, win, fail
   currentLevel = 1
@@ -72,6 +80,7 @@ export default class Main {
     this.initWechat()
     this.initAudio()
     this.initFood()
+    this.initAchievement()
     this.initUI()
     this.bindEvent()
     this.loop()
@@ -107,6 +116,24 @@ export default class Main {
   }
 
   /**
+   * 初始化成就系统
+   */
+  initAchievement() {
+    this.achievementManager = new AchievementManager()
+    this.achievementScene = new AchievementScene(this.achievementManager, () => {
+      this.sceneManager.switchTo('menu')
+    })
+    this.achievementNotification = new AchievementNotification()
+
+    // 设置分享奖励回调
+    if (this.wechatService) {
+      this.wechatService.setShareRewardCallback(() => {
+        this.onShareReward()
+      })
+    }
+  }
+
+  /**
    * 初始化UI系统
    */
   initUI() {
@@ -120,6 +147,9 @@ export default class Main {
 
     this.rankScene = new RankScene(this.sceneManager, this.wechatService)
     this.sceneManager.register('rank', this.rankScene)
+
+    // 注册成就场景
+    this.sceneManager.register('achievement', this.achievementScene)
 
     // 创建暂停和结算场景（覆盖层）
     this.pauseScene = new PauseScene(this.sceneManager)
@@ -355,6 +385,11 @@ export default class Main {
     // 更新当前场景
     this.sceneManager.update()
 
+    // 更新成就通知
+    if (this.achievementNotification) {
+      this.achievementNotification.update()
+    }
+
     // 更新暂停场景
     if (this.isPaused) {
       this.pauseScene.update()
@@ -388,6 +423,11 @@ export default class Main {
     // 更新HUD时间
     const currentTime = Math.floor((Date.now() - this.startTime) / 1000)
     this.gameHUD.setTime(currentTime)
+
+    // 更新食物显示
+    if (this.foodDisplay) {
+      this.foodDisplay.update()
+    }
   }
 
   /**
@@ -623,10 +663,61 @@ export default class Main {
     // 显示奖励动画
     this.foodDisplay.showRewardAnimation(rewards)
 
+    // 记录成就
+    const stars = this.calculateStars()
+    this.achievementManager.recordWin(this.currentLevel, stars, this.moves, par, time)
+    this.achievementManager.recordStreak(this.foodManager.consecutiveWins)
+    this.achievementManager.recordFoodCollection(this.foodManager.food)
+
+    // 检查新解锁的成就
+    const newAchievements = this.achievementManager.getNewUnlocked()
+    newAchievements.forEach(achievement => {
+      this.achievementNotification.add(achievement)
+      // 发放成就奖励
+      if (achievement.reward) {
+        this.foodManager.giveRewards(achievement.reward)
+      }
+    })
+
     // 显示结算界面
     this.resultScene.setResult(this.currentLevel, this.moves, 3, time)
     this.resultScene.setRewards(rewards)
     this.resultScene.show()
+  }
+
+  /**
+   * 计算星级
+   */
+  calculateStars() {
+    const levelData = this.levelManager.getLevel(this.currentLevel)
+    const par = levelData ? levelData.par : 3
+
+    if (this.moves <= par) return 3
+    if (this.moves <= par * 1.5) return 2
+    return 1
+  }
+
+  /**
+   * 分享奖励处理
+   */
+  onShareReward() {
+    console.log('分享奖励：获得5🐟')
+    this.foodManager.addFish(5)
+    this.achievementManager.recordShare()
+
+    // 检查新解锁的成就
+    const newAchievements = this.achievementManager.getNewUnlocked()
+    newAchievements.forEach(achievement => {
+      this.achievementNotification.add(achievement)
+      if (achievement.reward) {
+        this.foodManager.giveRewards(achievement.reward)
+      }
+    })
+
+    wx.showToast({
+      title: '分享成功 +5🐟',
+      icon: 'none'
+    })
   }
 
   /**
@@ -707,6 +798,11 @@ export default class Main {
     // 渲染结算场景（覆盖层）
     if (this.gameState === 'win') {
       this.resultScene.render(this.ctx)
+    }
+
+    // 渲染成就通知（最上层）
+    if (this.achievementNotification) {
+      this.achievementNotification.render(this.ctx)
     }
   }
 

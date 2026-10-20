@@ -12,6 +12,11 @@ export default class WechatService {
     // 回调
     this.onLoginSuccess = null
     this.onLoginFail = null
+
+    // 分享奖励
+    this.onShareReward = null
+    this.lastShareTime = 0
+    this.shareCooldown = 60000 // 分享冷却时间（1分钟）
   }
 
   /**
@@ -183,10 +188,58 @@ export default class WechatService {
   }
 
   /**
-   * 主动分享
+   * 主动分享（带奖励）
    */
   share() {
-    wx.shareAppMessage(this.getShareConfig())
+    const now = Date.now()
+    if (now - this.lastShareTime < this.shareCooldown) {
+      const remaining = Math.ceil((this.shareCooldown - (now - this.lastShareTime)) / 1000)
+      wx.showToast({
+        title: `分享冷却中(${remaining}秒)`,
+        icon: 'none'
+      })
+      return false
+    }
+
+    wx.shareAppMessage({
+      ...this.getShareConfig(),
+      success: (res) => {
+        this.lastShareTime = now
+        console.log('分享成功')
+        // 触发分享奖励
+        if (this.onShareReward) {
+          this.onShareReward()
+        }
+      },
+      fail: (err) => {
+        console.log('分享取消或失败')
+      }
+    })
+    return true
+  }
+
+  /**
+   * 设置分享奖励回调
+   */
+  setShareRewardCallback(callback) {
+    this.onShareReward = callback
+  }
+
+  /**
+   * 检查是否可以分享
+   */
+  canShare() {
+    const now = Date.now()
+    return now - this.lastShareTime >= this.shareCooldown
+  }
+
+  /**
+   * 获取分享冷却时间
+   */
+  getShareCooldownRemaining() {
+    const now = Date.now()
+    const remaining = this.shareCooldown - (now - this.lastShareTime)
+    return Math.max(0, Math.ceil(remaining / 1000))
   }
 
   /**

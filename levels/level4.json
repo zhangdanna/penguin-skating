@@ -1,0 +1,36 @@
+{
+  "id": 4,
+  "name": "冰墙迷宫",
+  "grid": {
+    "width": 8,
+    "height": 10,
+    "cellSize": 50
+  },
+  "penguin": {
+    "x": 50,
+    "y": 50
+  },
+  "stones": [
+    { "x": 200, "y": 150, "size": 40 }
+  ],
+  "target": {
+    "x": 300,
+    "y": 400,
+    "width": 50,
+    "height": 50
+  },
+  "obstacles": [
+    { "type": "wall", "x": 100, "y": 100, "size": 50 },
+    { "type": "wall", "x": 150, "y": 100, "size": 50 },
+    { "type": "wall", "x": 200, "y": 100, "size": 50 },
+    { "type": "wall", "x": 100, "y": 200, "size": 50 },
+    { "type": "wall", "x": 250, "y": 250, "size": 50 },
+    { "type": "wall", "x": 300, "y": 250, "size": 50 }
+  ],
+  "par": 5,
+  "stars": {
+    "5": 1,
+    "8": 2,
+    "12": 3
+  }
+}

@@ -4,6 +4,7 @@ import Stone from './js/runtime/stone'
 import Target from './js/runtime/target'
 import LevelManager from './js/levels/level-manager'
 import { checkAABB } from './js/physics/collision'
+import { ObstacleFactory } from './js/runtime/obstacle'
 
 // UI组件
 import SceneManager from './js/ui/scene-manager'
@@ -26,6 +27,7 @@ export default class Main {
   penguin = null
   stones = []
   target = null
+  obstacles = []  // 障碍物数组
   levelManager = new LevelManager()
 
   // UI系统
@@ -104,6 +106,9 @@ export default class Main {
       this.stones = levelData.stones.map(s => new Stone(s))
       this.target = new Target(levelData.target)
 
+      // 创建障碍物
+      this.obstacles = ObstacleFactory.createFromLevelData(levelData.obstacles)
+
       // 重置状态
       this.moves = 0
       this.startTime = Date.now()
@@ -114,7 +119,7 @@ export default class Main {
       this.gameHUD.setLevelInfo(levelNum, levelData.par)
       this.gameHUD.setMoves(0)
 
-      console.log(`关卡 ${levelNum} 加载成功: ${levelData.name}`)
+      console.log(`关卡 ${levelNum} 加载成功: ${levelData.name}, 障碍物: ${this.obstacles.length}`)
     } catch (e) {
       console.error('加载关卡失败:', e)
     }
@@ -285,9 +290,13 @@ export default class Main {
     this.penguin.update()
     this.stones.forEach(stone => stone.update())
     this.target.update()
+    this.obstacles.forEach(obstacle => obstacle.update())
 
     // 碰撞检测
     this.checkCollisions()
+
+    // 障碍物碰撞检测
+    this.checkObstacleCollisions()
 
     // 胜利检测
     this.checkWinCondition()
@@ -352,6 +361,130 @@ export default class Main {
       stoneA.vy = 0
       stoneB.vy = 0
     }
+  }
+
+  /**
+   * 障碍物碰撞检测
+   */
+  checkObstacleCollisions() {
+    if (this.obstacles.length === 0) return
+
+    // 企鹅与障碍物碰撞
+    this.obstacles.forEach(obstacle => {
+      if (checkAABB(this.penguin, obstacle)) {
+        const result = obstacle.onPenguinCollide(this.penguin)
+        this.handlePenguinObstacleResult(result, obstacle)
+      }
+    })
+
+    // 石头与障碍物碰撞
+    this.stones.forEach(stone => {
+      this.obstacles.forEach(obstacle => {
+        if (checkAABB(stone, obstacle)) {
+          const result = obstacle.onStoneCollide(stone)
+          this.handleStoneObstacleResult(result, stone, obstacle)
+        }
+      })
+    })
+  }
+
+  /**
+   * 处理企鹅与障碍物碰撞结果
+   */
+  handlePenguinObstacleResult(result, obstacle) {
+    switch (result.action) {
+      case 'stop':
+        // 碰到冰墙，停止
+        this.penguin.vx = result.vx
+        this.penguin.vy = result.vy
+        this.penguin.isMoving = false
+        // 分离企鹅和障碍物
+        this.separateObjects(this.penguin, obstacle)
+        break
+
+      case 'fail':
+        // 掉入冰窟窿，游戏失败
+        this.gameState = 'fail'
+        this.onFail(result.reason)
+        break
+
+      case 'slow':
+        // 经过雪堆，减速
+        this.penguin.vx *= result.speedMultiplier
+        this.penguin.vy *= result.speedMultiplier
+        break
+    }
+  }
+
+  /**
+   * 处理石头与障碍物碰撞结果
+   */
+  handleStoneObstacleResult(result, stone, obstacle) {
+    switch (result.action) {
+      case 'stop':
+        // 碰到冰墙，停止
+        stone.vx = result.vx
+        stone.vy = result.vy
+        stone.isMoving = false
+        this.separateObjects(stone, obstacle)
+        break
+
+      case 'destroy':
+        // 掉入冰窟窿，移除石头
+        const index = this.stones.indexOf(stone)
+        if (index > -1) {
+          this.stones.splice(index, 1)
+        }
+        break
+
+      case 'stuck':
+        // 卡在雪堆里，停止
+        stone.vx = result.vx
+        stone.vy = result.vy
+        stone.isMoving = false
+        break
+    }
+  }
+
+  /**
+   * 分离两个碰撞的对象
+   */
+  separateObjects(objA, objB) {
+    const overlapX = Math.min(
+      objA.x + objA.width - objB.x,
+      objB.x + objB.width - objA.x
+    )
+    const overlapY = Math.min(
+      objA.y + objA.height - objB.y,
+      objB.y + objB.height - objA.y
+    )
+
+    if (overlapX < overlapY) {
+      if (objA.x < objB.x) {
+        objA.x -= overlapX
+      } else {
+        objA.x += overlapX
+      }
+    } else {
+      if (objA.y < objB.y) {
+        objA.y -= overlapY
+      } else {
+        objA.y += overlapY
+      }
+    }
+  }
+
+  /**
+   * 游戏失败处理
+   */
+  onFail(reason) {
+    console.log(`游戏失败: ${reason}`)
+    wx.vibrateShort({ type: 'heavy' })
+
+    // 3秒后重新开始
+    setTimeout(() => {
+      this.restartLevel()
+    }, 2000)
   }
 
   /**
@@ -463,6 +596,9 @@ export default class Main {
       this.target.render(this.ctx)
     }
 
+    // 渲染障碍物
+    this.obstacles.forEach(obstacle => obstacle.render(this.ctx))
+
     // 渲染石头
     this.stones.forEach(stone => stone.render(this.ctx))
 
@@ -475,6 +611,33 @@ export default class Main {
     if (this.gameState === 'playing' || this.gameState === 'win') {
       this.gameHUD.render(this.ctx)
     }
+
+    // 渲染失败提示
+    if (this.gameState === 'fail') {
+      this.renderFailMessage()
+    }
+  }
+
+  /**
+   * 渲染失败提示
+   */
+  renderFailMessage() {
+    const ctx = this.ctx
+
+    // 半透明遮罩
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+    // 失败文字
+    ctx.fillStyle = '#e74c3c'
+    ctx.font = 'bold 36px Arial'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText('游戏失败', canvas.width / 2, canvas.height / 2 - 20)
+
+    ctx.fillStyle = '#ffffff'
+    ctx.font = '18px Arial'
+    ctx.fillText('即将重新开始...', canvas.width / 2, canvas.height / 2 + 20)
   }
 
   /**

@@ -1,0 +1,34 @@
+{
+  "id": 5,
+  "name": "危险冰窟",
+  "grid": {
+    "width": 8,
+    "height": 10,
+    "cellSize": 50
+  },
+  "penguin": {
+    "x": 50,
+    "y": 50
+  },
+  "stones": [
+    { "x": 150, "y": 150, "size": 40 },
+    { "x": 250, "y": 200, "size": 40 }
+  ],
+  "target": {
+    "x": 300,
+    "y": 400,
+    "width": 50,
+    "height": 50
+  },
+  "obstacles": [
+    { "type": "hole", "x": 150, "y": 250, "size": 50 },
+    { "type": "hole", "x": 250, "y": 300, "size": 50 },
+    { "type": "hole", "x": 100, "y": 350, "size": 50 }
+  ],
+  "par": 6,
+  "stars": {
+    "6": 1,
+    "10": 2,
+    "15": 3
+  }
+}

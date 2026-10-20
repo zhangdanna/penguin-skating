@@ -5,6 +5,14 @@ import Target from './js/runtime/target'
 import LevelManager from './js/levels/level-manager'
 import { checkAABB } from './js/physics/collision'
 
+// UI组件
+import SceneManager from './js/ui/scene-manager'
+import MenuScene from './js/ui/menu-scene'
+import LevelSelectScene from './js/ui/level-select-scene'
+import PauseScene from './js/ui/pause-scene'
+import ResultScene from './js/ui/result-scene'
+import GameHUD from './js/ui/game-hud'
+
 /**
  * 游戏主类
  * 控制游戏主循环和状态管理
@@ -20,11 +28,18 @@ export default class Main {
   target = null
   levelManager = new LevelManager()
 
+  // UI系统
+  sceneManager = new SceneManager()
+  pauseScene = null
+  resultScene = null
+  gameHUD = null
+
   // 游戏状态
-  gameState = 'playing'  // menu, playing, paused, win, fail
+  gameState = 'menu'  // menu, levelSelect, playing, paused, win, fail
   currentLevel = 1
   moves = 0
   startTime = 0
+  isPaused = false
 
   constructor() {
     this.init()
@@ -34,9 +49,34 @@ export default class Main {
    * 初始化游戏
    */
   init() {
+    this.initUI()
     this.bindEvent()
-    this.loadLevel(1)
     this.loop()
+
+    // 进入主菜单
+    this.sceneManager.switchTo('menu')
+  }
+
+  /**
+   * 初始化UI系统
+   */
+  initUI() {
+    // 注册场景
+    this.sceneManager.register('menu', new MenuScene(this.sceneManager))
+    this.sceneManager.register('levelSelect', new LevelSelectScene(this.sceneManager))
+
+    // 创建暂停和结算场景（覆盖层）
+    this.pauseScene = new PauseScene(this.sceneManager)
+    this.pauseScene.onResume = () => this.resumeGame()
+    this.pauseScene.onRestart = () => this.restartLevel()
+
+    this.resultScene = new ResultScene(this.sceneManager)
+    this.resultScene.onNextLevel = () => this.nextLevel()
+    this.resultScene.onReplay = () => this.restartLevel()
+
+    // 创建游戏HUD
+    this.gameHUD = new GameHUD()
+    this.gameHUD.onPauseClick = () => this.pauseGame()
   }
 
   /**
@@ -68,6 +108,11 @@ export default class Main {
       this.moves = 0
       this.startTime = Date.now()
       this.gameState = 'playing'
+      this.isPaused = false
+
+      // 更新HUD
+      this.gameHUD.setLevelInfo(levelNum, levelData.par)
+      this.gameHUD.setMoves(0)
 
       console.log(`关卡 ${levelNum} 加载成功: ${levelData.name}`)
     } catch (e) {
@@ -76,35 +121,141 @@ export default class Main {
   }
 
   /**
+   * 暂停游戏
+   */
+  pauseGame() {
+    if (this.gameState !== 'playing') return
+    this.gameState = 'paused'
+    this.isPaused = true
+    this.pauseScene.show()
+  }
+
+  /**
+   * 恢复游戏
+   */
+  resumeGame() {
+    this.gameState = 'playing'
+    this.isPaused = false
+    this.pauseScene.hide()
+  }
+
+  /**
+   * 重新开始关卡
+   */
+  restartLevel() {
+    this.loadLevel(this.currentLevel)
+  }
+
+  /**
+   * 进入下一关
+   */
+  nextLevel() {
+    const nextLevel = this.levelManager.getNextLevel()
+    if (nextLevel) {
+      this.loadLevel(nextLevel)
+    } else {
+      console.log('恭喜通关所有关卡！')
+      this.sceneManager.switchTo('menu')
+    }
+  }
+
+  /**
    * 触摸开始处理
    */
   touchStartHandler(e) {
-    if (this.gameState !== 'playing') return
-
     const touch = e.touches[0]
-    this.penguin.handleTouchStart(touch)
+
+    // 优先处理暂停场景
+    if (this.isPaused) {
+      this.pauseScene.onTouchStart(touch)
+      return
+    }
+
+    // 处理结算场景
+    if (this.gameState === 'win') {
+      this.resultScene.onTouchStart(touch)
+      return
+    }
+
+    // 处理HUD（暂停按钮）
+    if (this.gameState === 'playing') {
+      if (this.gameHUD.onTouchStart(touch)) {
+        return
+      }
+    }
+
+    // 处理当前场景
+    this.sceneManager.onTouchStart(touch)
+
+    // 处理游戏操作
+    if (this.gameState === 'playing' && this.penguin) {
+      this.penguin.handleTouchStart(touch)
+    }
   }
 
   /**
    * 触摸移动处理
    */
   touchMoveHandler(e) {
-    if (this.gameState !== 'playing') return
-
     const touch = e.touches[0]
-    this.penguin.handleTouchMove(touch)
+
+    // 优先处理暂停场景
+    if (this.isPaused) {
+      this.pauseScene.onTouchMove(touch)
+      return
+    }
+
+    // 处理结算场景
+    if (this.gameState === 'win') {
+      this.resultScene.onTouchMove(touch)
+      return
+    }
+
+    // 处理当前场景
+    this.sceneManager.onTouchMove(touch)
+
+    // 处理游戏操作
+    if (this.gameState === 'playing' && this.penguin) {
+      this.penguin.handleTouchMove(touch)
+    }
   }
 
   /**
    * 触摸结束处理
    */
   touchEndHandler(e) {
-    if (this.gameState !== 'playing') return
+    const touch = e.changedTouches[0]
 
-    // 只有企鹅停止时才记录步数
-    if (!this.penguin.isMoving) {
-      this.penguin.handleTouchEnd()
-      this.moves++
+    // 优先处理暂停场景
+    if (this.isPaused) {
+      this.pauseScene.onTouchEnd(touch)
+      return
+    }
+
+    // 处理结算场景
+    if (this.gameState === 'win') {
+      this.resultScene.onTouchEnd(touch)
+      return
+    }
+
+    // 处理HUD（暂停按钮）
+    if (this.gameState === 'playing') {
+      if (this.gameHUD.onTouchEnd(touch)) {
+        return
+      }
+    }
+
+    // 处理当前场景
+    this.sceneManager.onTouchEnd(touch)
+
+    // 处理游戏操作
+    if (this.gameState === 'playing' && this.penguin) {
+      // 只有企鹅停止时才记录步数
+      if (!this.penguin.isMoving) {
+        this.penguin.handleTouchEnd()
+        this.moves++
+        this.gameHUD.setMoves(this.moves)
+      }
     }
   }
 
@@ -112,6 +263,22 @@ export default class Main {
    * 游戏更新
    */
   update() {
+    // 更新当前场景
+    this.sceneManager.update()
+
+    // 更新暂停场景
+    if (this.isPaused) {
+      this.pauseScene.update()
+      return
+    }
+
+    // 更新结算场景
+    if (this.gameState === 'win') {
+      this.resultScene.update()
+      return
+    }
+
+    // 更新游戏逻辑
     if (this.gameState !== 'playing') return
 
     // 更新游戏对象
@@ -124,6 +291,10 @@ export default class Main {
 
     // 胜利检测
     this.checkWinCondition()
+
+    // 更新HUD时间
+    const currentTime = Math.floor((Date.now() - this.startTime) / 1000)
+    this.gameHUD.setTime(currentTime)
   }
 
   /**
@@ -151,7 +322,6 @@ export default class Main {
    * 解决石头之间的碰撞
    */
   resolveStoneCollision(stoneA, stoneB) {
-    // 计算重叠
     const overlapX = Math.min(
       stoneA.x + stoneA.width - stoneB.x,
       stoneB.x + stoneB.width - stoneA.x
@@ -161,7 +331,6 @@ export default class Main {
       stoneB.y + stoneB.height - stoneA.y
     )
 
-    // 分离石头
     if (overlapX < overlapY) {
       if (stoneA.x < stoneB.x) {
         stoneA.x -= overlapX / 2
@@ -189,7 +358,6 @@ export default class Main {
    * 胜利检测
    */
   checkWinCondition() {
-    // 检查所有石头是否都在目标位置
     const allInTarget = this.stones.every(stone => {
       const inTarget = this.target.contains(stone)
       stone.inTarget = inTarget
@@ -212,16 +380,44 @@ export default class Main {
     // 振动反馈
     wx.vibrateShort({ type: 'heavy' })
 
-    // 3秒后进入下一关
-    setTimeout(() => {
-      const nextLevel = this.levelManager.getNextLevel()
-      if (nextLevel) {
-        this.loadLevel(nextLevel)
-      } else {
-        console.log('恭喜通关所有关卡！')
-        this.loadLevel(1)  // 重新开始
+    // 保存关卡进度
+    this.saveLevelProgress()
+
+    // 显示结算界面
+    this.resultScene.setResult(this.currentLevel, this.moves, 3, time)
+    this.resultScene.show()
+  }
+
+  /**
+   * 保存关卡进度
+   */
+  saveLevelProgress() {
+    try {
+      // 计算星级
+      const levelData = this.levelManager.getLevel(this.currentLevel)
+      const par = levelData ? levelData.par : 3
+      let stars = 1
+      if (this.moves <= par) stars = 3
+      else if (this.moves <= par * 1.5) stars = 2
+
+      // 保存当前关卡星级
+      wx.setStorageSync(`level_${this.currentLevel}`, {
+        stars: stars,
+        moves: this.moves,
+        timestamp: Date.now()
+      })
+
+      // 更新解锁关卡
+      const progress = wx.getStorageSync('gameProgress') || { unlockedLevel: 1, currentLevel: 1 }
+      if (this.currentLevel >= progress.unlockedLevel) {
+        progress.unlockedLevel = this.currentLevel + 1
       }
-    }, 3000)
+      progress.currentLevel = this.currentLevel
+      wx.setStorageSync('gameProgress', progress)
+
+    } catch (e) {
+      console.error('保存进度失败:', e)
+    }
   }
 
   /**
@@ -231,49 +427,53 @@ export default class Main {
     // 清屏
     this.ctx.clearRect(0, 0, canvas.width, canvas.height)
 
+    // 根据当前场景渲染
+    const currentSceneName = this.sceneManager.getCurrentSceneName()
+
+    if (currentSceneName === 'menu' || currentSceneName === 'levelSelect') {
+      // 渲染UI场景
+      this.sceneManager.render(this.ctx)
+    } else {
+      // 渲染游戏场景
+      this.renderGame()
+    }
+
+    // 渲染暂停场景（覆盖层）
+    if (this.isPaused) {
+      this.pauseScene.render(this.ctx)
+    }
+
+    // 渲染结算场景（覆盖层）
+    if (this.gameState === 'win') {
+      this.resultScene.render(this.ctx)
+    }
+  }
+
+  /**
+   * 渲染游戏场景
+   */
+  renderGame() {
     // 渲染背景
-    this.background.render()
+    if (this.background) {
+      this.background.render()
+    }
 
     // 渲染目标
-    this.target.render(this.ctx)
+    if (this.target) {
+      this.target.render(this.ctx)
+    }
 
     // 渲染石头
     this.stones.forEach(stone => stone.render(this.ctx))
 
     // 渲染企鹅
-    this.penguin.render(this.ctx)
+    if (this.penguin) {
+      this.penguin.render(this.ctx)
+    }
 
-    // 渲染UI
-    this.renderUI()
-  }
-
-  /**
-   * 渲染UI
-   */
-  renderUI() {
-    const ctx = this.ctx
-
-    // 关卡信息
-    ctx.fillStyle = '#2c3e50'
-    ctx.font = '16px Arial'
-    ctx.fillText(`关卡: ${this.currentLevel}`, 10, 25)
-    ctx.fillText(`步数: ${this.moves}`, 10, 50)
-
-    // 胜利提示
-    if (this.gameState === 'win') {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-      ctx.fillStyle = '#27ae60'
-      ctx.font = 'bold 32px Arial'
-      ctx.textAlign = 'center'
-      ctx.fillText('通关成功！', canvas.width / 2, canvas.height / 2 - 20)
-
-      ctx.fillStyle = '#ffffff'
-      ctx.font = '18px Arial'
-      ctx.fillText(`步数: ${this.moves}`, canvas.width / 2, canvas.height / 2 + 20)
-      ctx.fillText('即将进入下一关...', canvas.width / 2, canvas.height / 2 + 50)
-      ctx.textAlign = 'left'
+    // 渲染HUD
+    if (this.gameState === 'playing' || this.gameState === 'win') {
+      this.gameHUD.render(this.ctx)
     }
   }
 

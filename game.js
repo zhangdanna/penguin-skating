@@ -9,6 +9,7 @@ import AudioManager from './js/utils/audio-manager'
 import WechatService from './js/utils/wechat-service'
 import FoodManager from './js/utils/food-manager'
 import AchievementManager from './js/utils/achievement-manager'
+import ReviveManager from './js/utils/revive-manager'
 
 // UI组件
 import SceneManager from './js/ui/scene-manager'
@@ -20,6 +21,7 @@ import LoginScene from './js/ui/login-scene'
 import RankScene from './js/ui/rank-scene'
 import AchievementScene from './js/ui/achievement-scene'
 import AchievementNotification from './js/ui/achievement-notification'
+import ReviveScene from './js/ui/revive-scene'
 import GameHUD from './js/ui/game-hud'
 import FoodDisplay from './js/ui/food-display'
 
@@ -62,6 +64,10 @@ export default class Main {
   achievementScene = null
   achievementNotification = null
 
+  // 复活系统
+  reviveManager = null
+  reviveScene = null
+
   // 游戏状态
   gameState = 'menu'  // menu, levelSelect, playing, paused, win, fail
   currentLevel = 1
@@ -81,6 +87,7 @@ export default class Main {
     this.initAudio()
     this.initFood()
     this.initAchievement()
+    this.initRevive()
     this.initUI()
     this.bindEvent()
     this.loop()
@@ -131,6 +138,16 @@ export default class Main {
         this.onShareReward()
       })
     }
+  }
+
+  /**
+   * 初始化复活系统
+   */
+  initRevive() {
+    this.reviveManager = new ReviveManager()
+    this.reviveScene = new ReviveScene(this.reviveManager, this.foodManager, this.wechatService)
+    this.reviveScene.onReviveSuccess = (result) => this.onReviveSuccess(result)
+    this.reviveScene.onGiveUp = () => this.onReviveGiveUp()
   }
 
   /**
@@ -259,6 +276,10 @@ export default class Main {
    * 重新开始关卡
    */
   restartLevel() {
+    // 重置复活状态
+    if (this.reviveManager) {
+      this.reviveManager.resetLevelRevive()
+    }
     this.loadLevel(this.currentLevel)
   }
 
@@ -268,6 +289,10 @@ export default class Main {
   nextLevel() {
     const nextLevel = this.levelManager.getNextLevel()
     if (nextLevel) {
+      // 重置复活状态
+      if (this.reviveManager) {
+        this.reviveManager.resetLevelRevive()
+      }
       this.loadLevel(nextLevel)
     } else {
       console.log('恭喜通关所有关卡！')
@@ -280,6 +305,12 @@ export default class Main {
    */
   touchStartHandler(e) {
     const touch = e.touches[0]
+
+    // 优先处理复活场景
+    if (this.reviveScene && this.reviveScene.isVisible) {
+      this.reviveScene.onTouchStart(touch)
+      return
+    }
 
     // 优先处理暂停场景
     if (this.isPaused) {
@@ -315,6 +346,12 @@ export default class Main {
   touchMoveHandler(e) {
     const touch = e.touches[0]
 
+    // 优先处理复活场景
+    if (this.reviveScene && this.reviveScene.isVisible) {
+      this.reviveScene.onTouchMove(touch)
+      return
+    }
+
     // 优先处理暂停场景
     if (this.isPaused) {
       this.pauseScene.onTouchMove(touch)
@@ -341,6 +378,12 @@ export default class Main {
    */
   touchEndHandler(e) {
     const touch = e.changedTouches[0]
+
+    // 优先处理复活场景
+    if (this.reviveScene && this.reviveScene.isVisible) {
+      this.reviveScene.onTouchEnd(touch)
+      return
+    }
 
     // 优先处理暂停场景
     if (this.isPaused) {
@@ -612,10 +655,69 @@ export default class Main {
     // 播放失败音效
     this.audioManager.playFailSound()
 
-    // 3秒后重新开始
-    setTimeout(() => {
-      this.restartLevel()
-    }, 2000)
+    // 保存当前位置（用于复活恢复）
+    this.reviveManager.savePosition(this.penguin, this.stones)
+
+    // 检查是否可以复活
+    const status = this.reviveManager.getStatus()
+    const canRevive = !status.currentLevelRevived && (
+      status.remaining.shareFriend > 0 ||
+      status.remaining.shareGroup > 0 ||
+      status.remaining.watchAd > 0 ||
+      this.reviveManager.hasEnoughFood(this.foodManager)
+    )
+
+    if (canRevive) {
+      // 显示复活选择界面
+      this.reviveScene.show()
+    } else {
+      // 无法复活，2秒后重新开始
+      setTimeout(() => {
+        this.restartLevel()
+      }, 2000)
+    }
+  }
+
+  /**
+   * 复活成功处理
+   */
+  onReviveSuccess(result) {
+    console.log('复活成功:', result)
+
+    // 恢复位置
+    if (result.lastPosition) {
+      this.penguin.x = result.lastPosition.x
+      this.penguin.y = result.lastPosition.y
+      this.penguin.vx = 0
+      this.penguin.vy = 0
+      this.penguin.isMoving = false
+    }
+
+    // 恢复石头位置
+    if (result.lastStones && this.stones.length === result.lastStones.length) {
+      result.lastStones.forEach((stoneState, index) => {
+        this.stones[index].x = stoneState.x
+        this.stones[index].y = stoneState.y
+        this.stones[index].vx = 0
+        this.stones[index].vy = 0
+        this.stones[index].isMoving = false
+      })
+    }
+
+    // 增加步数惩罚
+    this.moves += result.movePenalty
+    this.gameHUD.setMoves(this.moves)
+
+    // 恢复游戏状态
+    this.gameState = 'playing'
+  }
+
+  /**
+   * 放弃复活处理
+   */
+  onReviveGiveUp() {
+    console.log('放弃复活')
+    this.restartLevel()
   }
 
   /**
@@ -798,6 +900,11 @@ export default class Main {
     // 渲染结算场景（覆盖层）
     if (this.gameState === 'win') {
       this.resultScene.render(this.ctx)
+    }
+
+    // 渲染复活场景（覆盖层）
+    if (this.reviveScene && this.reviveScene.isVisible) {
+      this.reviveScene.render(this.ctx)
     }
 
     // 渲染成就通知（最上层）

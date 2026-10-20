@@ -10,6 +10,7 @@ import WechatService from './js/utils/wechat-service'
 import FoodManager from './js/utils/food-manager'
 import AchievementManager from './js/utils/achievement-manager'
 import ReviveManager from './js/utils/revive-manager'
+import SettlementManager from './js/utils/settlement-manager'
 
 // UI组件
 import SceneManager from './js/ui/scene-manager'
@@ -17,6 +18,7 @@ import MenuScene from './js/ui/menu-scene'
 import LevelSelectScene from './js/ui/level-select-scene'
 import PauseScene from './js/ui/pause-scene'
 import ResultScene from './js/ui/result-scene'
+import GameOverScene from './js/ui/gameover-scene'
 import LoginScene from './js/ui/login-scene'
 import RankScene from './js/ui/rank-scene'
 import AchievementScene from './js/ui/achievement-scene'
@@ -68,6 +70,10 @@ export default class Main {
   reviveManager = null
   reviveScene = null
 
+  // 结算系统
+  settlementManager = null
+  gameOverScene = null
+
   // 游戏状态
   gameState = 'menu'  // menu, levelSelect, playing, paused, win, fail
   currentLevel = 1
@@ -88,6 +94,7 @@ export default class Main {
     this.initFood()
     this.initAchievement()
     this.initRevive()
+    this.initSettlement()
     this.initUI()
     this.bindEvent()
     this.loop()
@@ -148,6 +155,17 @@ export default class Main {
     this.reviveScene = new ReviveScene(this.reviveManager, this.foodManager, this.wechatService)
     this.reviveScene.onReviveSuccess = (result) => this.onReviveSuccess(result)
     this.reviveScene.onGiveUp = () => this.onReviveGiveUp()
+  }
+
+  /**
+   * 初始化结算系统
+   */
+  initSettlement() {
+    this.settlementManager = new SettlementManager()
+    this.gameOverScene = new GameOverScene()
+    this.gameOverScene.onRestart = () => this.onGameOverRestart()
+    this.gameOverScene.onBackToMenu = () => this.onGameOverBackToMenu()
+    this.gameOverScene.onWatchAd = () => this.onGameOverWatchAd()
   }
 
   /**
@@ -247,6 +265,11 @@ export default class Main {
       this.gameHUD.setLevelInfo(levelNum, levelData.par)
       this.gameHUD.setMoves(0)
 
+      // 通知结算管理器开始关卡
+      if (this.settlementManager) {
+        this.settlementManager.startLevel(levelNum, levelData.difficulty || 'easy')
+      }
+
       console.log(`关卡 ${levelNum} 加载成功: ${levelData.name}, 障碍物: ${this.obstacles.length}`)
     } catch (e) {
       console.error('加载关卡失败:', e)
@@ -306,6 +329,12 @@ export default class Main {
   touchStartHandler(e) {
     const touch = e.touches[0]
 
+    // 优先处理游戏结束场景
+    if (this.gameOverScene && this.gameOverScene.isVisible) {
+      this.gameOverScene.onTouchStart(touch)
+      return
+    }
+
     // 优先处理复活场景
     if (this.reviveScene && this.reviveScene.isVisible) {
       this.reviveScene.onTouchStart(touch)
@@ -346,6 +375,12 @@ export default class Main {
   touchMoveHandler(e) {
     const touch = e.touches[0]
 
+    // 优先处理游戏结束场景
+    if (this.gameOverScene && this.gameOverScene.isVisible) {
+      this.gameOverScene.onTouchMove(touch)
+      return
+    }
+
     // 优先处理复活场景
     if (this.reviveScene && this.reviveScene.isVisible) {
       this.reviveScene.onTouchMove(touch)
@@ -378,6 +413,12 @@ export default class Main {
    */
   touchEndHandler(e) {
     const touch = e.changedTouches[0]
+
+    // 优先处理游戏结束场景
+    if (this.gameOverScene && this.gameOverScene.isVisible) {
+      this.gameOverScene.onTouchEnd(touch)
+      return
+    }
 
     // 优先处理复活场景
     if (this.reviveScene && this.reviveScene.isVisible) {
@@ -415,6 +456,11 @@ export default class Main {
         this.moves++
         this.gameHUD.setMoves(this.moves)
 
+        // 记录步数到结算管理器
+        if (this.settlementManager) {
+          this.settlementManager.recordMove()
+        }
+
         // 播放滑动音效
         this.audioManager.playSlideSound()
       }
@@ -431,6 +477,12 @@ export default class Main {
     // 更新成就通知
     if (this.achievementNotification) {
       this.achievementNotification.update()
+    }
+
+    // 更新游戏结束场景
+    if (this.gameOverScene && this.gameOverScene.isVisible) {
+      this.gameOverScene.update()
+      return
     }
 
     // 更新暂停场景
@@ -671,10 +723,11 @@ export default class Main {
       // 显示复活选择界面
       this.reviveScene.show()
     } else {
-      // 无法复活，2秒后重新开始
-      setTimeout(() => {
-        this.restartLevel()
-      }, 2000)
+      // 无法复活，显示游戏结束界面
+      if (this.settlementManager) {
+        this.settlementManager.failLevel()
+      }
+      this.gameOverScene.show()
     }
   }
 
@@ -721,6 +774,40 @@ export default class Main {
   }
 
   /**
+   * 游戏结束-重新开始
+   */
+  onGameOverRestart() {
+    console.log('游戏结束-重新开始')
+    this.gameOverScene.hide()
+    this.restartLevel()
+  }
+
+  /**
+   * 游戏结束-返回菜单
+   */
+  onGameOverBackToMenu() {
+    console.log('游戏结束-返回菜单')
+    this.gameOverScene.hide()
+    this.sceneManager.switchTo('menu')
+  }
+
+  /**
+   * 游戏结束-观看广告复活
+   */
+  onGameOverWatchAd() {
+    console.log('游戏结束-观看广告')
+    // 尝试通过观看广告复活
+    const result = this.reviveManager.reviveByWatchAd()
+    if (result.success) {
+      this.gameOverScene.hide()
+      this.onReviveSuccess(result)
+      wx.showToast({ title: '复活成功！', icon: 'success' })
+    } else {
+      wx.showToast({ title: result.message || '今日广告次数已用完', icon: 'none' })
+    }
+  }
+
+  /**
    * 胜利检测
    */
   checkWinCondition() {
@@ -748,6 +835,13 @@ export default class Main {
 
     // 播放通关音效
     this.audioManager.playWinSound()
+
+    // 通知结算管理器完成关卡
+    if (this.settlementManager) {
+      const levelData = this.levelManager.getLevel(this.currentLevel)
+      const par = levelData ? levelData.par : 3
+      this.settlementManager.completeLevel(this.moves, time, par)
+    }
 
     // 保存关卡进度
     this.saveLevelProgress()
@@ -907,6 +1001,11 @@ export default class Main {
       this.reviveScene.render(this.ctx)
     }
 
+    // 渲染游戏结束场景（覆盖层）
+    if (this.gameOverScene && this.gameOverScene.isVisible) {
+      this.gameOverScene.render(this.ctx)
+    }
+
     // 渲染成就通知（最上层）
     if (this.achievementNotification) {
       this.achievementNotification.render(this.ctx)
@@ -947,33 +1046,6 @@ export default class Main {
     if (this.foodDisplay && (this.gameState === 'playing' || this.gameState === 'win')) {
       this.foodDisplay.render(this.ctx)
     }
-
-    // 渲染失败提示
-    if (this.gameState === 'fail') {
-      this.renderFailMessage()
-    }
-  }
-
-  /**
-   * 渲染失败提示
-   */
-  renderFailMessage() {
-    const ctx = this.ctx
-
-    // 半透明遮罩
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-    // 失败文字
-    ctx.fillStyle = '#e74c3c'
-    ctx.font = 'bold 36px Arial'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText('游戏失败', canvas.width / 2, canvas.height / 2 - 20)
-
-    ctx.fillStyle = '#ffffff'
-    ctx.font = '18px Arial'
-    ctx.fillText('即将重新开始...', canvas.width / 2, canvas.height / 2 + 20)
   }
 
   /**

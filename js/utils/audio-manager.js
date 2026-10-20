@@ -16,16 +16,16 @@ export default class AudioManager {
     this.bgm = null
     this.sounds = {}
 
-    // 音效文件路径
+    // 音效文件路径（支持 mp3 和 wav 格式）
     this.audioFiles = {
       bgm: 'audio/bgm.mp3',
-      slide: 'audio/slide.mp3',
-      push: 'audio/push.mp3',
-      collision: 'audio/collision.mp3',
-      win: 'audio/win.mp3',
-      fail: 'audio/fail.mp3',
-      button: 'audio/button.mp3',
-      star: 'audio/star.mp3'
+      slide: 'audio/slide.wav',
+      push: 'audio/push.wav',
+      collision: 'audio/collision.wav',
+      win: 'audio/win.wav',
+      fail: 'audio/fail.wav',
+      button: 'audio/button.wav',
+      star: 'audio/star.wav'
     }
 
     // 初始化
@@ -48,18 +48,32 @@ export default class AudioManager {
    */
   preloadSounds() {
     Object.keys(this.audioFiles).forEach(key => {
-      if (key === 'bgm') {
-        // 背景音乐单独处理
-        this.bgm = wx.createInnerAudioContext()
-        this.bgm.src = this.audioFiles.bgm
-        this.bgm.loop = true
-        this.bgm.volume = this.musicVolume
-      } else {
-        // 音效
-        const audio = wx.createInnerAudioContext()
-        audio.src = this.audioFiles[key]
-        audio.volume = this.soundVolume
-        this.sounds[key] = audio
+      try {
+        if (key === 'bgm') {
+          // 背景音乐单独处理
+          this.bgm = wx.createInnerAudioContext()
+          this.bgm.src = this.audioFiles.bgm
+          this.bgm.loop = true
+          this.bgm.volume = this.musicVolume
+
+          this.bgm.onError((err) => {
+            console.warn(`背景音乐加载失败: ${this.audioFiles.bgm}`, err)
+            this.bgm = null
+          })
+        } else {
+          // 音效
+          const audio = wx.createInnerAudioContext()
+          audio.src = this.audioFiles[key]
+          audio.volume = this.soundVolume
+          this.sounds[key] = audio
+
+          audio.onError((err) => {
+            console.warn(`音效加载失败: ${this.audioFiles[key]}`, err)
+            delete this.sounds[key]
+          })
+        }
+      } catch (e) {
+        console.warn(`音频初始化失败: ${key}`, e)
       }
     })
   }

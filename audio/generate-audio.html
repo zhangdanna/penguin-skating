@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>生成游戏音效</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+    h1 { color: #2874a6; }
+    .btn { background: #3498db; color: white; border: none; padding: 10px 20px; margin: 5px; cursor: pointer; border-radius: 5px; }
+    .btn:hover { background: #2980b9; }
+    .btn:disabled { background: #95a5a6; cursor: not-allowed; }
+    .status { margin: 10px 0; padding: 10px; background: #ecf0f1; border-radius: 5px; }
+    .success { background: #d4edda; color: #155724; }
+    .info { background: #d1ecf1; color: #0c5460; }
+  </style>
+</head>
+<body>
+  <h1>🐧 企鹅滑冰 - 音效生成器</h1>
+  <p>点击按钮生成并下载游戏音效文件。</p>
+
+  <div class="status info">
+    提示：生成的音效为简单的合成音效，如需更专业的音效，建议从免费音效网站下载。
+  </div>
+
+  <div>
+    <button class="btn" onclick="generateAll()">生成所有音效</button>
+    <button class="btn" onclick="generateAndDownload('slide')">滑动音效</button>
+    <button class="btn" onclick="generateAndDownload('push')">推动音效</button>
+    <button class="btn" onclick="generateAndDownload('collision')">碰撞音效</button>
+    <button class="btn" onclick="generateAndDownload('win')">通关音效</button>
+    <button class="btn" onclick="generateAndDownload('fail')">失败音效</button>
+    <button class="btn" onclick="generateAndDownload('button')">按钮音效</button>
+    <button class="btn" onclick="generateAndDownload('star')">星星音效</button>
+  </div>
+
+  <div id="status" class="status"></div>
+
+  <script>
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+    // 音效配置
+    const soundConfigs = {
+      slide: {
+        type: 'sine',
+        frequency: 800,
+        frequencyEnd: 400,
+        duration: 0.5,
+        volume: 0.3
+      },
+      push: {
+        type: 'square',
+        frequency: 200,
+        frequencyEnd: 100,
+        duration: 0.3,
+        volume: 0.4
+      },
+      collision: {
+        type: 'sawtooth',
+        frequency: 150,
+        frequencyEnd: 50,
+        duration: 0.2,
+        volume: 0.5
+      },
+      win: {
+        type: 'sine',
+        frequency: 523, // C5
+        notes: [523, 659, 784, 1047], // C5, E5, G5, C6
+        duration: 0.3,
+        volume: 0.4
+      },
+      fail: {
+        type: 'sawtooth',
+        frequency: 400,
+        frequencyEnd: 100,
+        duration: 1.0,
+        volume: 0.4
+      },
+      button: {
+        type: 'sine',
+        frequency: 1000,
+        duration: 0.1,
+        volume: 0.3
+      },
+      star: {
+        type: 'sine',
+        frequency: 880, // A5
+        notes: [880, 1109, 1319], // A5, C#6, E6
+        duration: 0.2,
+        volume: 0.3
+      }
+    };
+
+    function generateSound(name) {
+      const config = soundConfigs[name];
+      const sampleRate = audioContext.sampleRate;
+      const length = sampleRate * config.duration;
+      const buffer = audioContext.createBuffer(1, length, sampleRate);
+      const data = buffer.getChannelData(0);
+
+      if (config.notes) {
+        // 多音符音效（和弦）
+        const noteLength = length / config.notes.length;
+        config.notes.forEach((freq, i) => {
+          const start = i * noteLength;
+          const end = start + noteLength;
+          for (let j = start; j < end; j++) {
+            const t = j / sampleRate;
+            const envelope = Math.exp(-(j - start) / (sampleRate * 0.1));
+            data[j] = Math.sin(2 * Math.PI * freq * t) * config.volume * envelope;
+          }
+        });
+      } else {
+        // 单音符音效
+        for (let i = 0; i < length; i++) {
+          const t = i / sampleRate;
+          const progress = i / length;
+          const freq = config.frequency + (config.frequencyEnd - config.frequency) * progress;
+          const envelope = Math.exp(-t * 5);
+
+          let sample = 0;
+          switch (config.type) {
+            case 'sine':
+              sample = Math.sin(2 * Math.PI * freq * t);
+              break;
+            case 'square':
+              sample = Math.sign(Math.sin(2 * Math.PI * freq * t));
+              break;
+            case 'sawtooth':
+              sample = 2 * (freq * t % 1) - 1;
+              break;
+          }
+
+          data[i] = sample * config.volume * envelope;
+        }
+      }
+
+      return buffer;
+    }
+
+    function bufferToWav(buffer) {
+      const numChannels = buffer.numberOfChannels;
+      const sampleRate = buffer.sampleRate;
+      const format = 1; // PCM
+      const bitDepth = 16;
+      const bytesPerSample = bitDepth / 8;
+      const blockAlign = numChannels * bytesPerSample;
+      const dataSize = buffer.length * blockAlign;
+      const headerSize = 44;
+      const arrayBuffer = new ArrayBuffer(headerSize + dataSize);
+      const view = new DataView(arrayBuffer);
+
+      // WAV header
+      writeString(view, 0, 'RIFF');
+      view.setUint32(4, 36 + dataSize, true);
+      writeString(view, 8, 'WAVE');
+      writeString(view, 12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, format, true);
+      view.setUint16(22, numChannels, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * blockAlign, true);
+      view.setUint16(32, blockAlign, true);
+      view.setUint16(34, bitDepth, true);
+      writeString(view, 36, 'data');
+      view.setUint32(40, dataSize, true);
+
+      // Write audio data
+      const channelData = buffer.getChannelData(0);
+      let offset = 44;
+      for (let i = 0; i < buffer.length; i++) {
+        const sample = Math.max(-1, Math.min(1, channelData[i]));
+        view.setInt16(offset, sample * 0x7FFF, true);
+        offset += 2;
+      }
+
+      return arrayBuffer;
+    }
+
+    function writeString(view, offset, string) {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    }
+
+    function downloadBuffer(name, buffer) {
+      const wav = bufferToWav(buffer);
+      const blob = new Blob([wav], { type: 'audio/wav' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name + '.wav';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function generateAndDownload(name) {
+      try {
+        const buffer = generateSound(name);
+        downloadBuffer(name, buffer);
+        showStatus(`已生成并下载: ${name}.wav`, 'success');
+      } catch (e) {
+        showStatus(`生成失败: ${e.message}`, 'error');
+      }
+    }
+
+    async function generateAll() {
+      const names = Object.keys(soundConfigs);
+      for (const name of names) {
+        generateAndDownload(name);
+        await new Promise(r => setTimeout(r, 500));
+      }
+      showStatus('所有音效已生成！', 'success');
+    }
+
+    function showStatus(msg, type) {
+      const el = document.getElementById('status');
+      el.textContent = msg;
+      el.className = 'status ' + (type || '');
+    }
+  </script>
+</body>
+</html>

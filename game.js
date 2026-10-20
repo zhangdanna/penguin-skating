@@ -6,6 +6,7 @@ import LevelManager from './js/levels/level-manager'
 import { checkAABB } from './js/physics/collision'
 import { ObstacleFactory } from './js/runtime/obstacle'
 import AudioManager from './js/utils/audio-manager'
+import WechatService from './js/utils/wechat-service'
 
 // UI组件
 import SceneManager from './js/ui/scene-manager'
@@ -13,6 +14,8 @@ import MenuScene from './js/ui/menu-scene'
 import LevelSelectScene from './js/ui/level-select-scene'
 import PauseScene from './js/ui/pause-scene'
 import ResultScene from './js/ui/result-scene'
+import LoginScene from './js/ui/login-scene'
+import RankScene from './js/ui/rank-scene'
 import GameHUD from './js/ui/game-hud'
 
 /**
@@ -35,10 +38,15 @@ export default class Main {
   sceneManager = new SceneManager()
   pauseScene = null
   resultScene = null
+  loginScene = null
+  rankScene = null
   gameHUD = null
 
   // 音效系统
   audioManager = null
+
+  // 微信服务
+  wechatService = null
 
   // 游戏状态
   gameState = 'menu'  // menu, levelSelect, playing, paused, win, fail
@@ -55,6 +63,7 @@ export default class Main {
    * 初始化游戏
    */
   init() {
+    this.initWechat()
     this.initAudio()
     this.initUI()
     this.bindEvent()
@@ -65,6 +74,14 @@ export default class Main {
 
     // 播放背景音乐
     this.audioManager.playBGM()
+  }
+
+  /**
+   * 初始化微信服务
+   */
+  initWechat() {
+    this.wechatService = new WechatService()
+    this.wechatService.init()
   }
 
   /**
@@ -81,6 +98,13 @@ export default class Main {
     // 注册场景
     this.sceneManager.register('menu', new MenuScene(this.sceneManager))
     this.sceneManager.register('levelSelect', new LevelSelectScene(this.sceneManager))
+
+    // 创建登录和排行榜场景
+    this.loginScene = new LoginScene(this.sceneManager, this.wechatService)
+    this.sceneManager.register('login', this.loginScene)
+
+    this.rankScene = new RankScene(this.sceneManager, this.wechatService)
+    this.sceneManager.register('rank', this.rankScene)
 
     // 创建暂停和结算场景（覆盖层）
     this.pauseScene = new PauseScene(this.sceneManager)
@@ -544,6 +568,9 @@ export default class Main {
     // 保存关卡进度
     this.saveLevelProgress()
 
+    // 上报分数到排行榜
+    this.reportScore()
+
     // 显示结算界面
     this.resultScene.setResult(this.currentLevel, this.moves, 3, time)
     this.resultScene.show()
@@ -579,6 +606,26 @@ export default class Main {
     } catch (e) {
       console.error('保存进度失败:', e)
     }
+  }
+
+  /**
+   * 上报分数到排行榜
+   */
+  reportScore() {
+    if (!this.wechatService || !this.wechatService.isLogin) {
+      console.log('用户未登录，跳过分数上报')
+      return
+    }
+
+    // 计算星级
+    const levelData = this.levelManager.getLevel(this.currentLevel)
+    const par = levelData ? levelData.par : 3
+    let stars = 1
+    if (this.moves <= par) stars = 3
+    else if (this.moves <= par * 1.5) stars = 2
+
+    // 上报分数
+    this.wechatService.reportScore(this.currentLevel, this.moves, stars)
   }
 
   /**

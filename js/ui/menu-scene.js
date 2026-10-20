@@ -72,6 +72,38 @@ export default class MenuScene {
         console.log('打开设置')
       }
     }))
+
+    // 排行榜按钮
+    this.buttons.push(new Button({
+      x: centerX - buttonWidth / 2,
+      y: 350 + (buttonHeight + buttonSpacing) * 3,
+      width: buttonWidth,
+      height: buttonHeight,
+      text: '排行榜',
+      fontSize: 24,
+      bgColor: '#f39c12',
+      hoverColor: '#d68910',
+      borderColor: '#b9770e',
+      onClick: () => {
+        this.sceneManager.switchTo('rank')
+      }
+    }))
+
+    // 个人中心按钮
+    this.buttons.push(new Button({
+      x: centerX - buttonWidth / 2,
+      y: 350 + (buttonHeight + buttonSpacing) * 4,
+      width: buttonWidth,
+      height: buttonHeight,
+      text: '个人中心',
+      fontSize: 24,
+      bgColor: '#8e44ad',
+      hoverColor: '#7d3c98',
+      borderColor: '#6c3483',
+      onClick: () => {
+        this.sceneManager.switchTo('login')
+      }
+    }))
   }
 
   /**

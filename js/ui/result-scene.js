@@ -17,6 +17,9 @@ export default class ResultScene {
     this.time = 0
     this.stars = 0
 
+    // 奖励数据
+    this.rewards = null
+
     // 动画参数
     this.titleScale = 0
     this.starScales = [0, 0, 0]
@@ -81,6 +84,13 @@ export default class ResultScene {
     this.par = par
     this.time = time
     this.stars = this.calculateStars()
+  }
+
+  /**
+   * 设置奖励数据
+   */
+  setRewards(rewards) {
+    this.rewards = rewards
   }
 
   /**
@@ -173,8 +183,49 @@ export default class ResultScene {
     const timeStr = this.formatTime(this.time)
     ctx.fillText(`用时: ${timeStr}`, canvas.width / 2, 380)
 
+    // 渲染奖励
+    if (this.rewards) {
+      this.renderRewards(ctx)
+    }
+
     // 绘制按钮
     this.buttons.forEach(btn => btn.render(ctx))
+  }
+
+  /**
+   * 渲染奖励信息
+   */
+  renderRewards(ctx) {
+    const centerX = canvas.width / 2
+    const startY = 410
+
+    // 奖励标题
+    ctx.fillStyle = '#f1c40f'
+    ctx.font = 'bold 16px Arial'
+    ctx.textAlign = 'center'
+    ctx.fillText('获得奖励', centerX, startY)
+
+    // 奖励详情
+    ctx.fillStyle = '#ffffff'
+    ctx.font = '14px Arial'
+
+    let y = startY + 25
+    if (this.rewards.fish > 0) {
+      ctx.fillText(`🐟 × ${this.rewards.fish}`, centerX, y)
+      y += 20
+    }
+    if (this.rewards.shrimp > 0) {
+      ctx.fillText(`🦐 × ${this.rewards.shrimp}`, centerX, y)
+      y += 20
+    }
+    if (this.rewards.squid > 0) {
+      ctx.fillText(`🦑 × ${this.rewards.squid}`, centerX, y)
+      y += 20
+    }
+    if (this.rewards.goldfish > 0) {
+      ctx.fillText(`🐠 × ${this.rewards.goldfish}`, centerX, y)
+      y += 20
+    }
   }
 
   renderStars(ctx) {

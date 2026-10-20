@@ -7,6 +7,7 @@ import { checkAABB } from './js/physics/collision'
 import { ObstacleFactory } from './js/runtime/obstacle'
 import AudioManager from './js/utils/audio-manager'
 import WechatService from './js/utils/wechat-service'
+import FoodManager from './js/utils/food-manager'
 
 // UI组件
 import SceneManager from './js/ui/scene-manager'
@@ -17,6 +18,7 @@ import ResultScene from './js/ui/result-scene'
 import LoginScene from './js/ui/login-scene'
 import RankScene from './js/ui/rank-scene'
 import GameHUD from './js/ui/game-hud'
+import FoodDisplay from './js/ui/food-display'
 
 /**
  * 游戏主类
@@ -48,6 +50,10 @@ export default class Main {
   // 微信服务
   wechatService = null
 
+  // 食物系统
+  foodManager = null
+  foodDisplay = null
+
   // 游戏状态
   gameState = 'menu'  // menu, levelSelect, playing, paused, win, fail
   currentLevel = 1
@@ -65,6 +71,7 @@ export default class Main {
   init() {
     this.initWechat()
     this.initAudio()
+    this.initFood()
     this.initUI()
     this.bindEvent()
     this.loop()
@@ -89,6 +96,14 @@ export default class Main {
    */
   initAudio() {
     this.audioManager = new AudioManager()
+  }
+
+  /**
+   * 初始化食物系统
+   */
+  initFood() {
+    this.foodManager = new FoodManager()
+    this.foodDisplay = new FoodDisplay(this.foodManager)
   }
 
   /**
@@ -136,6 +151,33 @@ export default class Main {
   async loadLevel(levelNum) {
     try {
       const levelData = await this.levelManager.loadLevel(levelNum)
+
+      // 检查并消耗食物
+      const difficulty = levelData.difficulty || 'easy'
+      const cost = this.foodManager.getLevelCost(difficulty)
+
+      if (cost > 0 && !this.foodManager.hasEnoughFood(cost)) {
+        wx.showModal({
+          title: '食物不足',
+          content: `需要 ${cost}🐟 才能开始关卡，是否观看广告获取食物？`,
+          confirmText: '看广告',
+          cancelText: '取消',
+          success: (res) => {
+            if (res.confirm) {
+              // TODO: 显示广告
+              wx.showToast({ title: '广告功能待实现', icon: 'none' })
+            }
+          }
+        })
+        return
+      }
+
+      // 消耗食物
+      if (cost > 0) {
+        this.foodManager.consumeFood(cost)
+        console.log(`消耗食物: ${cost}🐟`)
+      }
+
       this.currentLevel = levelNum
       this.levelManager.setCurrentLevel(levelNum)
 
@@ -571,8 +613,19 @@ export default class Main {
     // 上报分数到排行榜
     this.reportScore()
 
+    // 计算并发放食物奖励
+    const levelData = this.levelManager.getLevel(this.currentLevel)
+    const par = levelData ? levelData.par : 3
+    const rewards = this.foodManager.calculateRewards(this.currentLevel, this.moves, par, time)
+    this.foodManager.giveRewards(rewards)
+    console.log('获得食物奖励:', rewards.details)
+
+    // 显示奖励动画
+    this.foodDisplay.showRewardAnimation(rewards)
+
     // 显示结算界面
     this.resultScene.setResult(this.currentLevel, this.moves, 3, time)
+    this.resultScene.setRewards(rewards)
     this.resultScene.show()
   }
 
@@ -685,6 +738,11 @@ export default class Main {
     // 渲染HUD
     if (this.gameState === 'playing' || this.gameState === 'win') {
       this.gameHUD.render(this.ctx)
+    }
+
+    // 渲染食物显示
+    if (this.foodDisplay && (this.gameState === 'playing' || this.gameState === 'win')) {
+      this.foodDisplay.render(this.ctx)
     }
 
     // 渲染失败提示

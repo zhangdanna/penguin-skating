@@ -5,6 +5,7 @@ import Target from './js/runtime/target'
 import LevelManager from './js/levels/level-manager'
 import { checkAABB } from './js/physics/collision'
 import { ObstacleFactory } from './js/runtime/obstacle'
+import AudioManager from './js/utils/audio-manager'
 
 // UI组件
 import SceneManager from './js/ui/scene-manager'
@@ -36,6 +37,9 @@ export default class Main {
   resultScene = null
   gameHUD = null
 
+  // 音效系统
+  audioManager = null
+
   // 游戏状态
   gameState = 'menu'  // menu, levelSelect, playing, paused, win, fail
   currentLevel = 1
@@ -51,12 +55,23 @@ export default class Main {
    * 初始化游戏
    */
   init() {
+    this.initAudio()
     this.initUI()
     this.bindEvent()
     this.loop()
 
     // 进入主菜单
     this.sceneManager.switchTo('menu')
+
+    // 播放背景音乐
+    this.audioManager.playBGM()
+  }
+
+  /**
+   * 初始化音效系统
+   */
+  initAudio() {
+    this.audioManager = new AudioManager()
   }
 
   /**
@@ -260,6 +275,9 @@ export default class Main {
         this.penguin.handleTouchEnd()
         this.moves++
         this.gameHUD.setMoves(this.moves)
+
+        // 播放滑动音效
+        this.audioManager.playSlideSound()
       }
     }
   }
@@ -314,6 +332,8 @@ export default class Main {
     this.stones.forEach(stone => {
       if (checkAABB(this.penguin, stone)) {
         this.penguin.pushStone(stone)
+        // 播放推动音效
+        this.audioManager.playPushSound()
       }
     })
 
@@ -322,6 +342,8 @@ export default class Main {
       for (let j = i + 1; j < this.stones.length; j++) {
         if (checkAABB(this.stones[i], this.stones[j])) {
           this.resolveStoneCollision(this.stones[i], this.stones[j])
+          // 播放碰撞音效
+          this.audioManager.playCollisionSound()
         }
       }
     }
@@ -481,6 +503,9 @@ export default class Main {
     console.log(`游戏失败: ${reason}`)
     wx.vibrateShort({ type: 'heavy' })
 
+    // 播放失败音效
+    this.audioManager.playFailSound()
+
     // 3秒后重新开始
     setTimeout(() => {
       this.restartLevel()
@@ -512,6 +537,9 @@ export default class Main {
 
     // 振动反馈
     wx.vibrateShort({ type: 'heavy' })
+
+    // 播放通关音效
+    this.audioManager.playWinSound()
 
     // 保存关卡进度
     this.saveLevelProgress()

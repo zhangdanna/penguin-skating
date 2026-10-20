@@ -6,11 +6,50 @@
 
 ## 特性
 
+### 核心玩法
 - 冰面物理模拟，真实的滑行和摩擦效果
 - 触摸操作：滑动选择方向，松开滑行
-- 多个关卡，难度递增
+- 推箱子玩法：将石头推到目标区域
+- 多个关卡，难度递增（7个内置关卡 + 程序化生成）
 - 企鹅、石头和边界的碰撞检测
-- 精美的冰面主题图形和动画效果
+
+### 障碍物系统
+- 冰墙：阻挡移动并反弹
+- 冰窟窿：企鹅掉入即失败
+- 雪堆：减慢移动速度
+- 关卡动态配置障碍物
+
+### UI系统
+- 带企鹅动画的主菜单
+- 带星级评定的关卡选择
+- 暂停/恢复功能
+- 通关结算界面（含奖励）
+- 游戏结束界面（含复活选项）
+- 游戏内HUD（步数、时间、关卡信息）
+
+### 进度系统
+- 食物/体力系统（鱼🐟、虾🦐、鱿鱼🦑、金鱼🐠）
+- 成就系统（20+成就可解锁）
+- 复活机制（分享好友/群、看广告、消耗食物）
+- 星级评定系统（每关1-3星）
+- 本地存档系统
+
+### 社交功能
+- 微信登录集成
+- 排行榜（开放数据域）
+- 分享到好友和群
+- 分享奖励
+
+### 音效系统
+- 背景音乐（占位符）
+- 推动、碰撞、滑行、胜利、失败音效
+- 带音量控制的音效管理器
+
+### 游戏统计
+- 结算管理器追踪所有游戏数据
+- 每关最佳时间和步数
+- 总游戏次数、通关次数、连胜记录
+- 完美通关追踪
 
 ## 技术栈
 
@@ -47,27 +86,61 @@
 
 ```
 penguin-skating-game/
-├── game.js                 # 游戏入口
-├── game.json               # 小游戏配置
-├── project.config.json     # 项目配置
+├── game.js                      # 游戏入口
+├── game.json                    # 小游戏配置
+├── project.config.json          # 项目配置
 ├── js/
-│   ├── base/               # 基础类
-│   │   ├── sprite.js       # 精灵基类
-│   │   └── pool.js         # 对象池
-│   ├── runtime/            # 游戏运行时对象
-│   │   ├── penguin.js      # 企鹅（玩家角色）
-│   │   ├── stone.js        # 可推动的石头
-│   │   ├── target.js       # 目标区域
-│   │   └── background.js   # 冰面背景
-│   ├── physics/            # 物理系统
-│   │   ├── physics.js      # 物理引擎
-│   │   └── collision.js    # 碰撞检测
-│   └── levels/             # 关卡管理
-│       └── level-manager.js
-└── levels/                 # 关卡数据（JSON）
-    ├── level1.json
-    ├── level2.json
-    └── level3.json
+│   ├── base/                    # 基础类
+│   │   ├── sprite.js           # 精灵基类
+│   │   └── pool.js             # 对象池
+│   ├── runtime/                 # 游戏运行时对象
+│   │   ├── penguin.js          # 企鹅（玩家角色）
+│   │   ├── stone.js            # 可推动的石头
+│   │   ├── target.js           # 目标区域
+│   │   ├── background.js       # 冰面背景
+│   │   └── obstacle.js         # 障碍物（冰墙、冰窟窿、雪堆）
+│   ├── physics/                 # 物理系统
+│   │   ├── physics.js          # 物理引擎
+│   │   └── collision.js        # 碰撞检测
+│   ├── levels/                  # 关卡管理
+│   │   └── level-manager.js    # 关卡加载器和管理器
+│   ├── ui/                      # UI组件
+│   │   ├── scene-manager.js    # 场景管理
+│   │   ├── menu-scene.js       # 主菜单
+│   │   ├── level-select-scene.js # 关卡选择
+│   │   ├── pause-scene.js      # 暂停界面
+│   │   ├── result-scene.js     # 通关结算
+│   │   ├── gameover-scene.js   # 游戏结束
+│   │   ├── login-scene.js      # 登录界面
+│   │   ├── rank-scene.js       # 排行榜
+│   │   ├── achievement-scene.js # 成就展示
+│   │   ├── achievement-notification.js # 成就弹窗
+│   │   ├── revive-scene.js     # 复活选项
+│   │   ├── game-hud.js         # 游戏HUD
+│   │   ├── food-display.js     # 食物计数器
+│   │   └── button.js           # 可复用按钮组件
+│   └── utils/                   # 工具管理器
+│       ├── audio-manager.js    # 音效和音乐
+│       ├── wechat-service.js   # 微信API集成
+│       ├── food-manager.js     # 食物/体力系统
+│       ├── achievement-manager.js # 成就追踪
+│       ├── revive-manager.js   # 复活系统
+│       ├── settlement-manager.js # 游戏统计
+│       └── ad-manager.js       # 广告管理
+├── levels/                      # 关卡数据（JSON）
+│   ├── level1.json ~ level7.json
+├── audio/                       # 音效文件（占位符）
+└── docs/                        # 阶段文档
+    ├── phase1-core-prototype.md
+    ├── phase2-ui-system.md
+    ├── phase3-obstacle-system.md
+    ├── phase4-audio-system.md
+    ├── phase5-wechat-integration.md
+    ├── phase6-login-rank.md
+    ├── phase7-food-system.md
+    ├── phase8-achievement-share.md
+    ├── phase9-revive-system.md
+    └── phase10-gameover-settlement.md
 ```
 
 ## 操作说明
@@ -136,17 +209,54 @@ penguin-skating-game/
 
 ## 文档
 
-- [第一阶段：核心原型](./docs/phase1-core-prototype.md) - 详细模块文档
+### 阶段文档
+- [第一阶段：核心原型](./docs/phase1-core-prototype.md) - 基础玩法和物理
+- [第二阶段：UI系统](./docs/phase2-ui-system.md) - 菜单、关卡选择、暂停、结算界面
+- [第三阶段：障碍物系统](./docs/phase3-obstacle-system.md) - 冰墙、冰窟窿、雪堆
+- [第四阶段：音效系统](./docs/phase4-audio-system.md) - 音效和音乐
+- [第五阶段：微信集成](./docs/phase5-wechat-integration.md) - 微信API设置
+- [第六阶段：登录与排行榜](./docs/phase6-login-rank.md) - 用户登录和排行榜
+- [第七阶段：食物系统](./docs/phase7-food-system.md) - 体力和奖励
+- [第八阶段：成就与分享](./docs/phase8-achievement-share.md) - 成就和分享
+- [第九阶段：复活系统](./docs/phase9-revive-system.md) - 复活机制
+- [第十阶段：游戏结束与结算](./docs/phase10-gameover-settlement.md) - 统计和游戏结束
+
+## 当前状态
+
+✅ **全部10个阶段已完成！** 游戏功能完整，包含：
+- 核心玩法机制
+- 完整UI系统
+- 障碍物系统
+- 音效系统
+- 微信集成
+- 登录和排行榜
+- 食物/体力系统
+- 成就系统
+- 复活机制
+- 游戏统计追踪
 
 ## 开发计划
 
-- [ ] UI 系统（主菜单、关卡选择、暂停界面）
-- [ ] 障碍物系统（冰墙、冰窟窿、雪堆）
-- [ ] 音效和音乐
-- [ ] 本地存储（关卡进度）
-- [ ] 微信登录和排行榜
-- [ ] 广告接入
-- [ ] 食物/体力系统
+### 已完成
+- [x] UI系统（主菜单、关卡选择、暂停界面）
+- [x] 障碍物系统（冰墙、冰窟窿、雪堆）
+- [x] 音效和音乐（占位符音频文件）
+- [x] 本地存储（关卡进度）
+- [x] 微信登录和排行榜
+- [x] 食物/体力系统
+- [x] 成就系统
+- [x] 复活机制
+- [x] 游戏统计
+
+### 未来增强
+- [ ] 替换占位符音频为真实音效文件
+- [ ] 添加更多关卡（当前7关 + 程序化生成）
+- [ ] 实现真实广告集成（当前为占位符）
+- [ ] 添加每日挑战
+- [ ] 实现道具商店（能力增强）
+- [ ] 添加更多成就
+- [ ] 社交功能增强（好友挑战）
+- [ ] 大关卡性能优化
 
 ## 许可证
 

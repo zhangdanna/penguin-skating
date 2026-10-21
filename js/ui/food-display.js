@@ -2,6 +2,8 @@
  * 食物显示组件
  * 在界面上显示当前食物数量和恢复时间
  */
+import { COLORS, drawGlassPanel, font } from './theme'
+
 export default class FoodDisplay {
   constructor(foodManager) {
     this.foodManager = foodManager
@@ -95,20 +97,9 @@ export default class FoodDisplay {
    * 绘制背景
    */
   renderBackground(ctx) {
-    ctx.save()
-
-    // 半透明背景
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
-    ctx.beginPath()
-    ctx.roundRect(this.x, this.y, this.width, this.height, 10)
-    ctx.fill()
-
-    // 边框
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'
-    ctx.lineWidth = 2
-    ctx.stroke()
-
-    ctx.restore()
+    drawGlassPanel(ctx, this.x, this.y, this.width, this.height, 16, {
+      fill: 'rgba(255, 255, 255, 0.82)'
+    })
   }
 
   /**
@@ -137,8 +128,8 @@ export default class FoodDisplay {
         ctx.fillText(food.icon, iconX, iconY)
 
         // 绘制数量
-        ctx.fillStyle = '#ffffff'
-        ctx.font = 'bold 12px Arial'
+        ctx.fillStyle = COLORS.navy
+        ctx.font = font(12)
         ctx.fillText(`×${food.count}`, iconX + 20, iconY)
 
         iconX += 50
@@ -146,8 +137,8 @@ export default class FoodDisplay {
     })
 
     // 绘制总价值
-    ctx.fillStyle = '#f1c40f'
-    ctx.font = 'bold 14px Arial'
+    ctx.fillStyle = COLORS.yellowDeep
+    ctx.font = font(14)
     ctx.textAlign = 'left'
     ctx.fillText(`总计: ${status.total}`, this.x + 15, this.y + 45)
 
@@ -167,8 +158,8 @@ export default class FoodDisplay {
     const secs = seconds % 60
     const timeText = `${minutes}:${secs.toString().padStart(2, '0')}`
 
-    ctx.fillStyle = '#2ecc71'
-    ctx.font = '12px Arial'
+    ctx.fillStyle = COLORS.mintDeep
+    ctx.font = font(12)
     ctx.textAlign = 'right'
     ctx.fillText(`+1🐟 ${timeText}`, this.x + this.width - 10, this.y + 45)
 

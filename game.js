@@ -3,7 +3,6 @@ import Penguin from './js/runtime/penguin'
 import Stone from './js/runtime/stone'
 import Target from './js/runtime/target'
 import LevelManager from './js/levels/level-manager'
-import { checkAABB } from './js/physics/collision'
 import { ObstacleFactory } from './js/runtime/obstacle'
 import AudioManager from './js/utils/audio-manager'
 import WechatService from './js/utils/wechat-service'
@@ -15,7 +14,6 @@ import SettlementManager from './js/utils/settlement-manager'
 // UI组件
 import SceneManager from './js/ui/scene-manager'
 import MenuScene from './js/ui/menu-scene'
-import LevelSelectScene from './js/ui/level-select-scene'
 import PauseScene from './js/ui/pause-scene'
 import ResultScene from './js/ui/result-scene'
 import GameOverScene from './js/ui/gameover-scene'
@@ -26,62 +24,78 @@ import AchievementNotification from './js/ui/achievement-notification'
 import ReviveScene from './js/ui/revive-scene'
 import GameHUD from './js/ui/game-hud'
 import FoodDisplay from './js/ui/food-display'
+import GameScene from './js/ui/game-scene'
+
+// 棋盘配置：7列×9行，每格50px，整体居中
+const CELL_SIZE = 50
+const GRID_COLS = 7
+const GRID_ROWS = 9
+const BOARD_OFFSET_X = Math.round((canvas.width - GRID_COLS * CELL_SIZE) / 2)
+const BOARD_OFFSET_Y = Math.round((canvas.height - GRID_ROWS * CELL_SIZE) / 2)
+
+// 滑动方向对应的一格位移
+const DIRECTION_STEP = {
+  up: { col: 0, row: -1 },
+  down: { col: 0, row: 1 },
+  left: { col: -1, row: 0 },
+  right: { col: 1, row: 0 }
+}
 
 /**
  * 游戏主类
  * 控制游戏主循环和状态管理
  */
 export default class Main {
-  aniId = 0
-  ctx = canvas.getContext('2d')
-
-  // 游戏对象
-  background = null
-  penguin = null
-  stones = []
-  target = null
-  obstacles = []  // 障碍物数组
-  levelManager = new LevelManager()
-
-  // UI系统
-  sceneManager = new SceneManager()
-  pauseScene = null
-  resultScene = null
-  loginScene = null
-  rankScene = null
-  gameHUD = null
-
-  // 音效系统
-  audioManager = null
-
-  // 微信服务
-  wechatService = null
-
-  // 食物系统
-  foodManager = null
-  foodDisplay = null
-
-  // 成就系统
-  achievementManager = null
-  achievementScene = null
-  achievementNotification = null
-
-  // 复活系统
-  reviveManager = null
-  reviveScene = null
-
-  // 结算系统
-  settlementManager = null
-  gameOverScene = null
-
-  // 游戏状态
-  gameState = 'menu'  // menu, levelSelect, playing, paused, win, fail
-  currentLevel = 1
-  moves = 0
-  startTime = 0
-  isPaused = false
-
   constructor() {
+    this.aniId = 0
+    this.ctx = canvas.getContext('2d')
+
+    // 游戏对象
+    this.background = null
+    this.penguin = null
+    this.stones = []
+    this.target = null
+    this.obstacles = []  // 障碍物数组
+    this.levelManager = new LevelManager()
+
+    // UI系统
+    this.sceneManager = new SceneManager()
+    this.pauseScene = null
+    this.resultScene = null
+    this.loginScene = null
+    this.rankScene = null
+    this.gameHUD = null
+
+    // 音效系统
+    this.audioManager = null
+
+    // 微信服务
+    this.wechatService = null
+
+    // 食物系统
+    this.foodManager = null
+    this.foodDisplay = null
+
+    // 成就系统
+    this.achievementManager = null
+    this.achievementScene = null
+    this.achievementNotification = null
+
+    // 复活系统
+    this.reviveManager = null
+    this.reviveScene = null
+
+    // 结算系统
+    this.settlementManager = null
+    this.gameOverScene = null
+
+    // 游戏状态
+    this.gameState = 'menu'  // menu, playing, paused, win, fail
+    this.currentLevel = 1
+    this.moves = 0
+    this.startTime = 0
+    this.isPaused = false
+
     this.init()
   }
 
@@ -127,6 +141,11 @@ export default class Main {
   initFood() {
     this.foodManager = new FoodManager()
     this.foodDisplay = new FoodDisplay(this.foodManager)
+    // 放到棋盘下方的空档
+    this.foodDisplay.setPosition(
+      BOARD_OFFSET_X,
+      BOARD_OFFSET_Y + GRID_ROWS * CELL_SIZE + 14
+    )
   }
 
   /**
@@ -174,7 +193,6 @@ export default class Main {
   initUI() {
     // 注册场景
     this.sceneManager.register('menu', new MenuScene(this.sceneManager))
-    this.sceneManager.register('levelSelect', new LevelSelectScene(this.sceneManager))
 
     // 创建登录和排行榜场景
     this.loginScene = new LoginScene(this.sceneManager, this.wechatService)
@@ -198,6 +216,10 @@ export default class Main {
     // 创建游戏HUD
     this.gameHUD = new GameHUD()
     this.gameHUD.onPauseClick = () => this.pauseGame()
+    
+    // 注册游戏主场景
+    this.gameScene = new GameScene(this)
+    this.sceneManager.register('game', this.gameScene)
   }
 
   /**
@@ -207,6 +229,15 @@ export default class Main {
     wx.onTouchStart(this.touchStartHandler.bind(this))
     wx.onTouchMove(this.touchMoveHandler.bind(this))
     wx.onTouchEnd(this.touchEndHandler.bind(this))
+  }
+
+  /**
+   * 开始关卡（供GameScene调用）
+   * @param {number} levelNum - 关卡编号
+   */
+  startLevel(levelNum) {
+    console.log(`[Game] 开始关卡: ${levelNum}`)
+    this.loadLevel(levelNum)
   }
 
   /**
@@ -234,6 +265,8 @@ export default class Main {
             }
           }
         })
+        // 无法开战时回到菜单，避免停留在空白的游戏场景
+        this.sceneManager.switchTo('menu')
         return
       }
 
@@ -246,14 +279,25 @@ export default class Main {
       this.currentLevel = levelNum
       this.levelManager.setCurrentLevel(levelNum)
 
-      // 创建游戏对象
-      this.background = new Background(this.ctx)
-      this.penguin = new Penguin(levelData.penguin)
-      this.stones = levelData.stones.map(s => new Stone(s))
-      this.target = new Target(levelData.target)
+      // 创建游戏对象（关卡坐标按格换算到居中的棋盘上）
+      const grid = {
+        cols: GRID_COLS,
+        rows: GRID_ROWS,
+        cellSize: CELL_SIZE,
+        offsetX: BOARD_OFFSET_X,
+        offsetY: BOARD_OFFSET_Y
+      }
+      this.background = new Background(this.ctx, grid)
+      this.penguin = new Penguin({ ...this.toBoardPixel(levelData.penguin), size: CELL_SIZE })
+      this.stones = levelData.stones.map(s => new Stone({ ...this.toBoardPixel(s), size: CELL_SIZE }))
+      this.target = new Target({ ...levelData.target, ...this.toBoardPixel(levelData.target) })
 
-      // 创建障碍物
+      // 创建障碍物（同样偏移到棋盘位置）
       this.obstacles = ObstacleFactory.createFromLevelData(levelData.obstacles)
+      this.obstacles.forEach(obstacle => {
+        obstacle.x += BOARD_OFFSET_X
+        obstacle.y += BOARD_OFFSET_Y
+      })
 
       // 重置状态
       this.moves = 0
@@ -274,6 +318,131 @@ export default class Main {
     } catch (e) {
       console.error('加载关卡失败:', e)
     }
+  }
+
+  /**
+   * 关卡坐标（50px对齐）换算为棋盘像素坐标
+   * @param {Object} pos - 关卡坐标 {x, y}
+   * @returns {Object} 棋盘坐标 {x, y}
+   */
+  toBoardPixel(pos) {
+    return {
+      x: BOARD_OFFSET_X + Math.round(pos.x / CELL_SIZE) * CELL_SIZE,
+      y: BOARD_OFFSET_Y + Math.round(pos.y / CELL_SIZE) * CELL_SIZE
+    }
+  }
+
+  /**
+   * 格子坐标换算为棋盘像素坐标
+   */
+  cellToPixel(col, row) {
+    return {
+      x: BOARD_OFFSET_X + col * CELL_SIZE,
+      y: BOARD_OFFSET_Y + row * CELL_SIZE
+    }
+  }
+
+  /**
+   * 获取对象所在格子
+   */
+  getCell(obj) {
+    return {
+      col: Math.round((obj.x - BOARD_OFFSET_X) / CELL_SIZE),
+      row: Math.round((obj.y - BOARD_OFFSET_Y) / CELL_SIZE)
+    }
+  }
+
+  /**
+   * 判断格子是否在棋盘内
+   */
+  isCellInside(col, row) {
+    return col >= 0 && col < GRID_COLS && row >= 0 && row < GRID_ROWS
+  }
+
+  /**
+   * 获取指定格子上的障碍物
+   */
+  getObstacleAt(col, row, type) {
+    return this.obstacles.find(obstacle => {
+      const cell = this.getCell(obstacle)
+      return obstacle.type === type && cell.col === col && cell.row === row
+    })
+  }
+
+  /**
+   * 获取指定格子上的石头
+   */
+  getStoneAt(col, row) {
+    return this.stones.find(stone => {
+      const cell = this.getCell(stone)
+      return cell.col === col && cell.row === row
+    })
+  }
+
+  /**
+   * 按格移动一格（推石、墙壁、冰窟窿、边界均按格判定）
+   * @param {string} direction - up/down/left/right
+   * @returns {boolean} 是否移动成功
+   */
+  tryMove(direction) {
+    if (!this.penguin || this.penguin.isMoving || this.gameState !== 'playing') {
+      return false
+    }
+
+    const step = DIRECTION_STEP[direction]
+    if (!step) return false
+
+    const current = this.getCell(this.penguin)
+    const next = { col: current.col + step.col, row: current.row + step.row }
+
+    // 边界或冰墙阻挡
+    if (!this.isCellInside(next.col, next.row) || this.getObstacleAt(next.col, next.row, 'wall')) {
+      this.audioManager.playCollisionSound()
+      return false
+    }
+
+    const stone = this.getStoneAt(next.col, next.row)
+
+    if (stone) {
+      const stoneNext = { col: next.col + step.col, row: next.row + step.row }
+
+      // 石头前方是边界、冰墙、雪堆或另一块石头，推不动
+      const stoneBlocked = !this.isCellInside(stoneNext.col, stoneNext.row) ||
+        this.getObstacleAt(stoneNext.col, stoneNext.row, 'wall') ||
+        this.getObstacleAt(stoneNext.col, stoneNext.row, 'snow') ||
+        this.getStoneAt(stoneNext.col, stoneNext.row)
+
+      if (stoneBlocked) {
+        this.audioManager.playCollisionSound()
+        return false
+      }
+
+      if (this.getObstacleAt(stoneNext.col, stoneNext.row, 'hole')) {
+        // 石头掉入冰窟窿，消失
+        this.stones.splice(this.stones.indexOf(stone), 1)
+      } else {
+        const stonePixel = this.cellToPixel(stoneNext.col, stoneNext.row)
+        stone.moveTo(stonePixel.x, stonePixel.y)
+      }
+
+      const nextPixel = this.cellToPixel(next.col, next.row)
+      this.penguin.moveTo(nextPixel.x, nextPixel.y)
+      this.audioManager.playPushSound()
+    } else if (this.getObstacleAt(next.col, next.row, 'hole')) {
+      // 企鹅掉入冰窟窿：停留在安全格（便于复活恢复），直接失败
+      this.gameState = 'fail'
+      this.onFail('掉入冰窟窿')
+      return false
+    } else {
+      const nextPixel = this.cellToPixel(next.col, next.row)
+      this.penguin.moveTo(nextPixel.x, nextPixel.y)
+    }
+
+    if (typeof wx !== 'undefined') {
+      wx.vibrateShort({ type: 'light' })
+    }
+
+    return true
   }
 
   /**
@@ -450,9 +619,11 @@ export default class Main {
 
     // 处理游戏操作
     if (this.gameState === 'playing' && this.penguin) {
-      // 只有企鹅停止时才记录步数
-      if (!this.penguin.isMoving) {
-        this.penguin.handleTouchEnd()
+      const direction = this.penguin.handleTouchEnd()
+
+      // 只有企鹅停止时才响应新的滑动
+      if (direction && !this.penguin.isMoving) {
+        this.tryMove(direction)
         this.moves++
         this.gameHUD.setMoves(this.moves)
 
@@ -506,12 +677,6 @@ export default class Main {
     this.target.update()
     this.obstacles.forEach(obstacle => obstacle.update())
 
-    // 碰撞检测
-    this.checkCollisions()
-
-    // 障碍物碰撞检测
-    this.checkObstacleCollisions()
-
     // 胜利检测
     this.checkWinCondition()
 
@@ -522,178 +687,6 @@ export default class Main {
     // 更新食物显示
     if (this.foodDisplay) {
       this.foodDisplay.update()
-    }
-  }
-
-  /**
-   * 碰撞检测
-   */
-  checkCollisions() {
-    // 企鹅与石头碰撞
-    this.stones.forEach(stone => {
-      if (checkAABB(this.penguin, stone)) {
-        this.penguin.pushStone(stone)
-        // 播放推动音效
-        this.audioManager.playPushSound()
-      }
-    })
-
-    // 石头与石头碰撞
-    for (let i = 0; i < this.stones.length; i++) {
-      for (let j = i + 1; j < this.stones.length; j++) {
-        if (checkAABB(this.stones[i], this.stones[j])) {
-          this.resolveStoneCollision(this.stones[i], this.stones[j])
-          // 播放碰撞音效
-          this.audioManager.playCollisionSound()
-        }
-      }
-    }
-  }
-
-  /**
-   * 解决石头之间的碰撞
-   */
-  resolveStoneCollision(stoneA, stoneB) {
-    const overlapX = Math.min(
-      stoneA.x + stoneA.width - stoneB.x,
-      stoneB.x + stoneB.width - stoneA.x
-    )
-    const overlapY = Math.min(
-      stoneA.y + stoneA.height - stoneB.y,
-      stoneB.y + stoneB.height - stoneA.y
-    )
-
-    if (overlapX < overlapY) {
-      if (stoneA.x < stoneB.x) {
-        stoneA.x -= overlapX / 2
-        stoneB.x += overlapX / 2
-      } else {
-        stoneA.x += overlapX / 2
-        stoneB.x -= overlapX / 2
-      }
-      stoneA.vx = 0
-      stoneB.vx = 0
-    } else {
-      if (stoneA.y < stoneB.y) {
-        stoneA.y -= overlapY / 2
-        stoneB.y += overlapY / 2
-      } else {
-        stoneA.y += overlapY / 2
-        stoneB.y -= overlapY / 2
-      }
-      stoneA.vy = 0
-      stoneB.vy = 0
-    }
-  }
-
-  /**
-   * 障碍物碰撞检测
-   */
-  checkObstacleCollisions() {
-    if (this.obstacles.length === 0) return
-
-    // 企鹅与障碍物碰撞
-    this.obstacles.forEach(obstacle => {
-      if (checkAABB(this.penguin, obstacle)) {
-        const result = obstacle.onPenguinCollide(this.penguin)
-        this.handlePenguinObstacleResult(result, obstacle)
-      }
-    })
-
-    // 石头与障碍物碰撞
-    this.stones.forEach(stone => {
-      this.obstacles.forEach(obstacle => {
-        if (checkAABB(stone, obstacle)) {
-          const result = obstacle.onStoneCollide(stone)
-          this.handleStoneObstacleResult(result, stone, obstacle)
-        }
-      })
-    })
-  }
-
-  /**
-   * 处理企鹅与障碍物碰撞结果
-   */
-  handlePenguinObstacleResult(result, obstacle) {
-    switch (result.action) {
-      case 'stop':
-        // 碰到冰墙，停止
-        this.penguin.vx = result.vx
-        this.penguin.vy = result.vy
-        this.penguin.isMoving = false
-        // 分离企鹅和障碍物
-        this.separateObjects(this.penguin, obstacle)
-        break
-
-      case 'fail':
-        // 掉入冰窟窿，游戏失败
-        this.gameState = 'fail'
-        this.onFail(result.reason)
-        break
-
-      case 'slow':
-        // 经过雪堆，减速
-        this.penguin.vx *= result.speedMultiplier
-        this.penguin.vy *= result.speedMultiplier
-        break
-    }
-  }
-
-  /**
-   * 处理石头与障碍物碰撞结果
-   */
-  handleStoneObstacleResult(result, stone, obstacle) {
-    switch (result.action) {
-      case 'stop':
-        // 碰到冰墙，停止
-        stone.vx = result.vx
-        stone.vy = result.vy
-        stone.isMoving = false
-        this.separateObjects(stone, obstacle)
-        break
-
-      case 'destroy':
-        // 掉入冰窟窿，移除石头
-        const index = this.stones.indexOf(stone)
-        if (index > -1) {
-          this.stones.splice(index, 1)
-        }
-        break
-
-      case 'stuck':
-        // 卡在雪堆里，停止
-        stone.vx = result.vx
-        stone.vy = result.vy
-        stone.isMoving = false
-        break
-    }
-  }
-
-  /**
-   * 分离两个碰撞的对象
-   */
-  separateObjects(objA, objB) {
-    const overlapX = Math.min(
-      objA.x + objA.width - objB.x,
-      objB.x + objB.width - objA.x
-    )
-    const overlapY = Math.min(
-      objA.y + objA.height - objB.y,
-      objB.y + objB.height - objA.y
-    )
-
-    if (overlapX < overlapY) {
-      if (objA.x < objB.x) {
-        objA.x -= overlapX
-      } else {
-        objA.x += overlapX
-      }
-    } else {
-      if (objA.y < objB.y) {
-        objA.y -= overlapY
-      } else {
-        objA.y += overlapY
-      }
     }
   }
 
@@ -741,8 +734,6 @@ export default class Main {
     if (result.lastPosition) {
       this.penguin.x = result.lastPosition.x
       this.penguin.y = result.lastPosition.y
-      this.penguin.vx = 0
-      this.penguin.vy = 0
       this.penguin.isMoving = false
     }
 
@@ -751,8 +742,6 @@ export default class Main {
       result.lastStones.forEach((stoneState, index) => {
         this.stones[index].x = stoneState.x
         this.stones[index].y = stoneState.y
-        this.stones[index].vx = 0
-        this.stones[index].vy = 0
         this.stones[index].isMoving = false
       })
     }
@@ -811,13 +800,21 @@ export default class Main {
    * 胜利检测
    */
   checkWinCondition() {
-    const allInTarget = this.stones.every(stone => {
-      const inTarget = this.target.contains(stone)
-      stone.inTarget = inTarget
-      return inTarget
+    // 移动动画结束后再判定，避免冰块途经目标格时误判通关
+    if (this.penguin.isMoving || this.stones.some(stone => stone.isMoving)) {
+      return
+    }
+
+    // 目标格只容得下一块冰块，因此任意一块冰块进入目标即通关
+    let reachedTarget = false
+    this.stones.forEach(stone => {
+      stone.inTarget = this.target.contains(stone)
+      if (stone.inTarget) {
+        reachedTarget = true
+      }
     })
 
-    if (allInTarget) {
+    if (reachedTarget) {
       this.gameState = 'win'
       this.onWin()
     }
@@ -876,7 +873,7 @@ export default class Main {
     })
 
     // 显示结算界面
-    this.resultScene.setResult(this.currentLevel, this.moves, 3, time)
+    this.resultScene.setResult(this.currentLevel, this.moves, par, time)
     this.resultScene.setRewards(rewards)
     this.resultScene.show()
   }
@@ -977,8 +974,9 @@ export default class Main {
 
     // 根据当前场景渲染
     const currentSceneName = this.sceneManager.getCurrentSceneName()
+    const uiScenes = ['menu', 'login', 'rank', 'achievement']
 
-    if (currentSceneName === 'menu' || currentSceneName === 'levelSelect') {
+    if (uiScenes.includes(currentSceneName)) {
       // 渲染UI场景
       this.sceneManager.render(this.ctx)
     } else {

@@ -1,4 +1,14 @@
 import Button from './button'
+import {
+  COLORS,
+  drawCandyButton,
+  drawGlassPanel,
+  drawOverlay,
+  drawStar,
+  drawStickerText,
+  fillRoundRect,
+  font
+} from './theme'
 
 /**
  * 结算场景
@@ -29,22 +39,21 @@ export default class ResultScene {
 
   init() {
     const centerX = canvas.width / 2
-    const buttonWidth = 150
+    const buttonWidth = 138
     const buttonHeight = 50
-    const buttonSpacing = 20
-    const startY = 450
+    const startY = 452
 
     // 下一关按钮
     this.buttons.push(new Button({
-      x: centerX - buttonWidth - 10,
+      x: centerX - buttonWidth - 8,
       y: startY,
       width: buttonWidth,
       height: buttonHeight,
       text: '下一关',
       fontSize: 20,
-      bgColor: '#27ae60',
-      hoverColor: '#229954',
-      borderColor: '#1e8449',
+      bgColor: COLORS.mint,
+      hoverColor: COLORS.mintDeep,
+      borderColor: '#17876C',
       onClick: () => {
         if (this.onNextLevel) {
           this.onNextLevel()
@@ -54,15 +63,15 @@ export default class ResultScene {
 
     // 重玩按钮
     this.buttons.push(new Button({
-      x: centerX + 10,
+      x: centerX + 8,
       y: startY,
       width: buttonWidth,
       height: buttonHeight,
       text: '重玩',
       fontSize: 20,
-      bgColor: '#3498db',
-      hoverColor: '#2980b9',
-      borderColor: '#2471a3',
+      bgColor: COLORS.water,
+      hoverColor: COLORS.waterDeep,
+      borderColor: '#1F7FAE',
       onClick: () => {
         if (this.onReplay) {
           this.onReplay()
@@ -151,37 +160,51 @@ export default class ResultScene {
   render(ctx) {
     if (!this.isVisible) return
 
-    // 半透明遮罩
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    const centerX = canvas.width / 2
+
+    // 深蓝遮罩 + 奶油面板
+    drawOverlay(ctx, 0.6)
+    drawGlassPanel(ctx, 30, 88, 315, 540, 30, {
+      fill: 'rgba(255, 249, 238, 0.97)'
+    })
 
     // 通关标题
     ctx.save()
-    ctx.translate(canvas.width / 2, 150)
+    ctx.translate(centerX, 150)
     ctx.scale(this.titleScale, this.titleScale)
-    ctx.fillStyle = '#f1c40f'
-    ctx.font = 'bold 48px Arial'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText('通关成功！', 0, 0)
+    drawStickerText(ctx, '通关成功！', 0, 0, {
+      size: 38,
+      color: COLORS.mint,
+      stroke: COLORS.navyDeep,
+      strokeWidth: 6
+    })
     ctx.restore()
 
-    // 关卡信息
-    ctx.fillStyle = '#ffffff'
-    ctx.font = '20px Arial'
-    ctx.textAlign = 'center'
-    ctx.fillText(`关卡 ${this.level}`, canvas.width / 2, 220)
+    // 关卡徽章
+    drawCandyButton(ctx, centerX - 56, 184, 112, 26, {
+      color: COLORS.water,
+      shadowColor: COLORS.waterDeep,
+      radius: 13
+    })
+    drawStickerText(ctx, `关卡 ${this.level}`, centerX, 197, {
+      size: 13,
+      color: COLORS.white,
+      strokeWidth: 2.5
+    })
 
     // 星星评价
     this.renderStars(ctx)
 
     // 统计信息
-    ctx.fillStyle = '#bdc3c7'
-    ctx.font = '18px Arial'
-    ctx.fillText(`步数: ${this.moves} / 标准: ${this.par}`, canvas.width / 2, 350)
+    ctx.font = font(16)
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = COLORS.navy
+    ctx.fillText(`步数 ${this.moves} / 标准 ${this.par}`, centerX, 332)
 
-    const timeStr = this.formatTime(this.time)
-    ctx.fillText(`用时: ${timeStr}`, canvas.width / 2, 380)
+    ctx.font = font(14, 'normal')
+    ctx.fillStyle = COLORS.navySoft
+    ctx.fillText(`用时 ${this.formatTime(this.time)}`, centerX, 360)
 
     // 渲染奖励
     if (this.rewards) {
@@ -197,43 +220,36 @@ export default class ResultScene {
    */
   renderRewards(ctx) {
     const centerX = canvas.width / 2
-    const startY = 410
+    const labelY = 394
+    const pillY = 420
 
-    // 奖励标题
-    ctx.fillStyle = '#f1c40f'
-    ctx.font = 'bold 16px Arial'
+    ctx.font = font(13)
     ctx.textAlign = 'center'
-    ctx.fillText('获得奖励', centerX, startY)
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = COLORS.yellowDeep
+    ctx.fillText('获得奖励', centerX, labelY)
 
-    // 奖励详情
-    ctx.fillStyle = '#ffffff'
-    ctx.font = '14px Arial'
+    const items = []
+    if (this.rewards.fish > 0) items.push(`🐟×${this.rewards.fish}`)
+    if (this.rewards.shrimp > 0) items.push(`🦐×${this.rewards.shrimp}`)
+    if (this.rewards.squid > 0) items.push(`🦑×${this.rewards.squid}`)
+    if (this.rewards.goldfish > 0) items.push(`🐠×${this.rewards.goldfish}`)
+    if (items.length === 0) return
 
-    let y = startY + 25
-    if (this.rewards.fish > 0) {
-      ctx.fillText(`🐟 × ${this.rewards.fish}`, centerX, y)
-      y += 20
-    }
-    if (this.rewards.shrimp > 0) {
-      ctx.fillText(`🦐 × ${this.rewards.shrimp}`, centerX, y)
-      y += 20
-    }
-    if (this.rewards.squid > 0) {
-      ctx.fillText(`🦑 × ${this.rewards.squid}`, centerX, y)
-      y += 20
-    }
-    if (this.rewards.goldfish > 0) {
-      ctx.fillText(`🐠 × ${this.rewards.goldfish}`, centerX, y)
-      y += 20
-    }
+    const text = items.join('   ')
+    ctx.font = font(15)
+    const textWidth = ctx.measureText(text).width
+    fillRoundRect(ctx, centerX - textWidth / 2 - 16, pillY - 14, textWidth + 32, 28, 14, 'rgba(47, 191, 155, 0.16)')
+    ctx.fillStyle = COLORS.mintDeep
+    ctx.fillText(text, centerX, pillY)
   }
 
   renderStars(ctx) {
-    const starSize = 40
-    const spacing = 20
+    const starSize = 36
+    const spacing = 18
     const totalWidth = 3 * starSize + 2 * spacing
     const startX = (canvas.width - totalWidth) / 2
-    const y = 280
+    const y = 264
 
     for (let i = 0; i < 3; i++) {
       const x = startX + i * (starSize + spacing) + starSize / 2
@@ -243,40 +259,19 @@ export default class ResultScene {
       ctx.scale(this.starScales[i], this.starScales[i])
 
       if (i < this.stars) {
-        // 金色星星
-        this.drawStar(ctx, 0, 0, starSize / 2, '#f1c40f')
+        drawStar(ctx, 0, 0, starSize / 2, COLORS.yellow, {
+          stroke: COLORS.white,
+          lineWidth: 2.5
+        })
       } else {
-        // 灰色星星
-        this.drawStar(ctx, 0, 0, starSize / 2, '#7f8c8d')
+        drawStar(ctx, 0, 0, starSize / 2, 'rgba(31, 58, 95, 0.14)', {
+          stroke: 'rgba(255, 255, 255, 0.8)',
+          lineWidth: 2
+        })
       }
 
       ctx.restore()
     }
-  }
-
-  drawStar(ctx, cx, cy, radius, color) {
-    ctx.save()
-    ctx.fillStyle = color
-    ctx.strokeStyle = '#f39c12'
-    ctx.lineWidth = 2
-    ctx.beginPath()
-
-    for (let i = 0; i < 5; i++) {
-      const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2
-      const x = cx + Math.cos(angle) * radius
-      const y = cy + Math.sin(angle) * radius
-
-      if (i === 0) {
-        ctx.moveTo(x, y)
-      } else {
-        ctx.lineTo(x, y)
-      }
-    }
-
-    ctx.closePath()
-    ctx.fill()
-    ctx.stroke()
-    ctx.restore()
   }
 
   formatTime(seconds) {

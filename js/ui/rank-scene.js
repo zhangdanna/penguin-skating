@@ -1,4 +1,12 @@
 import Button from './button'
+import {
+  COLORS,
+  drawGlassPanel,
+  drawOceanBackdrop,
+  drawStickerText,
+  fillRoundRect,
+  font
+} from './theme'
 
 /**
  * 排行榜场景
@@ -23,15 +31,15 @@ export default class RankScene {
   init() {
     // 返回按钮
     this.buttons.push(new Button({
-      x: 20,
-      y: 20,
-      width: 80,
-      height: 40,
+      x: 18,
+      y: 22,
+      width: 76,
+      height: 36,
       text: '返回',
-      fontSize: 16,
-      bgColor: '#95a5a6',
-      hoverColor: '#7f8c8d',
-      borderColor: '#707b7c',
+      fontSize: 15,
+      bgColor: COLORS.lavender,
+      hoverColor: COLORS.lavenderDeep,
+      borderColor: '#7255CC',
       onClick: () => {
         this.hide()
         this.sceneManager.switchTo('menu')
@@ -142,123 +150,142 @@ export default class RankScene {
   }
 
   renderBackground(ctx) {
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height)
-    gradient.addColorStop(0, '#1a5276')
-    gradient.addColorStop(1, '#2874a6')
-    ctx.fillStyle = gradient
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    drawOceanBackdrop(ctx, Date.now() / 1000)
   }
 
   renderTitle(ctx) {
-    ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 32px Arial'
-    ctx.textAlign = 'center'
-    ctx.fillText('好友排行榜', canvas.width / 2, 60)
+    drawGlassPanel(ctx, 97, 22, 180, 46, 23, {
+      fill: 'rgba(255, 255, 255, 0.86)'
+    })
+    drawStickerText(ctx, '好友排行榜', canvas.width / 2, 46, {
+      size: 21,
+      color: COLORS.navy,
+      strokeWidth: 0
+    })
   }
 
   renderLoading(ctx) {
-    ctx.fillStyle = '#ffffff'
-    ctx.font = '20px Arial'
-    ctx.textAlign = 'center'
-    ctx.fillText('加载中...', canvas.width / 2, canvas.height / 2)
+    drawStickerText(ctx, '加载中...', canvas.width / 2, canvas.height / 2, {
+      size: 20,
+      color: COLORS.white,
+      strokeWidth: 4
+    })
   }
 
   renderNotLogin(ctx) {
     const centerX = canvas.width / 2
-    const centerY = canvas.height / 2
 
-    ctx.fillStyle = '#bdc3c7'
-    ctx.font = '20px Arial'
+    drawGlassPanel(ctx, 40, 210, 295, 150, 24, {
+      fill: 'rgba(255, 249, 238, 0.95)'
+    })
+
+    ctx.fillStyle = COLORS.navy
+    ctx.font = font(18)
     ctx.textAlign = 'center'
-    ctx.fillText('请先登录后查看排行榜', centerX, centerY - 20)
+    ctx.textBaseline = 'middle'
+    ctx.fillText('请先登录后查看排行榜', centerX, 268)
 
-    ctx.fillStyle = '#95a5a6'
-    ctx.font = '16px Arial'
-    ctx.fillText('点击"返回"后进入个人中心登录', centerX, centerY + 20)
+    ctx.fillStyle = COLORS.navySoft
+    ctx.font = font(13, 'normal')
+    ctx.fillText('点击"返回"后进入个人中心登录', centerX, 304)
   }
 
   renderEmpty(ctx) {
     const centerX = canvas.width / 2
-    const centerY = canvas.height / 2
 
-    ctx.fillStyle = '#bdc3c7'
-    ctx.font = '20px Arial'
+    drawGlassPanel(ctx, 40, 190, 295, 190, 24, {
+      fill: 'rgba(255, 249, 238, 0.95)'
+    })
+
+    ctx.fillStyle = COLORS.navy
+    ctx.font = font(18)
     ctx.textAlign = 'center'
-    ctx.fillText('暂无排行数据', centerX, centerY - 40)
+    ctx.textBaseline = 'middle'
+    ctx.fillText('暂无排行数据', centerX, 250)
 
-    ctx.fillStyle = '#95a5a6'
-    ctx.font = '16px Arial'
-    ctx.fillText('快去通关获取分数吧！', centerX, centerY)
-    ctx.fillText('邀请好友一起挑战！', centerX, centerY + 30)
+    ctx.fillStyle = COLORS.navySoft
+    ctx.font = font(13, 'normal')
+    ctx.fillText('快去通关获取分数吧！', centerX, 290)
+    ctx.fillText('邀请好友一起挑战！', centerX, 316)
   }
 
   renderRankList(ctx) {
-    const startY = 100
-    const itemHeight = 70
+    const startY = 96
+    const itemHeight = 64
     const maxItems = 8
+    const listWidth = canvas.width - 40
 
-    // 绘制表头
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'
-    ctx.fillRect(20, startY, canvas.width - 40, 40)
+    // 表头
+    fillRoundRect(ctx, 20, startY, listWidth, 38, 14, 'rgba(255, 255, 255, 0.85)')
 
-    ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 14px Arial'
+    ctx.fillStyle = COLORS.navySoft
+    ctx.font = font(12)
     ctx.textAlign = 'center'
-    ctx.fillText('排名', 60, startY + 25)
+    ctx.textBaseline = 'middle'
+    ctx.fillText('排名', 56, startY + 19)
     ctx.textAlign = 'left'
-    ctx.fillText('昵称', 110, startY + 25)
+    ctx.fillText('昵称', 104, startY + 19)
     ctx.textAlign = 'center'
-    ctx.fillText('关卡', 250, startY + 25)
-    ctx.fillText('星星', 310, startY + 25)
+    ctx.fillText('关卡', 256, startY + 19)
+    ctx.fillText('星星', 312, startY + 19)
     ctx.textAlign = 'right'
-    ctx.fillText('分数', canvas.width - 40, startY + 25)
+    ctx.fillText('分数', canvas.width - 38, startY + 19)
 
-    // 绘制排行项
+    // 排行项
     const displayList = this.rankList.slice(0, maxItems)
     displayList.forEach((item, index) => {
-      const y = startY + 50 + index * itemHeight
+      const y = startY + 46 + index * itemHeight
       const rank = index + 1
+      const rowHeight = itemHeight - 8
 
-      // 背景色交替
-      ctx.fillStyle = index % 2 === 0 ? 'rgba(52, 152, 219, 0.3)' : 'rgba(41, 128, 185, 0.3)'
-      ctx.fillRect(20, y, canvas.width - 40, itemHeight - 10)
+      // 奶油卡片行
+      fillRoundRect(
+        ctx,
+        20,
+        y,
+        listWidth,
+        rowHeight,
+        14,
+        index % 2 === 0 ? 'rgba(255, 255, 255, 0.82)' : 'rgba(234, 249, 255, 0.82)'
+      )
 
       // 排名
-      let rankColor = '#ffffff'
-      if (rank === 1) rankColor = '#f1c40f'
-      else if (rank === 2) rankColor = '#bdc3c7'
-      else if (rank === 3) rankColor = '#cd6155'
+      let rankColor = COLORS.navy
+      if (rank === 1) rankColor = COLORS.yellowDeep
+      else if (rank === 2) rankColor = '#8FA6B8'
+      else if (rank === 3) rankColor = COLORS.orangeDeep
 
       ctx.fillStyle = rankColor
-      ctx.font = 'bold 24px Arial'
+      ctx.font = font(22)
       ctx.textAlign = 'center'
-      ctx.fillText(rank.toString(), 60, y + 35)
+      ctx.textBaseline = 'middle'
+      ctx.fillText(rank.toString(), 56, y + rowHeight / 2)
 
       // 昵称
-      ctx.fillStyle = '#ffffff'
-      ctx.font = '16px Arial'
+      ctx.fillStyle = COLORS.navy
+      ctx.font = font(15)
       ctx.textAlign = 'left'
       const nickName = item.nickName || '微信用户'
       const displayName = nickName.length > 8 ? nickName.substring(0, 8) + '...' : nickName
-      ctx.fillText(displayName, 110, y + 30)
+      ctx.fillText(displayName, 104, y + rowHeight / 2)
 
       // 关卡
-      ctx.fillStyle = '#bdc3c7'
-      ctx.font = '14px Arial'
+      ctx.fillStyle = COLORS.navySoft
+      ctx.font = font(13, 'normal')
       ctx.textAlign = 'center'
-      ctx.fillText(`Lv.${item.level}`, 250, y + 35)
+      ctx.fillText(`Lv.${item.level}`, 256, y + rowHeight / 2)
 
       // 星星
-      ctx.fillStyle = '#f1c40f'
-      ctx.font = '16px Arial'
+      ctx.fillStyle = COLORS.yellowDeep
+      ctx.font = font(14)
       const starText = '★'.repeat(item.stars) + '☆'.repeat(3 - item.stars)
-      ctx.fillText(starText, 310, y + 35)
+      ctx.fillText(starText, 312, y + rowHeight / 2)
 
       // 分数
-      ctx.fillStyle = '#ffffff'
-      ctx.font = 'bold 18px Arial'
+      ctx.fillStyle = COLORS.mintDeep
+      ctx.font = font(16)
       ctx.textAlign = 'right'
-      ctx.fillText(item.score.toString(), canvas.width - 40, y + 35)
+      ctx.fillText(item.score.toString(), canvas.width - 38, y + rowHeight / 2)
     })
   }
 

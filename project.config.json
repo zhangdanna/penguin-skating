@@ -1,7 +1,8 @@
 {
   "description": "企鹅滑冰 - 微信小游戏",
   "packOptions": {
-    "ignore": []
+    "ignore": [],
+    "include": []
   },
   "setting": {
     "bundle": false,
@@ -33,11 +34,18 @@
       "ignore": [],
       "disablePlugins": [],
       "outputPath": ""
-    }
+    },
+    "compileWorklet": false,
+    "localPlugins": false,
+    "disableUseStrict": false,
+    "useCompilerPlugins": false,
+    "condition": false
   },
   "compileType": "game",
   "libVersion": "2.25.0",
-  "appid": "wxXXXXXXXXXXXXXXXX",
+  "appid": "wx25bf5262c669e9a9",
   "projectname": "penguin-skating",
-  "condition": {}
+  "condition": {},
+  "simulatorPluginLibVersion": {},
+  "editorSetting": {}
 }

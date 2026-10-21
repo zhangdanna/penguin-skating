@@ -1,7 +1,14 @@
 import Button from './button'
+import {
+  COLORS,
+  drawCandyButton,
+  drawOceanBackdrop,
+  drawPenguin,
+  drawStickerText
+} from './theme'
 
 /**
- * 主菜单场景
+ * 主菜单场景（极地海洋馆）
  */
 export default class MenuScene {
   constructor(sceneManager) {
@@ -10,7 +17,7 @@ export default class MenuScene {
 
     // 动画参数
     this.titleY = 0
-    this.titleTargetY = 0
+    this.titleTargetY = 118
     this.penguinAngle = 0
 
     this.init()
@@ -18,117 +25,102 @@ export default class MenuScene {
 
   init() {
     const centerX = canvas.width / 2
-    const buttonWidth = 200
-    const buttonHeight = 60
-    const buttonSpacing = 20
 
-    // 开始游戏按钮
+    // 主按钮
+    const mainWidth = 220
+    const mainHeight = 62
+    const mainX = centerX - mainWidth / 2
+
+    // 开始游戏（直接从上次通关后的关卡继续）
     this.buttons.push(new Button({
-      x: centerX - buttonWidth / 2,
-      y: 350,
-      width: buttonWidth,
-      height: buttonHeight,
-      text: '开始游戏',
+      x: mainX,
+      y: 392,
+      width: mainWidth,
+      height: mainHeight,
+      text: '继续冒险',
       fontSize: 24,
-      bgColor: '#27ae60',
-      hoverColor: '#229954',
-      borderColor: '#1e8449',
+      bgColor: COLORS.mint,
+      hoverColor: COLORS.mintDeep,
+      borderColor: '#17876C',
       onClick: () => {
-        this.sceneManager.switchTo('levelSelect')
+        this.sceneManager.switchTo('game', { level: this.getProgressLevel() })
       }
     }))
 
-    // 继续游戏按钮
-    this.buttons.push(new Button({
-      x: centerX - buttonWidth / 2,
-      y: 350 + buttonHeight + buttonSpacing,
-      width: buttonWidth,
-      height: buttonHeight,
-      text: '继续游戏',
-      fontSize: 24,
-      bgColor: '#3498db',
-      hoverColor: '#2980b9',
-      borderColor: '#2471a3',
-      onClick: () => {
-        // 读取存档，继续游戏
-        const savedLevel = this.getSavedLevel()
-        this.sceneManager.switchTo('game', { level: savedLevel, continue: true })
-      }
-    }))
+    // 次级按钮 2×2
+    const subWidth = 104
+    const subHeight = 46
+    const gapX = 16
+    const gapY = 12
+    const subStartX = centerX - subWidth - gapX / 2
+    const subStartY = 556
 
-    // 设置按钮
-    this.buttons.push(new Button({
-      x: centerX - buttonWidth / 2,
-      y: 350 + (buttonHeight + buttonSpacing) * 2,
-      width: buttonWidth,
-      height: buttonHeight,
-      text: '设置',
-      fontSize: 24,
-      bgColor: '#95a5a6',
-      hoverColor: '#7f8c8d',
-      borderColor: '#707b7c',
-      onClick: () => {
-        // TODO: 打开设置界面
-        console.log('打开设置')
+    const subButtons = [
+      {
+        text: '设置',
+        color: COLORS.lavender,
+        hover: COLORS.lavenderDeep,
+        border: '#7255CC',
+        onClick: () => {
+          // TODO: 打开设置界面
+          console.log('打开设置')
+        }
+      },
+      {
+        text: '排行榜',
+        color: COLORS.yellow,
+        hover: COLORS.yellowDeep,
+        border: '#B8861C',
+        onClick: () => {
+          this.sceneManager.switchTo('rank')
+        }
+      },
+      {
+        text: '成就',
+        color: COLORS.orange,
+        hover: COLORS.orangeDeep,
+        border: '#C1651F',
+        onClick: () => {
+          this.sceneManager.switchTo('achievement')
+        }
+      },
+      {
+        text: '个人中心',
+        color: COLORS.pink,
+        hover: COLORS.pinkDeep,
+        border: '#CE4D80',
+        onClick: () => {
+          this.sceneManager.switchTo('login')
+        }
       }
-    }))
+    ]
 
-    // 排行榜按钮
-    this.buttons.push(new Button({
-      x: centerX - buttonWidth / 2,
-      y: 350 + (buttonHeight + buttonSpacing) * 3,
-      width: buttonWidth,
-      height: buttonHeight,
-      text: '排行榜',
-      fontSize: 24,
-      bgColor: '#f39c12',
-      hoverColor: '#d68910',
-      borderColor: '#b9770e',
-      onClick: () => {
-        this.sceneManager.switchTo('rank')
-      }
-    }))
-
-    // 成就按钮
-    this.buttons.push(new Button({
-      x: centerX - buttonWidth / 2,
-      y: 350 + (buttonHeight + buttonSpacing) * 4,
-      width: buttonWidth,
-      height: buttonHeight,
-      text: '成就',
-      fontSize: 24,
-      bgColor: '#e67e22',
-      hoverColor: '#d35400',
-      borderColor: '#ba4a00',
-      onClick: () => {
-        this.sceneManager.switchTo('achievement')
-      }
-    }))
-
-    // 个人中心按钮
-    this.buttons.push(new Button({
-      x: centerX - buttonWidth / 2,
-      y: 350 + (buttonHeight + buttonSpacing) * 5,
-      width: buttonWidth,
-      height: buttonHeight,
-      text: '个人中心',
-      fontSize: 24,
-      bgColor: '#8e44ad',
-      hoverColor: '#7d3c98',
-      borderColor: '#6c3483',
-      onClick: () => {
-        this.sceneManager.switchTo('login')
-      }
-    }))
+    subButtons.forEach((config, index) => {
+      const col = index % 2
+      const row = Math.floor(index / 2)
+      this.buttons.push(new Button({
+        x: subStartX + col * (subWidth + gapX),
+        y: subStartY + row * (subHeight + gapY),
+        width: subWidth,
+        height: subHeight,
+        text: config.text,
+        fontSize: 16,
+        bgColor: config.color,
+        hoverColor: config.hover,
+        borderColor: config.border,
+        onClick: config.onClick
+      }))
+    })
   }
 
   /**
-   * 获取存档关卡
+   * 获取当前进度：上次通关后的下一关（无限关卡）
    */
-  getSavedLevel() {
+  getProgressLevel() {
     try {
       const data = wx.getStorageSync('gameProgress')
-      return data ? data.currentLevel || 1 : 1
+      const level = data ? parseInt(data.unlockedLevel) : 1
+      return Number.isFinite(level) && level >= 1 ? level : 1
     } catch (e) {
       return 1
     }
@@ -136,7 +128,7 @@ export default class MenuScene {
 
   onEnter() {
     this.titleY = -100
-    this.titleTargetY = 150
+    this.titleTargetY = 118
   }
 
   onExit() {
@@ -146,129 +138,83 @@ export default class MenuScene {
   update() {
     // 标题下落动画
     if (this.titleY < this.titleTargetY) {
-      this.titleY += (this.titleTargetY - this.titleY) * 0.1
+      this.titleY += (this.titleTargetY - this.titleY) * 0.12
+      if (this.titleTargetY - this.titleY < 0.5) {
+        this.titleY = this.titleTargetY
+      }
     }
 
     // 企鹅摇摆动画
-    this.penguinAngle = Math.sin(Date.now() * 0.003) * 0.1
+    this.penguinAngle = Math.sin(Date.now() * 0.003) * 0.06
   }
 
   render(ctx) {
-    // 绘制背景
-    this.renderBackground(ctx)
+    const time = Date.now() / 1000
 
-    // 绘制标题
+    // 海洋馆背景
+    drawOceanBackdrop(ctx, time)
+
+    // 标题
     this.renderTitle(ctx)
 
-    // 绘制企鹅
-    this.renderPenguin(ctx)
+    // 企鹅吉祥物
+    this.renderPenguin(ctx, time)
 
-    // 绘制按钮
+    // 按钮
     this.buttons.forEach(btn => btn.render(ctx))
   }
 
-  renderBackground(ctx) {
-    // 渐变背景
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height)
-    gradient.addColorStop(0, '#1a5276')
-    gradient.addColorStop(0.5, '#2874a6')
-    gradient.addColorStop(1, '#3498db')
-    ctx.fillStyle = gradient
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-    // 雪花效果
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'
-    const time = Date.now() * 0.001
-    for (let i = 0; i < 20; i++) {
-      const x = (Math.sin(time + i * 0.5) * 0.5 + 0.5) * canvas.width
-      const y = ((time * 0.1 + i * 0.05) % 1) * canvas.height
-      ctx.beginPath()
-      ctx.arc(x, y, 2, 0, Math.PI * 2)
-      ctx.fill()
-    }
-  }
-
   renderTitle(ctx) {
-    ctx.save()
+    const centerX = canvas.width / 2
 
-    // 标题文字
-    ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 48px Arial'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
+    // 标题投影
+    drawStickerText(ctx, '企鹅滑冰', centerX, this.titleY + 5, {
+      size: 50,
+      color: 'rgba(31, 58, 95, 0.22)',
+      strokeWidth: 0
+    })
 
-    // 文字阴影
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
-    ctx.shadowBlur = 10
-    ctx.shadowOffsetX = 2
-    ctx.shadowOffsetY = 2
+    // 主标题
+    drawStickerText(ctx, '企鹅滑冰', centerX, this.titleY, {
+      size: 50,
+      color: COLORS.white,
+      stroke: COLORS.navyDeep,
+      strokeWidth: 7
+    })
 
-    ctx.fillText('企鹅滑冰', canvas.width / 2, this.titleY)
-
-    // 副标题
-    ctx.font = '20px Arial'
-    ctx.shadowBlur = 5
-    ctx.fillText('Penguin Skating', canvas.width / 2, this.titleY + 50)
-
-    ctx.restore()
+    // 副标题胶囊
+    drawCandyButton(ctx, centerX - 82, this.titleY + 34, 164, 24, {
+      color: COLORS.water,
+      shadowColor: COLORS.waterDeep,
+      radius: 12
+    })
+    drawStickerText(ctx, 'POLAR AQUARIUM', centerX, this.titleY + 46, {
+      size: 11,
+      color: COLORS.white,
+      strokeWidth: 2
+    })
   }
 
-  renderPenguin(ctx) {
-    ctx.save()
-
+  renderPenguin(ctx, time) {
     const centerX = canvas.width / 2
-    const centerY = 250
+    const baseY = 280
+    const centerY = baseY + Math.sin(time * 1.6) * 4
 
-    ctx.translate(centerX, centerY)
-    ctx.rotate(this.penguinAngle)
-
-    // 绘制简化的企鹅
-    // 身体
-    ctx.fillStyle = '#2c3e50'
+    // 企鹅脚下的浮冰
+    ctx.save()
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.55)'
     ctx.beginPath()
-    ctx.ellipse(0, 10, 30, 40, 0, 0, Math.PI * 2)
+    ctx.ellipse(centerX, baseY + 72, 66, 14, 0, 0, Math.PI * 2)
     ctx.fill()
-
-    // 肚子
-    ctx.fillStyle = '#ecf0f1'
-    ctx.beginPath()
-    ctx.ellipse(0, 15, 20, 30, 0, 0, Math.PI * 2)
-    ctx.fill()
-
-    // 头部
-    ctx.fillStyle = '#2c3e50'
-    ctx.beginPath()
-    ctx.arc(0, -25, 25, 0, Math.PI * 2)
-    ctx.fill()
-
-    // 眼睛
-    ctx.fillStyle = '#ffffff'
-    ctx.beginPath()
-    ctx.arc(-8, -30, 6, 0, Math.PI * 2)
-    ctx.arc(8, -30, 6, 0, Math.PI * 2)
-    ctx.fill()
-
-    ctx.fillStyle = '#000000'
-    ctx.beginPath()
-    ctx.arc(-6, -30, 3, 0, Math.PI * 2)
-    ctx.arc(6, -30, 3, 0, Math.PI * 2)
-    ctx.fill()
-
-    // 嘴巴
-    ctx.fillStyle = '#e67e22'
-    ctx.beginPath()
-    ctx.moveTo(0, -20)
-    ctx.lineTo(-6, -15)
-    ctx.lineTo(6, -15)
-    ctx.closePath()
-    ctx.fill()
-
-    // 围巾
-    ctx.fillStyle = '#e74c3c'
-    ctx.fillRect(-25, -5, 50, 10)
-    ctx.fillRect(15, -5, 10, 25)
-
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)'
+    ctx.lineWidth = 2
+    ctx.stroke()
     ctx.restore()
+
+    drawPenguin(ctx, centerX, centerY, 2.5, {
+      angle: this.penguinAngle,
+      direction: 'down'
+    })
   }
 
   onTouchStart(touch) {

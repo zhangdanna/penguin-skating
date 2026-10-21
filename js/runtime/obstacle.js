@@ -1,4 +1,10 @@
 import Sprite from '../base/sprite'
+import {
+  COLORS,
+  drawSnowflake,
+  fillRoundRect,
+  roundRectPath
+} from '../ui/theme'
 
 /**
  * 障碍物基类
@@ -129,33 +135,49 @@ class IceWall extends Obstacle {
   render(ctx) {
     ctx.save()
 
-    // 绘制冰墙主体
-    ctx.fillStyle = 'rgba(135, 206, 235, 0.8)'
-    ctx.fillRect(this.x, this.y, this.width, this.height)
-
-    // 绘制冰晶纹理
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'
-    ctx.lineWidth = 1
-
-    // 对角线纹理
+    // 底部阴影
+    ctx.fillStyle = 'rgba(31, 58, 95, 0.16)'
     ctx.beginPath()
-    ctx.moveTo(this.x + 10, this.y + 10)
-    ctx.lineTo(this.x + this.width - 10, this.y + this.height - 10)
+    ctx.ellipse(this.x + this.width / 2, this.y + this.height - 3, this.width * 0.4, 4, 0, 0, Math.PI * 2)
+    ctx.fill()
+
+    // 冰砖主体
+    const ice = ctx.createLinearGradient(this.x, this.y, this.x, this.y + this.height)
+    ice.addColorStop(0, '#EAFBFF')
+    ice.addColorStop(0.55, '#A9E2F8')
+    ice.addColorStop(1, '#78C7E8')
+    fillRoundRect(ctx, this.x + 2, this.y + 2, this.width - 4, this.height - 4, 8, ice)
+
+    // 砖缝
+    ctx.strokeStyle = 'rgba(70, 140, 170, 0.35)'
+    ctx.lineWidth = 1.5
+    const midY = this.y + this.height / 2
+    ctx.beginPath()
+    ctx.moveTo(this.x + 4, midY)
+    ctx.lineTo(this.x + this.width - 4, midY)
+    ctx.moveTo(this.x + this.width / 2, this.y + 4)
+    ctx.lineTo(this.x + this.width / 2, midY)
+    ctx.moveTo(this.x + this.width * 0.28, midY)
+    ctx.lineTo(this.x + this.width * 0.28, this.y + this.height - 4)
     ctx.stroke()
 
+    // 顶部左高光
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)'
+    ctx.lineWidth = 2.5
+    ctx.lineCap = 'round'
     ctx.beginPath()
-    ctx.moveTo(this.x + this.width - 10, this.y + 10)
-    ctx.lineTo(this.x + 10, this.y + this.height - 10)
+    ctx.moveTo(this.x + 8, this.y + 7)
+    ctx.lineTo(this.x + this.width - 12, this.y + 7)
     ctx.stroke()
 
-    // 边框
-    ctx.strokeStyle = 'rgba(100, 180, 220, 0.9)'
+    // 外描边
+    roundRectPath(ctx, this.x + 2, this.y + 2, this.width - 4, this.height - 4, 8)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)'
     ctx.lineWidth = 2
-    ctx.strokeRect(this.x, this.y, this.width, this.height)
+    ctx.stroke()
 
-    // 高光效果
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)'
-    ctx.fillRect(this.x + 5, this.y + 5, this.width / 3, this.height / 3)
+    // 冰晶闪光
+    drawSnowflake(ctx, this.x + this.width - 13, this.y + 14, 5, 'rgba(255, 255, 255, 0.75)', 1.2)
 
     ctx.restore()
   }
@@ -193,53 +215,69 @@ class IceHole extends Obstacle {
   }
 
   render(ctx) {
-    ctx.save()
-
     const centerX = this.x + this.width / 2
     const centerY = this.y + this.height / 2
     const radius = this.width / 2 - 5
 
-    // 绘制黑色窟窿
-    ctx.fillStyle = '#1a1a1a'
+    ctx.save()
+
+    // 洞口寒气光晕
+    const haze = ctx.createRadialGradient(centerX, centerY, radius, centerX, centerY, radius + 14)
+    haze.addColorStop(0, 'rgba(143, 227, 255, 0.55)')
+    haze.addColorStop(1, 'rgba(143, 227, 255, 0)')
+    ctx.fillStyle = haze
+    ctx.beginPath()
+    ctx.arc(centerX, centerY, radius + 14, 0, Math.PI * 2)
+    ctx.fill()
+
+    // 冰面水洞
+    const water = ctx.createRadialGradient(centerX, centerY - 3, 2, centerX, centerY, radius)
+    water.addColorStop(0, '#0B3B5E')
+    water.addColorStop(0.7, '#14587C')
+    water.addColorStop(1, '#2C86AD')
+    ctx.fillStyle = water
     ctx.beginPath()
     ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
     ctx.fill()
 
-    // 绘制内部渐变
-    const gradient = ctx.createRadialGradient(
-      centerX, centerY, 0,
-      centerX, centerY, radius
-    )
-    gradient.addColorStop(0, 'rgba(0, 0, 0, 0.9)')
-    gradient.addColorStop(0.7, 'rgba(20, 20, 20, 0.7)')
-    gradient.addColorStop(1, 'rgba(40, 40, 40, 0.5)')
-    ctx.fillStyle = gradient
+    // 水光波纹
+    const ripple = 0.5 + Math.sin(this.warningPulse) * 0.5
+    ctx.strokeStyle = `rgba(143, 227, 255, ${0.25 + ripple * 0.35})`
+    ctx.lineWidth = 1.5
     ctx.beginPath()
-    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
-    ctx.fill()
-
-    // 绘制警示红光
-    const alpha = (Math.sin(this.warningPulse) + 1) / 2 * 0.6
-    ctx.strokeStyle = `rgba(255, 50, 50, ${alpha})`
-    ctx.lineWidth = 3
-    ctx.beginPath()
-    ctx.arc(centerX, centerY, radius + 2, 0, Math.PI * 2)
+    ctx.arc(centerX, centerY, radius * (0.45 + ripple * 0.2), 0, Math.PI * 2)
     ctx.stroke()
 
-    // 绘制裂纹
-    ctx.strokeStyle = 'rgba(100, 100, 100, 0.5)'
-    ctx.lineWidth = 1
-    for (let i = 0; i < 4; i++) {
-      const angle = (i / 4) * Math.PI * 2
-      const x1 = centerX + Math.cos(angle) * (radius - 5)
-      const y1 = centerY + Math.sin(angle) * (radius - 5)
-      const x2 = centerX + Math.cos(angle) * (radius + 8)
-      const y2 = centerY + Math.sin(angle) * (radius + 8)
+    // 冰面裂纹
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)'
+    ctx.lineWidth = 1.5
+    ctx.lineCap = 'round'
+    for (let i = 0; i < 7; i++) {
+      const angle = (i / 7) * Math.PI * 2 + 0.3
+      const inner = radius + 1
+      const outer = radius + 4 + (i % 3) * 2
       ctx.beginPath()
-      ctx.moveTo(x1, y1)
-      ctx.lineTo(x2, y2)
+      ctx.moveTo(centerX + Math.cos(angle) * inner, centerY + Math.sin(angle) * inner)
+      ctx.lineTo(centerX + Math.cos(angle) * outer, centerY + Math.sin(angle) * outer)
       ctx.stroke()
     }
+
+    // 洞口边缘
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)'
+    ctx.lineWidth = 2.5
+    ctx.beginPath()
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
+    ctx.stroke()
+
+    // 警示浮标
+    const buoyX = centerX + radius * 0.72
+    const buoyY = centerY - radius * 0.75
+    ctx.fillStyle = COLORS.coral
+    ctx.beginPath()
+    ctx.arc(buoyX, buoyY, 4.5, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = COLORS.white
+    ctx.fillRect(buoyX - 4.5, buoyY - 1.2, 9, 2.4)
 
     ctx.restore()
   }
@@ -274,60 +312,38 @@ class SnowPile extends Obstacle {
   }
 
   render(ctx) {
-    ctx.save()
-
     const centerX = this.x + this.width / 2
     const centerY = this.y + this.height / 2
 
-    // 绘制雪堆阴影
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'
+    ctx.save()
+
+    // 底部阴影
+    ctx.fillStyle = 'rgba(31, 58, 95, 0.12)'
     ctx.beginPath()
-    ctx.ellipse(centerX + 2, centerY + this.height / 2 - 5, this.width / 2 - 2, 8, 0, 0, Math.PI * 2)
+    ctx.ellipse(centerX, centerY + this.height / 2 - 4, this.width * 0.42, 6, 0, 0, Math.PI * 2)
     ctx.fill()
 
-    // 绘制雪堆主体（多个圆形组合）
-    ctx.fillStyle = '#ffffff'
-
-    // 底部大雪球
+    // 蓬松雪堆
+    ctx.fillStyle = COLORS.white
+    ctx.strokeStyle = 'rgba(180, 225, 245, 0.7)'
+    ctx.lineWidth = 1.5
     ctx.beginPath()
-    ctx.arc(centerX, centerY + 5, 18, 0, Math.PI * 2)
+    ctx.arc(centerX, centerY + 5, 16, 0, Math.PI * 2)
+    ctx.arc(centerX - 11, centerY + 9, 10, 0, Math.PI * 2)
+    ctx.arc(centerX + 11, centerY + 9, 10, 0, Math.PI * 2)
+    ctx.arc(centerX, centerY - 5, 12, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.stroke()
+
+    // 雪面冷色阴影
+    ctx.fillStyle = 'rgba(190, 235, 255, 0.55)'
+    ctx.beginPath()
+    ctx.ellipse(centerX, centerY + 12, 15, 5, 0, 0, Math.PI * 2)
     ctx.fill()
 
-    // 左下小雪球
-    ctx.beginPath()
-    ctx.arc(centerX - 12, centerY + 10, 12, 0, Math.PI * 2)
-    ctx.fill()
-
-    // 右下小雪球
-    ctx.beginPath()
-    ctx.arc(centerX + 12, centerY + 10, 12, 0, Math.PI * 2)
-    ctx.fill()
-
-    // 顶部雪球
-    ctx.beginPath()
-    ctx.arc(centerX, centerY - 5, 14, 0, Math.PI * 2)
-    ctx.fill()
-
-    // 绘制雪花点缀
-    ctx.fillStyle = 'rgba(200, 220, 255, 0.8)'
-    const snowflakes = [
-      { x: -8, y: -2, size: 2 },
-      { x: 5, y: 8, size: 1.5 },
-      { x: -3, y: 12, size: 1 },
-      { x: 10, y: -3, size: 1.5 }
-    ]
-
-    snowflakes.forEach(flake => {
-      ctx.beginPath()
-      ctx.arc(centerX + flake.x, centerY + flake.y, flake.size, 0, Math.PI * 2)
-      ctx.fill()
-    })
-
-    // 绘制高光
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)'
-    ctx.beginPath()
-    ctx.arc(centerX - 5, centerY - 8, 4, 0, Math.PI * 2)
-    ctx.fill()
+    // 雪花闪光
+    drawSnowflake(ctx, centerX - 6, centerY - 8, 5, 'rgba(127, 212, 245, 0.85)', 1.2)
+    drawSnowflake(ctx, centerX + 8, centerY + 2, 3.5, 'rgba(255, 255, 255, 0.95)', 1)
 
     ctx.restore()
   }

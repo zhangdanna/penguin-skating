@@ -3,6 +3,14 @@
  * 显示游戏失败界面（无复活选项时）
  */
 import Button from './button'
+import {
+  COLORS,
+  drawGlassPanel,
+  drawOverlay,
+  drawPenguin,
+  drawStickerText,
+  font
+} from './theme'
 
 export default class GameOverScene {
   constructor() {
@@ -25,8 +33,8 @@ export default class GameOverScene {
     const centerX = canvas.width / 2
     const buttonWidth = 200
     const buttonHeight = 50
-    const buttonSpacing = 20
-    const startY = 420
+    const buttonSpacing = 16
+    const startY = 436
 
     // 重玩按钮
     this.buttons.push(new Button({
@@ -36,9 +44,9 @@ export default class GameOverScene {
       height: buttonHeight,
       text: '🔄 重新挑战',
       fontSize: 20,
-      bgColor: '#27ae60',
-      hoverColor: '#229954',
-      borderColor: '#1e8449',
+      bgColor: COLORS.mint,
+      hoverColor: COLORS.mintDeep,
+      borderColor: '#17876C',
       onClick: () => {
         if (this.onRestart) this.onRestart()
       }
@@ -52,9 +60,9 @@ export default class GameOverScene {
       height: buttonHeight,
       text: '📺 看广告复活',
       fontSize: 20,
-      bgColor: '#f39c12',
-      hoverColor: '#d68910',
-      borderColor: '#b9770e',
+      bgColor: COLORS.yellow,
+      hoverColor: COLORS.yellowDeep,
+      borderColor: '#B8861C',
       onClick: () => {
         if (this.onWatchAd) this.onWatchAd()
       }
@@ -68,9 +76,9 @@ export default class GameOverScene {
       height: buttonHeight,
       text: '🏠 返回菜单',
       fontSize: 20,
-      bgColor: '#95a5a6',
-      hoverColor: '#7f8c8d',
-      borderColor: '#707b7c',
+      bgColor: COLORS.lavender,
+      hoverColor: COLORS.lavenderDeep,
+      borderColor: '#7255CC',
       onClick: () => {
         if (this.onBackToMenu) this.onBackToMenu()
       }
@@ -115,9 +123,11 @@ export default class GameOverScene {
   render(ctx) {
     if (!this.isVisible) return
 
-    // 半透明背景
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    // 深蓝遮罩 + 奶油面板
+    drawOverlay(ctx, 0.62)
+    drawGlassPanel(ctx, 30, 76, 315, 560, 30, {
+      fill: 'rgba(255, 249, 238, 0.97)'
+    })
 
     // 渲染内容
     this.renderContent(ctx)
@@ -132,89 +142,49 @@ export default class GameOverScene {
   renderContent(ctx) {
     const centerX = canvas.width / 2
 
-    ctx.save()
-
-    // 企鹅动画
-    this.renderPenguin(ctx, centerX, 180)
+    // 难过企鹅
+    this.renderPenguin(ctx, centerX, 172)
 
     // 标题
-    ctx.fillStyle = '#e74c3c'
-    ctx.font = 'bold 32px Arial'
-    ctx.textAlign = 'center'
-    ctx.fillText('游戏结束', centerX, 280)
+    drawStickerText(ctx, '游戏结束', centerX, 286, {
+      size: 34,
+      color: COLORS.coral,
+      stroke: COLORS.navyDeep,
+      strokeWidth: 5
+    })
 
     // 提示文字
-    ctx.fillStyle = '#bdc3c7'
-    ctx.font = '16px Arial'
-    ctx.fillText('企鹅掉入冰窟窿了...', centerX, 320)
-    ctx.fillText('别灰心，再试一次吧！', centerX, 350)
+    ctx.font = font(15)
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = COLORS.navy
+    ctx.fillText('企鹅掉进冰冻的水洞了...', centerX, 328)
+
+    ctx.font = font(14, 'normal')
+    ctx.fillStyle = COLORS.navySoft
+    ctx.fillText('别灰心，再试一次吧！', centerX, 354)
 
     // 提示广告
-    ctx.fillStyle = '#f39c12'
-    ctx.font = '14px Arial'
-    ctx.fillText('看广告可以复活哦~', centerX, 390)
-
-    ctx.restore()
+    ctx.font = font(13)
+    ctx.fillStyle = COLORS.yellowDeep
+    ctx.fillText('看广告可以复活哦~', centerX, 396)
   }
 
   /**
    * 渲染企鹅
    */
   renderPenguin(ctx, x, y) {
-    ctx.save()
-
-    ctx.translate(x, y)
-    ctx.rotate(this.penguinAngle)
-
-    // 身体（倒下）
-    ctx.fillStyle = '#2c3e50'
-    ctx.beginPath()
-    ctx.ellipse(0, 10, 35, 25, 0.3, 0, Math.PI * 2)
-    ctx.fill()
-
-    // 肚子
-    ctx.fillStyle = '#ecf0f1'
-    ctx.beginPath()
-    ctx.ellipse(0, 15, 25, 18, 0.3, 0, Math.PI * 2)
-    ctx.fill()
-
-    // 头部
-    ctx.fillStyle = '#2c3e50'
-    ctx.beginPath()
-    ctx.arc(-15, -10, 20, 0, Math.PI * 2)
-    ctx.fill()
-
-    // 眼睛（X_X）
-    ctx.strokeStyle = '#ffffff'
-    ctx.lineWidth = 2
-    // 左眼 X
-    ctx.beginPath()
-    ctx.moveTo(-22, -15)
-    ctx.lineTo(-18, -11)
-    ctx.moveTo(-18, -15)
-    ctx.lineTo(-22, -11)
-    ctx.stroke()
-    // 右眼 X
-    ctx.beginPath()
-    ctx.moveTo(-12, -15)
-    ctx.lineTo(-8, -11)
-    ctx.moveTo(-8, -15)
-    ctx.lineTo(-12, -11)
-    ctx.stroke()
+    drawPenguin(ctx, x, y, 2.2, {
+      angle: this.penguinAngle,
+      sad: true
+    })
 
     // 眼泪
-    ctx.fillStyle = '#3498db'
+    ctx.save()
+    ctx.fillStyle = 'rgba(91, 200, 245, 0.9)'
     ctx.beginPath()
-    ctx.arc(-20, -5 + this.teardropY * 0.3, 3, 0, Math.PI * 2)
+    ctx.arc(x + 14, y - 16 + this.teardropY * 0.5, 3, 0, Math.PI * 2)
     ctx.fill()
-
-    // 嘴巴（难过）
-    ctx.strokeStyle = '#e67e22'
-    ctx.lineWidth = 2
-    ctx.beginPath()
-    ctx.arc(-15, 0, 5, 0.2 * Math.PI, 0.8 * Math.PI, true)
-    ctx.stroke()
-
     ctx.restore()
   }
 

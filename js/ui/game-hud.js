@@ -1,8 +1,17 @@
 import Button from './button'
+import {
+  COLORS,
+  drawCandyButton,
+  drawGlassPanel,
+  drawStickerText,
+  fillRoundRect,
+  font,
+  roundRectPath
+} from './theme'
 
 /**
  * 游戏内HUD
- * 显示关卡信息、步数、时间等
+ * 显示关卡信息、步数、时间等（亚克力导览牌风格）
  */
 export default class GameHUD {
   constructor() {
@@ -14,15 +23,15 @@ export default class GameHUD {
 
     // 暂停按钮
     this.pauseButton = new Button({
-      x: canvas.width - 70,
-      y: 20,
-      width: 50,
-      height: 50,
-      text: '⏸',
-      fontSize: 24,
-      bgColor: 'rgba(0, 0, 0, 0.3)',
-      hoverColor: 'rgba(0, 0, 0, 0.5)',
-      borderColor: 'transparent',
+      x: canvas.width - 62,
+      y: 16,
+      width: 44,
+      height: 44,
+      text: 'Ⅱ',
+      fontSize: 18,
+      bgColor: COLORS.orange,
+      hoverColor: COLORS.orangeDeep,
+      borderColor: '#B55F22',
       onClick: () => {
         if (this.onPauseClick) {
           this.onPauseClick()
@@ -73,33 +82,46 @@ export default class GameHUD {
 
     ctx.save()
 
-    // 顶部背景条
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'
-    ctx.fillRect(0, 0, canvas.width, 80)
+    // 亚克力导览牌
+    drawGlassPanel(ctx, 10, 8, canvas.width - 20, 64, 20, {
+      fill: 'rgba(255, 255, 255, 0.86)'
+    })
 
-    // 关卡信息
-    ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 18px Arial'
-    ctx.textAlign = 'left'
-    ctx.textBaseline = 'top'
-    ctx.fillText(`关卡 ${this.level}`, 20, 20)
+    // 关卡徽章
+    drawCandyButton(ctx, 20, 16, 92, 24, {
+      color: COLORS.mint,
+      shadowColor: COLORS.mintDeep,
+      radius: 12
+    })
+    drawStickerText(ctx, `关卡 ${this.level}`, 66, 28, {
+      size: 13,
+      color: COLORS.white,
+      strokeWidth: 2.5
+    })
 
     // 步数
-    ctx.font = '16px Arial'
-    const movesColor = this.moves <= this.par ? '#2ecc71' : '#e74c3c'
-    ctx.fillStyle = movesColor
-    ctx.fillText(`步数: ${this.moves}`, 20, 48)
+    ctx.font = font(15)
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = this.moves <= this.par ? COLORS.mintDeep : COLORS.coral
+    ctx.fillText(`步数 ${this.moves}`, 22, 54)
 
-    // 标准步数
-    ctx.fillStyle = '#95a5a6'
-    ctx.font = '12px Arial'
-    ctx.fillText(`标准: ${this.par}`, 100, 52)
+    ctx.font = font(11, 'normal')
+    ctx.fillStyle = COLORS.navySoft
+    ctx.fillText(`标准 ${this.par}`, 92, 54)
 
-    // 时间
-    ctx.fillStyle = '#ffffff'
-    ctx.font = '16px Arial'
+    // 计时胶囊
+    const timerX = canvas.width / 2 - 40
+    fillRoundRect(ctx, timerX, 16, 80, 26, 13, 'rgba(91, 200, 245, 0.22)')
+    roundRectPath(ctx, timerX, 16, 80, 26, 13)
+    ctx.strokeStyle = 'rgba(91, 200, 245, 0.6)'
+    ctx.lineWidth = 1.5
+    ctx.stroke()
+
+    ctx.font = font(15)
+    ctx.fillStyle = COLORS.navy
     ctx.textAlign = 'center'
-    ctx.fillText(this.formatTime(this.time), canvas.width / 2, 35)
+    ctx.fillText(this.formatTime(this.time), canvas.width / 2, 30)
 
     // 暂停按钮
     this.pauseButton.render(ctx)

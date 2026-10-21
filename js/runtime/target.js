@@ -1,8 +1,14 @@
 import Sprite from '../base/sprite'
+import {
+  COLORS,
+  drawStar,
+  fillRoundRect,
+  roundRectPath
+} from '../ui/theme'
 
 /**
  * 目标区域类
- * 石头需要被推到的目标位置
+ * 石头需要被推到的目标位置（海洋馆展台聚光灯格）
  */
 export default class Target extends Sprite {
   constructor(config) {
@@ -40,41 +46,61 @@ export default class Target extends Sprite {
    * @param {CanvasRenderingContext2D} ctx - 画布上下文
    */
   render(ctx) {
-    ctx.save()
-
     const centerX = this.x + this.width / 2
     const centerY = this.y + this.height / 2
+    const alpha = 0.4 + Math.sin(this.pulse) * 0.15
+    const scale = 1 + Math.sin(this.pulse) * 0.03
 
-    // 脉冲效果
-    const alpha = 0.3 + Math.sin(this.pulse) * 0.2
-    const scale = 1 + Math.sin(this.pulse) * 0.05
-
+    ctx.save()
     ctx.translate(centerX, centerY)
     ctx.scale(scale, scale)
     ctx.translate(-centerX, -centerY)
 
-    // 绘制外圈光晕
-    ctx.fillStyle = `rgba(46, 204, 113, ${alpha})`
+    // 地面光晕
+    const glow = ctx.createRadialGradient(centerX, centerY, 2, centerX, centerY, this.width * 0.75)
+    glow.addColorStop(0, `rgba(47, 191, 155, ${alpha})`)
+    glow.addColorStop(1, 'rgba(47, 191, 155, 0)')
+    ctx.fillStyle = glow
     ctx.beginPath()
-    ctx.arc(centerX, centerY, this.width / 2 + 5, 0, Math.PI * 2)
+    ctx.arc(centerX, centerY, this.width * 0.75, 0, Math.PI * 2)
     ctx.fill()
 
-    // 绘制目标区域
-    ctx.fillStyle = 'rgba(46, 204, 113, 0.5)'
-    ctx.fillRect(this.x, this.y, this.width, this.height)
+    // 展台格
+    fillRoundRect(ctx, this.x + 2, this.y + 2, this.width - 4, this.height - 4, 10, 'rgba(255, 255, 255, 0.28)')
 
-    // 绘制边框
-    ctx.strokeStyle = '#27ae60'
-    ctx.lineWidth = 2
-    ctx.setLineDash([5, 5])
-    ctx.strokeRect(this.x, this.y, this.width, this.height)
+    // 虚线边框
+    ctx.setLineDash([5, 4])
+    roundRectPath(ctx, this.x + 3, this.y + 3, this.width - 6, this.height - 6, 9)
+    ctx.strokeStyle = COLORS.mint
+    ctx.lineWidth = 2.5
+    ctx.stroke()
     ctx.setLineDash([])
 
-    // 绘制中心标记
-    ctx.fillStyle = '#27ae60'
-    ctx.beginPath()
-    ctx.arc(centerX, centerY, 5, 0, Math.PI * 2)
-    ctx.fill()
+    // 四角高亮
+    ctx.strokeStyle = COLORS.white
+    ctx.lineWidth = 3
+    ctx.lineCap = 'round'
+    const pad = 7
+    const len = 7
+    const corners = [
+      [this.x + pad, this.y + pad, 1, 1],
+      [this.x + this.width - pad, this.y + pad, -1, 1],
+      [this.x + pad, this.y + this.height - pad, 1, -1],
+      [this.x + this.width - pad, this.y + this.height - pad, -1, -1]
+    ]
+    corners.forEach(([x, y, dx, dy]) => {
+      ctx.beginPath()
+      ctx.moveTo(x + dx * len, y)
+      ctx.lineTo(x, y)
+      ctx.lineTo(x, y + dy * len)
+      ctx.stroke()
+    })
+
+    // 中心星星
+    drawStar(ctx, centerX, centerY, 8, COLORS.yellow, {
+      stroke: COLORS.white,
+      lineWidth: 1.8
+    })
 
     ctx.restore()
   }

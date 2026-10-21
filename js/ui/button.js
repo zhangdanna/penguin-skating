@@ -1,6 +1,8 @@
+import { COLORS, drawCandyButton, drawStickerText } from './theme'
+
 /**
  * 按钮组件
- * 可点击的UI按钮
+ * 可点击的UI按钮（糖果胶囊风）
  */
 export default class Button {
   constructor(config) {
@@ -14,7 +16,7 @@ export default class Button {
     this.bgColor = config.bgColor || '#4a90d9'
     this.hoverColor = config.hoverColor || '#357abd'
     this.borderColor = config.borderColor || '#2c5282'
-    this.borderRadius = config.borderRadius || 8
+    this.borderRadius = config.borderRadius || 25
 
     this.isHovered = false
     this.isVisible = true
@@ -75,28 +77,24 @@ export default class Button {
   render(ctx) {
     if (!this.isVisible) return
 
-    ctx.save()
+    const pressed = this.isHovered
+    const offsetY = pressed ? 2 : 0
 
-    // 绘制按钮背景
-    const bgColor = this.isHovered ? this.hoverColor : this.bgColor
-    ctx.fillStyle = bgColor
-    this.roundRect(ctx, this.x, this.y, this.width, this.height, this.borderRadius)
-    ctx.fill()
+    // 糖果胶囊按钮
+    drawCandyButton(ctx, this.x, this.y, this.width, this.height, {
+      color: pressed ? this.hoverColor : this.bgColor,
+      shadowColor: this.borderColor,
+      radius: Math.min(this.borderRadius, this.height / 2),
+      pressed
+    })
 
-    // 绘制边框
-    ctx.strokeStyle = this.borderColor
-    ctx.lineWidth = 2
-    this.roundRect(ctx, this.x, this.y, this.width, this.height, this.borderRadius)
-    ctx.stroke()
-
-    // 绘制文字
-    ctx.fillStyle = this.textColor
-    ctx.font = `${this.fontSize}px Arial`
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText(this.text, this.x + this.width / 2, this.y + this.height / 2)
-
-    ctx.restore()
+    // 贴纸感文字
+    drawStickerText(ctx, this.text, this.x + this.width / 2, this.y + this.height / 2 + offsetY, {
+      size: this.fontSize,
+      color: this.textColor,
+      stroke: COLORS.navyDeep,
+      strokeWidth: 3
+    })
   }
 
   /**

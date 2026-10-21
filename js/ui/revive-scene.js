@@ -3,6 +3,15 @@
  * 显示复活选项界面
  */
 import Button from './button'
+import {
+  COLORS,
+  drawGlassPanel,
+  drawOverlay,
+  drawPenguin,
+  drawStickerText,
+  fillRoundRect,
+  font
+} from './theme'
 
 export default class ReviveScene {
   constructor(reviveManager, foodManager, wechatService) {
@@ -22,10 +31,10 @@ export default class ReviveScene {
 
   init() {
     const centerX = canvas.width / 2
-    const buttonWidth = 240
-    const buttonHeight = 50
-    const buttonSpacing = 15
-    const startY = 280
+    const buttonWidth = 250
+    const buttonHeight = 46
+    const buttonSpacing = 24
+    const startY = 226
 
     // 分享给好友按钮
     this.buttons.push(new Button({
@@ -34,10 +43,10 @@ export default class ReviveScene {
       width: buttonWidth,
       height: buttonHeight,
       text: '🎯 分享给好友',
-      fontSize: 18,
-      bgColor: '#3498db',
-      hoverColor: '#2980b9',
-      borderColor: '#2471a3',
+      fontSize: 17,
+      bgColor: COLORS.water,
+      hoverColor: COLORS.waterDeep,
+      borderColor: '#1F7FAE',
       onClick: () => this.handleRevive('shareFriend')
     }))
 
@@ -48,10 +57,10 @@ export default class ReviveScene {
       width: buttonWidth,
       height: buttonHeight,
       text: '👥 分享到群聊',
-      fontSize: 18,
-      bgColor: '#27ae60',
-      hoverColor: '#229954',
-      borderColor: '#1e8449',
+      fontSize: 17,
+      bgColor: COLORS.mint,
+      hoverColor: COLORS.mintDeep,
+      borderColor: '#17876C',
       onClick: () => this.handleRevive('shareGroup')
     }))
 
@@ -62,10 +71,10 @@ export default class ReviveScene {
       width: buttonWidth,
       height: buttonHeight,
       text: '📺 看视频复活',
-      fontSize: 18,
-      bgColor: '#f39c12',
-      hoverColor: '#d68910',
-      borderColor: '#b9770e',
+      fontSize: 17,
+      bgColor: COLORS.yellow,
+      hoverColor: COLORS.yellowDeep,
+      borderColor: '#B8861C',
       onClick: () => this.handleRevive('watchAd')
     }))
 
@@ -76,10 +85,10 @@ export default class ReviveScene {
       width: buttonWidth,
       height: buttonHeight,
       text: `🐟 ${this.reviveManager.foodCost}食物复活`,
-      fontSize: 18,
-      bgColor: '#e67e22',
-      hoverColor: '#d35400',
-      borderColor: '#ba4a00',
+      fontSize: 17,
+      bgColor: COLORS.orange,
+      hoverColor: COLORS.orangeDeep,
+      borderColor: '#C1651F',
       onClick: () => this.handleRevive('useFood')
     }))
 
@@ -90,10 +99,10 @@ export default class ReviveScene {
       width: buttonWidth,
       height: buttonHeight,
       text: '放弃重玩',
-      fontSize: 18,
-      bgColor: '#95a5a6',
-      hoverColor: '#7f8c8d',
-      borderColor: '#707b7c',
+      fontSize: 17,
+      bgColor: COLORS.lavender,
+      hoverColor: COLORS.lavenderDeep,
+      borderColor: '#7255CC',
       onClick: () => this.handleGiveUp()
     }))
   }
@@ -252,9 +261,11 @@ export default class ReviveScene {
   render(ctx) {
     if (!this.isVisible) return
 
-    // 半透明背景
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    // 深蓝遮罩 + 奶油面板
+    drawOverlay(ctx, 0.62)
+    drawGlassPanel(ctx, 24, 70, 327, 580, 30, {
+      fill: 'rgba(255, 249, 238, 0.97)'
+    })
 
     // 标题
     this.renderTitle(ctx)
@@ -270,24 +281,25 @@ export default class ReviveScene {
    * 渲染标题
    */
   renderTitle(ctx) {
-    ctx.save()
+    const centerX = canvas.width / 2
 
-    // 企鹅掉入冰窟窿图标
-    ctx.font = '48px Arial'
-    ctx.textAlign = 'center'
-    ctx.fillText('🐧💦', canvas.width / 2, 150)
+    // 落水企鹅
+    drawPenguin(ctx, centerX, 118, 1.5, { sad: true })
 
     // 标题文字
-    ctx.fillStyle = '#e74c3c'
-    ctx.font = 'bold 28px Arial'
-    ctx.fillText('企鹅掉入冰窟窿！', canvas.width / 2, 210)
+    drawStickerText(ctx, '企鹅掉进冰洞！', centerX, 182, {
+      size: 26,
+      color: COLORS.coral,
+      stroke: COLORS.navyDeep,
+      strokeWidth: 4
+    })
 
     // 副标题
-    ctx.fillStyle = '#bdc3c7'
-    ctx.font = '16px Arial'
-    ctx.fillText('选择一种方式复活', canvas.width / 2, 245)
-
-    ctx.restore()
+    ctx.font = font(12, 'normal')
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = COLORS.navySoft
+    ctx.fillText('选择一种方式复活', centerX, 208)
   }
 
   /**
@@ -295,19 +307,21 @@ export default class ReviveScene {
    */
   renderStatus(ctx) {
     const status = this.reviveManager.getStatus()
+    const centerX = canvas.width / 2
 
     ctx.save()
 
     // 当前食物
-    ctx.fillStyle = '#f1c40f'
-    ctx.font = '14px Arial'
+    ctx.font = font(13)
     ctx.textAlign = 'center'
-    ctx.fillText(`当前食物: ${this.foodManager.getTotalFood()}🐟`, canvas.width / 2, 580)
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = COLORS.yellowDeep
+    ctx.fillText(`当前食物: ${this.foodManager.getTotalFood()}🐟`, centerX, 604)
 
     // 复活惩罚提示
-    ctx.fillStyle = '#e74c3c'
-    ctx.font = '12px Arial'
-    ctx.fillText(`复活后步数 +${status.movePenalty}`, canvas.width / 2, 605)
+    ctx.font = font(11, 'normal')
+    ctx.fillStyle = COLORS.navySoft
+    ctx.fillText(`复活后步数 +${status.movePenalty}`, centerX, 626)
 
     ctx.restore()
   }
@@ -350,23 +364,19 @@ export default class ReviveScene {
       // 渲染按钮
       btn.render(ctx)
 
+      // 如果禁用，绘制遮罩
+      if (disabled) {
+        fillRoundRect(ctx, btn.x, btn.y, btn.width, btn.height, btn.height / 2, 'rgba(31, 58, 95, 0.45)')
+      }
+
       // 渲染副标题
       if (subText) {
         ctx.save()
-        ctx.fillStyle = disabled ? '#7f8c8d' : '#bdc3c7'
-        ctx.font = '11px Arial'
+        ctx.fillStyle = disabled ? 'rgba(74, 107, 140, 0.6)' : COLORS.navySoft
+        ctx.font = font(11, 'normal')
         ctx.textAlign = 'center'
-        ctx.fillText(subText, btn.x + btn.width / 2, btn.y + btn.height + 12)
-        ctx.restore()
-      }
-
-      // 如果禁用，绘制遮罩
-      if (disabled) {
-        ctx.save()
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
-        ctx.beginPath()
-        ctx.roundRect(btn.x, btn.y, btn.width, btn.height, 10)
-        ctx.fill()
+        ctx.textBaseline = 'middle'
+        ctx.fillText(subText, btn.x + btn.width / 2, btn.y + btn.height + 11)
         ctx.restore()
       }
     })

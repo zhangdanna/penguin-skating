@@ -1,7 +1,15 @@
 import Button from './button'
+import {
+  COLORS,
+  drawOceanBackdrop,
+  drawStickerText,
+  drawStar,
+  drawGlassPanel,
+  font
+} from './theme'
 
 /**
- * 关卡选择场景
+ * 关卡选择场景（浮冰徽章）
  */
 export default class LevelSelectScene {
   constructor(sceneManager) {
@@ -17,15 +25,15 @@ export default class LevelSelectScene {
   init() {
     // 返回按钮
     this.buttons.push(new Button({
-      x: 20,
-      y: 20,
-      width: 80,
-      height: 40,
+      x: 18,
+      y: 22,
+      width: 76,
+      height: 36,
       text: '返回',
-      fontSize: 16,
-      bgColor: '#95a5a6',
-      hoverColor: '#7f8c8d',
-      borderColor: '#707b7c',
+      fontSize: 15,
+      bgColor: COLORS.lavender,
+      hoverColor: COLORS.lavenderDeep,
+      borderColor: '#7255CC',
       onClick: () => {
         this.sceneManager.switchTo('menu')
       }
@@ -36,7 +44,7 @@ export default class LevelSelectScene {
   }
 
   loadLevels() {
-    const maxLevel = 30  // 可配置的关卡总数
+    const maxLevel = 7  // 与 LevelManager 中的关卡总数保持一致
     const cols = 4
     const buttonSize = 60
     const padding = 20
@@ -102,16 +110,16 @@ export default class LevelSelectScene {
   }
 
   render(ctx) {
-    // 绘制背景
-    this.renderBackground(ctx)
+    // 海洋馆背景
+    drawOceanBackdrop(ctx, Date.now() / 1000)
 
-    // 绘制标题
+    // 标题
     this.renderTitle(ctx)
 
-    // 绘制返回按钮
+    // 返回按钮
     this.buttons[0].render(ctx)
 
-    // 绘制关卡网格
+    // 关卡浮冰徽章
     ctx.save()
     ctx.translate(0, -this.scrollY)
 
@@ -122,112 +130,97 @@ export default class LevelSelectScene {
     ctx.restore()
   }
 
-  renderBackground(ctx) {
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height)
-    gradient.addColorStop(0, '#2c3e50')
-    gradient.addColorStop(1, '#34495e')
-    ctx.fillStyle = gradient
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-  }
-
   renderTitle(ctx) {
-    ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 32px Arial'
-    ctx.textAlign = 'center'
-    ctx.fillText('选择关卡', canvas.width / 2, 50)
+    drawGlassPanel(ctx, 97, 22, 180, 46, 23, {
+      fill: 'rgba(255, 255, 255, 0.86)'
+    })
+    drawStickerText(ctx, '选择关卡', canvas.width / 2, 46, {
+      size: 22,
+      color: COLORS.navy,
+      strokeWidth: 0
+    })
   }
 
   renderLevel(ctx, level) {
-    const { x, y, width, height, isUnlocked, stars, isHovered } = level
+    const { x, y, width, isUnlocked, stars, isHovered } = level
+    const centerX = x + width / 2
+    const centerY = y + 24
+    const radius = 22
 
     ctx.save()
 
-    // 绘制关卡按钮背景
-    if (!isUnlocked) {
-      ctx.fillStyle = '#7f8c8d'
-    } else if (isHovered) {
-      ctx.fillStyle = '#3498db'
-    } else {
-      ctx.fillStyle = '#2980b9'
-    }
-
-    // 圆角矩形
-    this.roundRect(ctx, x, y, width, height, 10)
+    // 徽章投影
+    ctx.fillStyle = 'rgba(31, 58, 95, 0.16)'
+    ctx.beginPath()
+    ctx.ellipse(centerX, y + 47, 20, 5, 0, 0, Math.PI * 2)
     ctx.fill()
 
-    // 边框
-    ctx.strokeStyle = isUnlocked ? '#1a5276' : '#566573'
-    ctx.lineWidth = 2
-    this.roundRect(ctx, x, y, width, height, 10)
-    ctx.stroke()
-
-    // 关卡编号
-    ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 24px Arial'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-
+    // 浮冰徽章
     if (isUnlocked) {
-      ctx.fillText(level.id.toString(), x + width / 2, y + height / 2)
+      const ice = ctx.createLinearGradient(centerX, centerY - radius, centerX, centerY + radius)
+      ice.addColorStop(0, '#F2FDFF')
+      ice.addColorStop(0.5, '#BEEBFF')
+      ice.addColorStop(1, COLORS.iceDeep)
+      ctx.fillStyle = ice
     } else {
-      // 锁定图标
-      ctx.fillText('🔒', x + width / 2, y + height / 2)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.38)'
+    }
+    ctx.beginPath()
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
+    ctx.fill()
+
+    // 冰面高光
+    if (isUnlocked) {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.arc(centerX, centerY, radius - 4, Math.PI * 1.1, Math.PI * 1.85)
+      ctx.stroke()
     }
 
-    // 绘制星星
+    // 边框（悬停高亮）
+    ctx.beginPath()
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
+    ctx.strokeStyle = isHovered ? COLORS.yellow : 'rgba(255, 255, 255, 0.9)'
+    ctx.lineWidth = isHovered ? 3 : 2.5
+    ctx.stroke()
+
+    // 关卡编号 / 锁
+    if (isUnlocked) {
+      drawStickerText(ctx, level.id.toString(), centerX, centerY + 1, {
+        size: 22,
+        color: COLORS.navy,
+        strokeWidth: 0
+      })
+    } else {
+      ctx.font = font(18)
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillStyle = 'rgba(31, 58, 95, 0.45)'
+      ctx.fillText('🔒', centerX, centerY)
+    }
+
+    // 星级
     if (isUnlocked && stars > 0) {
-      this.renderStars(ctx, x, y + height - 15, stars)
+      this.renderStars(ctx, x, y + 53, stars)
     }
 
     ctx.restore()
   }
 
   renderStars(ctx, x, y, count) {
-    const starSize = 12
-    const spacing = 5
+    const starSize = 9
+    const spacing = 3
     const totalWidth = count * starSize + (count - 1) * spacing
     const startX = x + (60 - totalWidth) / 2
 
     for (let i = 0; i < count; i++) {
       const starX = startX + i * (starSize + spacing)
-      this.drawStar(ctx, starX + starSize / 2, y, starSize / 2)
+      drawStar(ctx, starX + starSize / 2, y, starSize / 2, COLORS.yellow, {
+        stroke: COLORS.white,
+        lineWidth: 1.2
+      })
     }
-  }
-
-  drawStar(ctx, cx, cy, radius) {
-    ctx.save()
-    ctx.fillStyle = '#f1c40f'
-    ctx.beginPath()
-
-    for (let i = 0; i < 5; i++) {
-      const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2
-      const x = cx + Math.cos(angle) * radius
-      const y = cy + Math.sin(angle) * radius
-
-      if (i === 0) {
-        ctx.moveTo(x, y)
-      } else {
-        ctx.lineTo(x, y)
-      }
-    }
-
-    ctx.closePath()
-    ctx.fill()
-    ctx.restore()
-  }
-
-  roundRect(ctx, x, y, width, height, radius) {
-    ctx.beginPath()
-    ctx.moveTo(x + radius, y)
-    ctx.lineTo(x + width - radius, y)
-    ctx.quadraticCurveTo(x + width, y, x + width, y + radius)
-    ctx.lineTo(x + width, y + height - radius)
-    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height)
-    ctx.lineTo(x + radius, y + height)
-    ctx.quadraticCurveTo(x, y + height, x, y + height - radius)
-    ctx.lineTo(x, y + radius)
-    ctx.quadraticCurveTo(x, y, x + radius, y)
-    ctx.closePath()
   }
 
   onTouchStart(touch) {

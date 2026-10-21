@@ -1,4 +1,11 @@
 import Button from './button'
+import {
+  COLORS,
+  drawGlassPanel,
+  drawOverlay,
+  drawStickerText,
+  font
+} from './theme'
 
 /**
  * 暂停场景
@@ -17,7 +24,7 @@ export default class PauseScene {
     const buttonWidth = 180
     const buttonHeight = 50
     const buttonSpacing = 15
-    const startY = 300
+    const startY = 252
 
     // 继续游戏按钮
     this.buttons.push(new Button({
@@ -27,11 +34,13 @@ export default class PauseScene {
       height: buttonHeight,
       text: '继续游戏',
       fontSize: 20,
-      bgColor: '#27ae60',
-      hoverColor: '#229954',
-      borderColor: '#1e8449',
+      bgColor: COLORS.mint,
+      hoverColor: COLORS.mintDeep,
+      borderColor: '#17876C',
       onClick: () => {
-        this.hide()
+        if (this.onResume) {
+          this.onResume()
+        }
       }
     }))
 
@@ -43,9 +52,9 @@ export default class PauseScene {
       height: buttonHeight,
       text: '重新开始',
       fontSize: 20,
-      bgColor: '#e67e22',
-      hoverColor: '#d35400',
-      borderColor: '#ba4a00',
+      bgColor: COLORS.orange,
+      hoverColor: COLORS.orangeDeep,
+      borderColor: '#C1651F',
       onClick: () => {
         this.hide()
         if (this.onRestart) {
@@ -62,9 +71,9 @@ export default class PauseScene {
       height: buttonHeight,
       text: '返回菜单',
       fontSize: 20,
-      bgColor: '#95a5a6',
-      hoverColor: '#7f8c8d',
-      borderColor: '#707b7c',
+      bgColor: COLORS.lavender,
+      hoverColor: COLORS.lavenderDeep,
+      borderColor: '#7255CC',
       onClick: () => {
         this.hide()
         this.sceneManager.switchTo('menu')
@@ -82,9 +91,6 @@ export default class PauseScene {
 
   hide() {
     this.isVisible = false
-    if (this.onResume) {
-      this.onResume()
-    }
   }
 
   onEnter() {
@@ -102,16 +108,27 @@ export default class PauseScene {
   render(ctx) {
     if (!this.isVisible) return
 
-    // 半透明遮罩
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    // 深蓝遮罩
+    drawOverlay(ctx, 0.5)
 
-    // 暂停标题
-    ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 36px Arial'
+    // 居中面板
+    drawGlassPanel(ctx, 57, 150, 261, 330, 28, {
+      fill: 'rgba(255, 249, 238, 0.97)'
+    })
+
+    // 标题
+    drawStickerText(ctx, '游戏暂停', canvas.width / 2, 202, {
+      size: 30,
+      color: COLORS.navy,
+      strokeWidth: 0
+    })
+
+    // 副标题
+    ctx.font = font(12, 'normal')
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText('游戏暂停', canvas.width / 2, 200)
+    ctx.fillStyle = COLORS.navySoft
+    ctx.fillText('PAUSED', canvas.width / 2, 226)
 
     // 绘制按钮
     this.buttons.forEach(btn => btn.render(ctx))

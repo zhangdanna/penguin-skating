@@ -3,6 +3,15 @@
  * 显示所有成就和解锁状态
  */
 import Button from './button'
+import {
+  COLORS,
+  drawGlassPanel,
+  drawOverlay,
+  drawStickerText,
+  fillRoundRect,
+  font,
+  roundRectPath
+} from './theme'
 
 export default class AchievementScene {
   constructor(achievementManager, onClose) {
@@ -28,15 +37,18 @@ export default class AchievementScene {
     this.totalPages = Math.ceil(allAchievements.length / this.itemsPerPage)
 
     // 关闭按钮
-    this.closeButton = new Button(
-      canvas.width - 60,
-      20,
-      40,
-      40,
-      '✕',
-      '#e74c3c',
-      () => this.hide()
-    )
+    this.closeButton = new Button({
+      x: canvas.width - 60,
+      y: 20,
+      width: 40,
+      height: 40,
+      text: '✕',
+      fontSize: 16,
+      bgColor: COLORS.coral,
+      hoverColor: '#E85F4F',
+      borderColor: '#C94A3C',
+      onClick: () => this.hide()
+    })
   }
 
   /**
@@ -59,18 +71,30 @@ export default class AchievementScene {
   }
 
   /**
+   * 场景进入
+   */
+  onEnter() {
+    this.show()
+  }
+
+  /**
+   * 场景退出
+   */
+  onExit() {
+    this.isVisible = false
+  }
+
+  /**
    * 触摸开始
    */
   onTouchStart(e) {
     if (!this.isVisible) return
 
-    const touch = e.touches[0]
+    const touch = e.touches ? e.touches[0] : e
     this.touchStartY = touch.clientY
 
     // 检查关闭按钮
-    if (this.closeButton.contains(touch.clientX, touch.clientY)) {
-      this.closeButton.onTouchStart()
-    }
+    this.closeButton.onTouchStart(touch)
   }
 
   /**
@@ -79,7 +103,7 @@ export default class AchievementScene {
   onTouchMove(e) {
     if (!this.isVisible) return
 
-    const touch = e.touches[0]
+    const touch = e.touches ? e.touches[0] : e
     const deltaY = this.touchStartY - touch.clientY
     this.touchStartY = touch.clientY
 
@@ -93,8 +117,8 @@ export default class AchievementScene {
   onTouchEnd(e) {
     if (!this.isVisible) return
 
-    const touch = e.changedTouches[0]
-    this.closeButton.onTouchEnd(touch.clientX, touch.clientY)
+    const touch = e.changedTouches ? e.changedTouches[0] : e
+    this.closeButton.onTouchEnd(touch)
   }
 
   /**
@@ -110,9 +134,11 @@ export default class AchievementScene {
   render(ctx) {
     if (!this.isVisible) return
 
-    // 半透明背景
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    // 遮罩 + 奶油面板
+    drawOverlay(ctx, 0.55)
+    drawGlassPanel(ctx, 16, 10, canvas.width - 32, canvas.height - 20, 28, {
+      fill: 'rgba(255, 252, 246, 0.96)'
+    })
 
     // 标题
     this.renderTitle(ctx)
@@ -131,14 +157,12 @@ export default class AchievementScene {
    * 渲染标题
    */
   renderTitle(ctx) {
-    ctx.save()
-
-    ctx.fillStyle = '#f1c40f'
-    ctx.font = 'bold 28px Arial'
-    ctx.textAlign = 'center'
-    ctx.fillText('成就系统', canvas.width / 2, 50)
-
-    ctx.restore()
+    drawStickerText(ctx, '成就系统', canvas.width / 2, 46, {
+      size: 26,
+      color: COLORS.lavenderDeep,
+      stroke: COLORS.white,
+      strokeWidth: 4
+    })
   }
 
   /**
@@ -147,37 +171,30 @@ export default class AchievementScene {
   renderProgress(ctx) {
     const progress = this.achievementManager.getProgress()
 
-    ctx.save()
-
     // 进度条背景
     const barX = 30
-    const barY = 70
+    const barY = 66
     const barWidth = canvas.width - 60
-    const barHeight = 20
+    const barHeight = 18
 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'
-    ctx.beginPath()
-    ctx.roundRect(barX, barY, barWidth, barHeight, 10)
-    ctx.fill()
+    fillRoundRect(ctx, barX, barY, barWidth, barHeight, 9, 'rgba(31, 58, 95, 0.1)')
 
     // 进度条
     const progressWidth = (barWidth * progress.percentage) / 100
-    ctx.fillStyle = '#f1c40f'
-    ctx.beginPath()
-    ctx.roundRect(barX, barY, progressWidth, barHeight, 10)
-    ctx.fill()
+    if (progressWidth > 0) {
+      fillRoundRect(ctx, barX, barY, Math.max(progressWidth, 12), barHeight, 9, COLORS.mint)
+    }
 
     // 进度文字
-    ctx.fillStyle = '#ffffff'
-    ctx.font = '14px Arial'
+    ctx.fillStyle = COLORS.navy
+    ctx.font = font(12)
     ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
     ctx.fillText(
       `${progress.unlocked} / ${progress.total} (${Math.floor(progress.percentage)}%)`,
       canvas.width / 2,
-      barY + 15
+      barY + 34
     )
-
-    ctx.restore()
   }
 
   /**
@@ -185,7 +202,7 @@ export default class AchievementScene {
    */
   renderAchievements(ctx) {
     const allAchievements = this.achievementManager.getAllAchievements()
-    const startY = 110
+    const startY = 112
     const itemHeight = 90
 
     // 计算最大滚动
@@ -195,16 +212,16 @@ export default class AchievementScene {
 
     // 裁剪区域
     ctx.beginPath()
-    ctx.rect(0, startY, canvas.width, canvas.height - startY - 50)
+    ctx.rect(0, startY, canvas.width, canvas.height - startY - 24)
     ctx.clip()
 
     allAchievements.forEach((achievement, index) => {
       const y = startY + index * itemHeight - this.scrollY
 
       // 只渲染可见区域
-      if (y + itemHeight < startY || y > canvas.height - 50) return
+      if (y + itemHeight < startY || y > canvas.height - 24) return
 
-      this.renderAchievementItem(ctx, achievement, 20, y, canvas.width - 40, itemHeight - 10)
+      this.renderAchievementItem(ctx, achievement, 26, y, canvas.width - 52, itemHeight - 10)
     })
 
     ctx.restore()
@@ -214,56 +231,57 @@ export default class AchievementScene {
    * 渲染单个成就项
    */
   renderAchievementItem(ctx, achievement, x, y, width, height) {
-    ctx.save()
-
-    // 背景
-    const bgColor = achievement.unlocked ? 'rgba(46, 204, 113, 0.3)' : 'rgba(255, 255, 255, 0.1)'
-    ctx.fillStyle = bgColor
-    ctx.beginPath()
-    ctx.roundRect(x, y, width, height, 10)
-    ctx.fill()
+    // 卡片
+    fillRoundRect(
+      ctx,
+      x,
+      y,
+      width,
+      height,
+      achievement.unlocked ? 16 : 14,
+      achievement.unlocked ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.55)'
+    )
 
     // 边框
-    ctx.strokeStyle = achievement.unlocked ? '#2ecc71' : '#7f8c8d'
-    ctx.lineWidth = 2
+    roundRectPath(ctx, x, y, width, height, achievement.unlocked ? 16 : 14)
+    ctx.strokeStyle = achievement.unlocked ? COLORS.mint : 'rgba(31, 58, 95, 0.12)'
+    ctx.lineWidth = achievement.unlocked ? 2 : 1.5
     ctx.stroke()
 
     // 图标
-    ctx.font = '32px Arial'
+    ctx.font = '30px Arial'
     ctx.textAlign = 'left'
     ctx.textBaseline = 'middle'
-    ctx.fillText(achievement.icon, x + 15, y + height / 2)
+    ctx.fillText(achievement.icon, x + 14, y + height / 2)
 
     // 名称
-    ctx.fillStyle = achievement.unlocked ? '#ffffff' : '#95a5a6'
-    ctx.font = 'bold 16px Arial'
-    ctx.fillText(achievement.name, x + 60, y + 25)
+    ctx.fillStyle = achievement.unlocked ? COLORS.navy : COLORS.navySoft
+    ctx.font = font(15)
+    ctx.fillText(achievement.name, x + 58, y + 24)
 
     // 描述
-    ctx.fillStyle = achievement.unlocked ? '#bdc3c7' : '#7f8c8d'
-    ctx.font = '12px Arial'
-    ctx.fillText(achievement.description, x + 60, y + 45)
+    ctx.fillStyle = COLORS.navySoft
+    ctx.font = font(12, 'normal')
+    ctx.fillText(achievement.description, x + 58, y + 46)
 
     // 奖励
     const rewardText = this.formatReward(achievement.reward)
-    ctx.fillStyle = '#f1c40f'
-    ctx.font = '12px Arial'
-    ctx.fillText(`奖励: ${rewardText}`, x + 60, y + 65)
+    ctx.fillStyle = COLORS.yellowDeep
+    ctx.font = font(12)
+    ctx.fillText(`奖励: ${rewardText}`, x + 58, y + 67)
 
     // 解锁状态
     if (achievement.unlocked) {
-      ctx.fillStyle = '#2ecc71'
-      ctx.font = 'bold 14px Arial'
+      ctx.fillStyle = COLORS.mintDeep
+      ctx.font = font(13)
       ctx.textAlign = 'right'
-      ctx.fillText('✓ 已解锁', x + width - 15, y + height / 2)
+      ctx.fillText('✓ 已解锁', x + width - 14, y + height / 2)
     } else {
-      ctx.fillStyle = '#7f8c8d'
+      ctx.fillStyle = 'rgba(31, 58, 95, 0.35)'
       ctx.font = '14px Arial'
       ctx.textAlign = 'right'
-      ctx.fillText('🔒', x + width - 15, y + height / 2)
+      ctx.fillText('🔒', x + width - 14, y + height / 2)
     }
-
-    ctx.restore()
   }
 
   /**

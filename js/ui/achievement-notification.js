@@ -2,6 +2,13 @@
  * 成就解锁通知组件
  * 在屏幕上显示新解锁的成就
  */
+import {
+  COLORS,
+  drawGlassPanel,
+  drawStar,
+  font
+} from './theme'
+
 export default class AchievementNotification {
   constructor() {
     this.notifications = []
@@ -61,33 +68,36 @@ export default class AchievementNotification {
     const y = notification.y + index * 80
 
     ctx.save()
-
     ctx.globalAlpha = notification.alpha
 
-    // 背景
-    const gradient = ctx.createLinearGradient(x - 120, y, x + 120, y)
-    gradient.addColorStop(0, 'rgba(241, 196, 15, 0)')
-    gradient.addColorStop(0.5, 'rgba(241, 196, 15, 0.8)')
-    gradient.addColorStop(1, 'rgba(241, 196, 15, 0)')
+    // 奶油卡片
+    drawGlassPanel(ctx, x - 130, y - 26, 260, 52, 26, {
+      fill: 'rgba(255, 249, 238, 0.95)',
+      shadow: 'rgba(31, 58, 95, 0.25)'
+    })
 
-    ctx.fillStyle = gradient
+    // 金色徽章
     ctx.beginPath()
-    ctx.roundRect(x - 120, y - 25, 240, 50, 25)
+    ctx.fillStyle = COLORS.yellow
+    ctx.arc(x - 102, y, 17, 0, Math.PI * 2)
     ctx.fill()
+    drawStar(ctx, x - 102, y, 10, 'rgba(255, 255, 255, 0.35)')
 
-    // 图标
-    ctx.font = '24px Arial'
-    ctx.textAlign = 'left'
+    // 成就图标
+    ctx.font = '18px Arial'
+    ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText(achievement.icon, x - 100, y)
+    ctx.fillText(achievement.icon, x - 102, y)
 
     // 文字
-    ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 14px Arial'
-    ctx.fillText('成就解锁!', x - 65, y - 8)
+    ctx.textAlign = 'left'
+    ctx.fillStyle = COLORS.yellowDeep
+    ctx.font = font(13)
+    ctx.fillText('成就解锁!', x - 78, y - 9)
 
-    ctx.font = '12px Arial'
-    ctx.fillText(achievement.name, x - 65, y + 10)
+    ctx.fillStyle = COLORS.navy
+    ctx.font = font(12, 'normal')
+    ctx.fillText(achievement.name, x - 78, y + 9)
 
     ctx.restore()
   }

@@ -46,7 +46,7 @@ penguin-skating-game/
 | 方法 | 说明 |
 |------|------|
 | `onPenguinCollide(penguin)` | 企鹅碰撞处理，返回处理结果 |
-| `onStoneCollide(stone)` | 石头碰撞处理，返回处理结果 |
+| `onStoneCollide(stone)` | 冰块碰撞处理，返回处理结果 |
 | `update()` | 更新状态 |
 | `render(ctx)` | 渲染障碍物 |
 
@@ -63,7 +63,7 @@ penguin-skating-game/
 **特性**：
 - 不可通过
 - 企鹅碰到会停止
-- 石头碰到会停止
+- 冰块碰到会停止
 - 蓝色半透明外观，带冰晶纹理
 
 **碰撞结果**：
@@ -71,7 +71,7 @@ penguin-skating-game/
 // 企鹅碰撞
 { action: 'stop', vx: 0, vy: 0 }
 
-// 石头碰撞
+// 冰块碰撞
 { action: 'stop', vx: 0, vy: 0 }
 ```
 
@@ -85,7 +85,7 @@ penguin-skating-game/
 
 **特性**：
 - 企鹅掉入会导致游戏失败
-- 石头掉入会消失
+- 冰块掉入会消失
 - 红色脉冲警示效果
 - 黑色窟窿外观
 
@@ -94,7 +94,7 @@ penguin-skating-game/
 // 企鹅碰撞
 { action: 'fail', reason: '掉入冰窟窿' }
 
-// 石头碰撞
+// 冰块碰撞
 { action: 'destroy' }
 ```
 
@@ -112,7 +112,7 @@ penguin-skating-game/
 
 **特性**：
 - 企鹅经过会减速50%
-- 石头会卡住停止
+- 冰块会卡住停止
 - 白色蓬松外观
 
 **碰撞结果**：
@@ -120,7 +120,7 @@ penguin-skating-game/
 // 企鹅碰撞
 { action: 'slow', friction: 0.95, speedMultiplier: 0.5 }
 
-// 石头碰撞
+// 冰块碰撞
 { action: 'stuck', vx: 0, vy: 0 }
 ```
 
@@ -166,14 +166,14 @@ penguin-skating-game/
   ├─ fail: 游戏失败
   └─ slow: 企鹅减速
   ↓
-检测石头与障碍物碰撞
+检测冰块与障碍物碰撞
   ↓
 调用 obstacle.onStoneCollide()
   ↓
 根据 action 处理：
-  ├─ stop: 石头停止，分离对象
-  ├─ destroy: 移除石头
-  └─ stuck: 石头停止
+  ├─ stop: 冰块停止，分离对象
+  ├─ destroy: 移除冰块
+  └─ stuck: 冰块停止
 ```
 
 ## 新增关卡
@@ -218,7 +218,7 @@ onFail(reason) {
 1. 背景
 2. 目标区域
 3. 障碍物（新增）
-4. 石头
+4. 冰块
 5. 企鹅
 6. HUD
 7. 失败提示（新增）

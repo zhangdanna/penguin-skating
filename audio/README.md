@@ -14,7 +14,7 @@
 |--------|------|----------|------|
 | bgm.mp3 | 背景音乐 | 60-120秒 | 轻松愉快的循环音乐 |
 | slide.mp3 | 音效 | 0.5-1秒 | 冰面滑动声 |
-| push.mp3 | 音效 | 0.3-0.5秒 | 石头推动声 |
+| push.mp3 | 音效 | 0.3-0.5秒 | 冰块推动声 |
 | collision.mp3 | 音效 | 0.2-0.3秒 | 碰撞声 |
 | win.mp3 | 音效 | 2-3秒 | 欢快通关音乐 |
 | fail.mp3 | 音效 | 1-2秒 | 低沉失败音效 |
@@ -64,7 +64,7 @@
 
 ### 音效
 - **滑动**: "ice slide", "glide", "slip"
-- **推动**: "push", "move stone", "heavy push"
+- **推动**: "push", "move ice block", "heavy push"
 - **碰撞**: "hit", "impact", "thud", "knock"
 - **通关**: "success", "victory", "level complete", "achievement"
 - **失败**: "fail", "error", "wrong", "game over"

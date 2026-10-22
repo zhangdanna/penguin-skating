@@ -32,20 +32,21 @@ export default class MenuScene {
     const mainX = centerX - mainWidth / 2
 
     // 开始游戏（直接从上次通关后的关卡继续）
-    this.buttons.push(new Button({
+    this.mainButton = new Button({
       x: mainX,
       y: 392,
       width: mainWidth,
       height: mainHeight,
-      text: '继续冒险',
-      fontSize: 24,
+      text: `第${this.getProgressLevel()}关`,
+      fontSize: 20,
       bgColor: COLORS.mint,
       hoverColor: COLORS.mintDeep,
       borderColor: '#17876C',
       onClick: () => {
         this.sceneManager.switchTo('game', { level: this.getProgressLevel() })
       }
-    }))
+    })
+    this.buttons.push(this.mainButton)
 
     // 次级按钮 2×2
     const subWidth = 104
@@ -53,7 +54,7 @@ export default class MenuScene {
     const gapX = 16
     const gapY = 12
     const subStartX = centerX - subWidth - gapX / 2
-    const subStartY = 556
+    const subStartY = 500
 
     const subButtons = [
       {
@@ -129,6 +130,11 @@ export default class MenuScene {
   onEnter() {
     this.titleY = -100
     this.titleTargetY = 118
+
+    // 进度可能已更新，回到首页时刷新“下一关”关数
+    if (this.mainButton) {
+      this.mainButton.setText(`第${this.getProgressLevel()}关`)
+    }
   }
 
   onExit() {
@@ -162,6 +168,21 @@ export default class MenuScene {
 
     // 按钮
     this.buttons.forEach(btn => btn.render(ctx))
+
+    // 操作说明（入口页展示，关卡页不再展示）
+    this.renderInstructions(ctx)
+  }
+
+  /**
+   * 渲染操作说明
+   */
+  renderInstructions(ctx) {
+    drawStickerText(ctx, '滑动屏幕控制企鹅 · 推动冰块到目标区域', canvas.width / 2, 634, {
+      size: 13,
+      color: COLORS.white,
+      stroke: COLORS.navyDeep,
+      strokeWidth: 3
+    })
   }
 
   renderTitle(ctx) {

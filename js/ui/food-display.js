@@ -1,17 +1,16 @@
 /**
  * 食物显示组件
- * 在界面上显示当前食物数量和恢复时间
+ * 显示在关卡页顶部，一行展示所有食物类型
  */
-import { COLORS, drawGlassPanel, font } from './theme'
+import { COLORS, font } from './theme'
 
 export default class FoodDisplay {
   constructor(foodManager) {
     this.foodManager = foodManager
     this.isVisible = true
-    this.x = 10
-    this.y = 10
-    this.width = 150
-    this.height = 60
+    this.x = 8
+    this.y = 6
+    this.width = canvas.width - 16
 
     // 动画
     this.animationTimer = 0
@@ -26,6 +25,13 @@ export default class FoodDisplay {
   setPosition(x, y) {
     this.x = x
     this.y = y
+  }
+
+  /**
+   * 设置宽度
+   */
+  setSize(width) {
+    this.width = width
   }
 
   /**
@@ -78,90 +84,51 @@ export default class FoodDisplay {
 
     const status = this.foodManager.getFoodStatus()
 
-    // 绘制背景
-    this.renderBackground(ctx)
-
-    // 绘制食物图标和数量
     this.renderFoodIcons(ctx, status)
 
-    // 绘制恢复时间
-    this.renderRecoveryTime(ctx, status)
-
-    // 绘制奖励动画
     if (this.showReward) {
       this.renderRewardAnimation(ctx)
     }
   }
 
   /**
-   * 绘制背景
-   */
-  renderBackground(ctx) {
-    drawGlassPanel(ctx, this.x, this.y, this.width, this.height, 16, {
-      fill: 'rgba(255, 255, 255, 0.82)'
-    })
-  }
-
-  /**
-   * 绘制食物图标和数量
+   * 一行展示所有食物（图标 + 数量）
    */
   renderFoodIcons(ctx, status) {
-    ctx.save()
-
-    const iconY = this.y + 20
-    let iconX = this.x + 15
-
-    // 绘制各种食物
     const foods = [
-      { type: 'fish', icon: '🐟', count: status.food.fish },
-      { type: 'shrimp', icon: '🦐', count: status.food.shrimp },
-      { type: 'squid', icon: '🦑', count: status.food.squid },
-      { type: 'goldfish', icon: '🐠', count: status.food.goldfish }
+      { icon: '🐟', count: status.food.fish },
+      { icon: '🦐', count: status.food.shrimp },
+      { icon: '🦑', count: status.food.squid },
+      { icon: '🐠', count: status.food.goldfish }
     ]
 
-    foods.forEach(food => {
-      if (food.count > 0) {
-        // 绘制图标
-        ctx.font = '16px Arial'
-        ctx.textAlign = 'left'
-        ctx.textBaseline = 'middle'
-        ctx.fillText(food.icon, iconX, iconY)
-
-        // 绘制数量
-        ctx.fillStyle = COLORS.navy
-        ctx.font = font(12)
-        ctx.fillText(`×${food.count}`, iconX + 20, iconY)
-
-        iconX += 50
-      }
-    })
-
-    // 绘制总价值
-    ctx.fillStyle = COLORS.yellowDeep
-    ctx.font = font(14)
-    ctx.textAlign = 'left'
-    ctx.fillText(`总计: ${status.total}`, this.x + 15, this.y + 45)
-
-    ctx.restore()
-  }
-
-  /**
-   * 绘制恢复时间
-   */
-  renderRecoveryTime(ctx, status) {
-    if (status.total >= status.max) return
+    const cellWidth = this.width / foods.length
+    const iconY = this.y + 23
 
     ctx.save()
+    ctx.textBaseline = 'middle'
 
-    const seconds = status.nextRecovery
-    const minutes = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    const timeText = `${minutes}:${secs.toString().padStart(2, '0')}`
+    foods.forEach((food, index) => {
+      const cellCenterX = this.x + cellWidth * (index + 0.5)
+      const countText = `×${food.count}`
 
-    ctx.fillStyle = COLORS.mintDeep
-    ctx.font = font(12)
-    ctx.textAlign = 'right'
-    ctx.fillText(`+1🐟 ${timeText}`, this.x + this.width - 10, this.y + 45)
+      ctx.font = font(14)
+      const countWidth = ctx.measureText(countText).width
+      const iconWidth = 17
+      const gap = 4
+      const startX = cellCenterX - (iconWidth + gap + countWidth) / 2
+
+      // 图标
+      ctx.font = '17px Arial'
+      ctx.textAlign = 'left'
+      ctx.fillStyle = COLORS.navy
+      ctx.fillText(food.icon, startX, iconY)
+
+      // 数量
+      ctx.font = font(14)
+      ctx.fillStyle = COLORS.navySoft
+      ctx.fillText(countText, startX + iconWidth + gap, iconY)
+    })
 
     ctx.restore()
   }
@@ -172,8 +139,8 @@ export default class FoodDisplay {
   renderRewardAnimation(ctx) {
     ctx.save()
 
-    const centerX = this.x + this.width / 2
-    const centerY = this.y - 30 - this.animationTimer * 0.5
+    const centerX = canvas.width / 2
+    const centerY = 210 - this.animationTimer * 0.5
 
     ctx.globalAlpha = this.rewardAlpha
     ctx.fillStyle = '#f1c40f'
@@ -187,13 +154,5 @@ export default class FoodDisplay {
     ctx.fillText(this.rewardText, centerX, centerY)
 
     ctx.restore()
-  }
-
-  /**
-   * 检查是否包含某点
-   */
-  contains(x, y) {
-    return x >= this.x && x <= this.x + this.width &&
-           y >= this.y && y <= this.y + this.height
   }
 }

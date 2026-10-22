@@ -43,7 +43,7 @@ penguin-skating-game/
 | 效果 | 说明 |
 |------|------|
 | 位置恢复 | 企鹅回到掉入冰窟窿前的位置 |
-| 石头保留 | 已推动的石头位置不变 |
+| 冰块保留 | 已推动的冰块位置不变 |
 | 步数+5 | 复活后增加5步惩罚 |
 | 每关限1次 | 同一关卡只能复活1次 |
 
@@ -145,7 +145,7 @@ onReviveSuccess(result) {
   this.penguin.x = result.lastPosition.x
   this.penguin.y = result.lastPosition.y
 
-  // 2. 恢复石头位置
+  // 2. 恢复冰块位置
   result.lastStones.forEach((stoneState, index) => {
     this.stones[index].x = stoneState.x
     this.stones[index].y = stoneState.y
@@ -255,7 +255,7 @@ onReviveSuccess(result) {
 
 | 类别 | 功能 |
 |------|------|
-| **核心玩法** | 企鹅冰面滑行、石头推动、碰撞检测 |
+| **核心玩法** | 企鹅冰面滑行、冰块推动、碰撞检测 |
 | **关卡系统** | 7个关卡、星级评价、进度保存 |
 | **UI系统** | 主菜单、关卡选择、暂停、结算、登录、排行榜、成就、复活 |
 | **障碍物** | 冰墙、冰窟窿、雪堆 |

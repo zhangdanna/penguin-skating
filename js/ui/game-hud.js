@@ -1,17 +1,15 @@
-import Button from './button'
 import {
   COLORS,
   drawCandyButton,
   drawGlassPanel,
   drawStickerText,
   fillRoundRect,
-  font,
-  roundRectPath
+  font
 } from './theme'
 
 /**
  * 游戏内HUD
- * 显示关卡信息、步数、时间等（亚克力导览牌风格）
+ * 顶部：食物与关卡信息；底部：暂停/重玩/返回操作按钮
  */
 export default class GameHUD {
   constructor() {
@@ -21,26 +19,60 @@ export default class GameHUD {
     this.par = 3
     this.isVisible = true
 
-    // 暂停按钮
-    this.pauseButton = new Button({
-      x: canvas.width - 62,
-      y: 16,
-      width: 44,
-      height: 44,
-      text: 'Ⅱ',
-      fontSize: 18,
-      bgColor: COLORS.orange,
-      hoverColor: COLORS.orangeDeep,
-      borderColor: '#B55F22',
-      onClick: () => {
-        if (this.onPauseClick) {
-          this.onPauseClick()
-        }
-      }
-    })
+    // 顶部信息面板（食物行由 FoodDisplay 绘制在同一面板内）
+    this.panel = {
+      x: 8,
+      y: 6,
+      width: canvas.width - 16,
+      height: 82
+    }
 
-    // 暂停回调
+    // 操作按钮回调
     this.onPauseClick = null
+    this.onRestartClick = null
+    this.onBackClick = null
+
+    // 底部操作按钮（图标 + 文案，一行展示）
+    const marginX = 12
+    const gap = 8
+    const buttonWidth = (canvas.width - marginX * 2 - gap * 2) / 3
+    const buttonY = canvas.height - 52
+
+    const buttonConfigs = [
+      {
+        icon: 'pause',
+        label: '暂停',
+        color: COLORS.orange,
+        hoverColor: COLORS.orangeDeep,
+        shadowColor: COLORS.orangeDeep,
+        onClick: () => this.onPauseClick && this.onPauseClick()
+      },
+      {
+        icon: 'replay',
+        label: '重玩',
+        color: COLORS.water,
+        hoverColor: COLORS.waterDeep,
+        shadowColor: COLORS.waterDeep,
+        onClick: () => this.onRestartClick && this.onRestartClick()
+      },
+      {
+        icon: 'back',
+        label: '返回',
+        color: COLORS.lavender,
+        hoverColor: COLORS.lavenderDeep,
+        shadowColor: COLORS.lavenderDeep,
+        onClick: () => this.onBackClick && this.onBackClick()
+      }
+    ]
+
+    this.actionButtons = buttonConfigs.map((config, index) => ({
+      ...config,
+      x: marginX + index * (buttonWidth + gap),
+      y: buttonY,
+      width: buttonWidth,
+      height: 40,
+      hovered: false
+    }))
   }
 
   /**
@@ -80,51 +112,112 @@ export default class GameHUD {
   render(ctx) {
     if (!this.isVisible) return
 
-    ctx.save()
+    this.renderPanel(ctx)
+    this.actionButtons.forEach(btn => this.renderActionButton(ctx, btn))
+  }
 
-    // 亚克力导览牌
-    drawGlassPanel(ctx, 10, 8, canvas.width - 20, 64, 20, {
+  /**
+   * 渲染顶部信息面板（关卡、步数、计时）
+   */
+  renderPanel(ctx) {
+    const { x, y, width, height } = this.panel
+
+    drawGlassPanel(ctx, x, y, width, height, 18, {
       fill: 'rgba(255, 255, 255, 0.86)'
     })
 
-    // 关卡徽章
-    drawCandyButton(ctx, 20, 16, 92, 24, {
-      color: COLORS.mint,
-      shadowColor: COLORS.mintDeep,
-      radius: 12
-    })
-    drawStickerText(ctx, `关卡 ${this.level}`, 66, 28, {
-      size: 13,
-      color: COLORS.white,
-      strokeWidth: 2.5
-    })
-
-    // 步数
-    ctx.font = font(15)
-    ctx.textAlign = 'left'
+    ctx.save()
     ctx.textBaseline = 'middle'
-    ctx.fillStyle = this.moves <= this.par ? COLORS.mintDeep : COLORS.coral
-    ctx.fillText(`步数 ${this.moves}`, 22, 54)
 
-    ctx.font = font(11, 'normal')
-    ctx.fillStyle = COLORS.navySoft
-    ctx.fillText(`标准 ${this.par}`, 92, 54)
+    const infoY = y + 64
 
-    // 计时胶囊
-    const timerX = canvas.width / 2 - 40
-    fillRoundRect(ctx, timerX, 16, 80, 26, 13, 'rgba(91, 200, 245, 0.22)')
-    roundRectPath(ctx, timerX, 16, 80, 26, 13)
-    ctx.strokeStyle = 'rgba(91, 200, 245, 0.6)'
-    ctx.lineWidth = 1.5
-    ctx.stroke()
-
-    ctx.font = font(15)
+    // 第N关（不加背景色）
+    ctx.font = font(16)
+    ctx.textAlign = 'left'
     ctx.fillStyle = COLORS.navy
-    ctx.textAlign = 'center'
-    ctx.fillText(this.formatTime(this.time), canvas.width / 2, 30)
+    ctx.fillText(`第${this.level}关`, 20, infoY)
 
-    // 暂停按钮
-    this.pauseButton.render(ctx)
+    // 步数与标准步数
+    ctx.font = font(14)
+    ctx.textAlign = 'center'
+    ctx.fillStyle = this.moves <= this.par ? COLORS.mintDeep : COLORS.coral
+    ctx.fillText(`步数 ${this.moves} · 标准 ${this.par}`, canvas.width / 2, infoY)
+
+    // 计时
+    ctx.font = font(16)
+    ctx.textAlign = 'right'
+    ctx.fillStyle = COLORS.navy
+    ctx.fillText(this.formatTime(this.time), x + width - 14, infoY)
+
+    ctx.restore()
+  }
+
+  /**
+   * 渲染底部操作按钮
+   */
+  renderActionButton(ctx, btn) {
+    drawCandyButton(ctx, btn.x, btn.y, btn.width, btn.height, {
+      color: btn.hovered ? btn.hoverColor : btn.color,
+      shadowColor: btn.shadowColor,
+      pressed: btn.hovered
+    })
+
+    const offsetY = btn.hovered ? 2 : 0
+    const centerY = btn.y + btn.height / 2 + offsetY
+    const iconWidth = 11
+    const iconGap = 4
+
+    ctx.save()
+    ctx.font = font(14)
+    const textWidth = ctx.measureText(btn.label).width
+    ctx.restore()
+
+    const totalWidth = iconWidth + iconGap + textWidth
+    const startX = btn.x + (btn.width - totalWidth) / 2
+
+    this.drawIcon(ctx, btn.icon, startX + iconWidth / 2, centerY)
+    drawStickerText(ctx, btn.label, startX + iconWidth + iconGap, centerY, {
+      size: 14,
+      color: COLORS.white,
+      strokeWidth: 2.5,
+      align: 'left'
+    })
+  }
+
+  /**
+   * 绘制按钮图标
+   */
+  drawIcon(ctx, type, cx, cy) {
+    ctx.save()
+    ctx.strokeStyle = COLORS.white
+    ctx.fillStyle = COLORS.white
+    ctx.lineWidth = 2
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+
+    if (type === 'pause') {
+      fillRoundRect(ctx, cx - 5, cy - 6, 3.5, 12, 1.5, COLORS.white)
+      fillRoundRect(ctx, cx + 1.5, cy - 6, 3.5, 12, 1.5, COLORS.white)
+    } else if (type === 'replay') {
+      ctx.beginPath()
+      ctx.arc(cx, cy, 5.5, Math.PI * 0.55, Math.PI * 1.85)
+      ctx.stroke()
+
+      ctx.beginPath()
+      ctx.moveTo(cx - 5.5, cy - 2.5)
+      ctx.lineTo(cx - 5.5, cy + 2.5)
+      ctx.lineTo(cx - 1.5, cy)
+      ctx.closePath()
+      ctx.fill()
+    } else if (type === 'back') {
+      ctx.beginPath()
+      ctx.moveTo(cx + 5, cy)
+      ctx.lineTo(cx - 5, cy)
+      ctx.moveTo(cx - 1, cy - 4)
+      ctx.lineTo(cx - 5, cy)
+      ctx.lineTo(cx - 1, cy + 4)
+      ctx.stroke()
+    }
 
     ctx.restore()
   }
@@ -133,13 +226,42 @@ export default class GameHUD {
    * 处理触摸开始
    */
   onTouchStart(touch) {
-    return this.pauseButton.onTouchStart(touch)
+    let handled = false
+
+    this.actionButtons.forEach(btn => {
+      if (this.contains(btn, touch)) {
+        btn.hovered = true
+        handled = true
+      }
+    })
+
+    return handled
   }
 
   /**
    * 处理触摸结束
    */
   onTouchEnd(touch) {
-    return this.pauseButton.onTouchEnd(touch)
+    let handled = false
+
+    this.actionButtons.forEach(btn => {
+      const wasHovered = btn.hovered
+      btn.hovered = false
+
+      if (wasHovered && this.contains(btn, touch)) {
+        if (btn.onClick) btn.onClick()
+        handled = true
+      }
+    })
+
+    return handled
+  }
+
+  /**
+   * 判断触摸点是否在按钮内
+   */
+  contains(btn, touch) {
+    return touch.clientX >= btn.x && touch.clientX <= btn.x + btn.width &&
+           touch.clientY >= btn.y && touch.clientY <= btn.y + btn.height
   }
 }

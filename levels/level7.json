@@ -1,38 +1,19 @@
 {
   "id": 7,
   "name": "综合挑战",
-  "grid": {
-    "width": 8,
-    "height": 10,
-    "cellSize": 50
-  },
-  "penguin": {
-    "x": 50,
-    "y": 50
-  },
+  "grid": { "width": 7, "height": 9, "cellSize": 50 },
+  "penguin": { "x": 50, "y": 50 },
   "stones": [
-    { "x": 150, "y": 100, "size": 40 },
-    { "x": 250, "y": 150, "size": 40 },
-    { "x": 100, "y": 250, "size": 40 }
+    { "x": 200, "y": 200, "size": 40 },
+    { "x": 250, "y": 200, "size": 40 },
+    { "x": 300, "y": 200, "size": 40 }
   ],
-  "target": {
-    "x": 300,
-    "y": 400,
-    "width": 50,
-    "height": 50
-  },
+  "target": { "x": 200, "y": 400, "width": 150, "height": 50 },
   "obstacles": [
-    { "type": "wall", "x": 200, "y": 200, "size": 50 },
-    { "type": "wall", "x": 250, "y": 200, "size": 50 },
-    { "type": "hole", "x": 150, "y": 300, "size": 50 },
-    { "type": "hole", "x": 200, "y": 350, "size": 50 },
-    { "type": "snow", "x": 100, "y": 150, "size": 50 },
-    { "type": "snow", "x": 300, "y": 250, "size": 50 }
+    { "type": "wall", "x": 250, "y": 250, "size": 50 },
+    { "type": "hole", "x": 250, "y": 150, "size": 50 },
+    { "type": "snow", "x": 150, "y": 200, "size": 50 }
   ],
-  "par": 10,
-  "stars": {
-    "10": 1,
-    "15": 2,
-    "22": 3
-  }
+  "par": 39,
+  "difficulty": "hard"
 }

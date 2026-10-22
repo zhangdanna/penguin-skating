@@ -149,7 +149,7 @@ onGameOverWatchAd()      // 观看广告复活
 
 ### 胜利流程
 ```
-所有石头到达目标
+所有冰块到达目标
   ↓
 settlementManager.completeLevel()
   ↓
@@ -210,7 +210,7 @@ settlementManager.completeLevel()
 2. **看广告复活**
    - 检查广告次数
    - 如果可用，执行复活逻辑
-   - 恢复企鹅和石头位置
+   - 恢复企鹅和冰块位置
    - 增加步数惩罚
 
 3. **返回菜单**

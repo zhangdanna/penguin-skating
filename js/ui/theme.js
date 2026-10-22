@@ -282,43 +282,52 @@ export function drawOceanBackdrop(ctx, time = Date.now() / 1000, options = {}) {
  * 沙底、珊瑚与海草
  */
 function drawSeaFloor(ctx, time, width, height) {
-  const baseY = height - 46
+  const baseY = height - 104
 
   ctx.save()
   // 沙地
   ctx.beginPath()
   ctx.moveTo(0, height)
-  ctx.lineTo(0, baseY + 10)
-  ctx.quadraticCurveTo(width * 0.25, baseY - 8, width * 0.5, baseY + 4)
-  ctx.quadraticCurveTo(width * 0.78, baseY + 14, width, baseY - 4)
+  ctx.lineTo(0, baseY + 14)
+  ctx.quadraticCurveTo(width * 0.18, baseY - 18, width * 0.38, baseY - 2)
+  ctx.quadraticCurveTo(width * 0.6, baseY + 14, width * 0.78, baseY - 6)
+  ctx.quadraticCurveTo(width * 0.9, baseY - 20, width, baseY + 2)
   ctx.lineTo(width, height)
   ctx.closePath()
-  ctx.fillStyle = 'rgba(255, 235, 200, 0.85)'
+  ctx.fillStyle = 'rgba(255, 235, 200, 0.9)'
   ctx.fill()
 
   // 沙地高光
   ctx.beginPath()
-  ctx.moveTo(0, baseY + 14)
-  ctx.quadraticCurveTo(width * 0.3, baseY + 2, width * 0.55, baseY + 10)
-  ctx.quadraticCurveTo(width * 0.8, baseY + 18, width, baseY + 6)
+  ctx.moveTo(0, baseY + 20)
+  ctx.quadraticCurveTo(width * 0.3, baseY + 4, width * 0.55, baseY + 14)
+  ctx.quadraticCurveTo(width * 0.8, baseY + 24, width, baseY + 10)
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'
   ctx.lineWidth = 2
   ctx.stroke()
 
   // 珊瑚
-  drawCoral(ctx, width * 0.14, height - 12, 22, COLORS.pink)
-  drawCoral(ctx, width * 0.3, height - 6, 15, COLORS.orange)
-  drawCoral(ctx, width * 0.85, height - 10, 19, COLORS.lavender)
+  drawCoral(ctx, width * 0.08, height - 18, 26, COLORS.pink)
+  drawCoral(ctx, width * 0.27, height - 10, 18, COLORS.orange)
+  drawCoral(ctx, width * 0.72, height - 14, 22, COLORS.lavender)
+  drawCoral(ctx, width * 0.93, height - 20, 16, COLORS.mint)
 
   // 海草
-  for (let i = 0; i < 4; i++) {
-    const x = width * (0.06 + i * 0.28)
-    const sway = Math.sin(time * 1.2 + i) * 5
+  const grassCount = 7
+  for (let i = 0; i < grassCount; i++) {
+    const x = width * (0.04 + i * 0.15)
+    const sway = Math.sin(time * 1.2 + i) * 6
+    const grassHeight = 58 + (i % 3) * 24
     ctx.beginPath()
     ctx.moveTo(x, height - 8)
-    ctx.quadraticCurveTo(x + sway, height - 32, x + sway * 1.4, height - 56 - (i % 2) * 10)
-    ctx.strokeStyle = 'rgba(47, 191, 155, 0.55)'
-    ctx.lineWidth = 5
+    ctx.quadraticCurveTo(
+      x + sway,
+      height - 8 - grassHeight * 0.55,
+      x + sway * 1.6,
+      height - 8 - grassHeight
+    )
+    ctx.strokeStyle = `rgba(47, 191, 155, ${0.42 + (i % 2) * 0.14})`
+    ctx.lineWidth = 4 + (i % 2)
     ctx.lineCap = 'round'
     ctx.stroke()
   }

@@ -2,16 +2,16 @@
 
 English | [简体中文](./README.zh-CN.md)
 
-A WeChat mini-game where you guide a penguin to push stones onto target areas by sliding on ice.
+A WeChat mini-game where you guide a penguin to push ice blocks onto target areas by sliding on ice.
 
 ## Features
 
 ### Core Gameplay
 - Ice physics simulation with realistic sliding and friction
 - Touch-based controls: swipe to choose direction, release to slide
-- Sokoban-style puzzle: push stones onto target areas
+- Sokoban-style puzzle: push ice blocks onto target areas
 - Multiple levels with increasing difficulty (7 built-in levels + procedural generation)
-- Collision detection between penguin, stones, and boundaries
+- Collision detection between penguin, ice blocks, and boundaries
 
 ### Obstacle System
 - Ice walls: block movement and cause bouncing
@@ -95,7 +95,7 @@ penguin-skating-game/
 │   │   └── pool.js             # Object pool
 │   ├── runtime/                 # Game objects
 │   │   ├── penguin.js          # Penguin (player character)
-│   │   ├── stone.js            # Pushable stones
+│   │   ├── stone.js            # Pushable ice blocks
 │   │   ├── target.js           # Target area
 │   │   ├── background.js       # Ice background
 │   │   └── obstacle.js         # Obstacles (ice walls, holes, snow piles)
@@ -147,18 +147,18 @@ penguin-skating-game/
 
 1. **Swipe** on the screen to choose the sliding direction
 2. **Release** to make the penguin slide in that direction
-3. **Push stones** by sliding into them
-4. **Win** by getting all stones onto the green target area
+3. **Push ice blocks** by sliding into them
+4. **Win** by getting all ice blocks onto the green target area
 
 ## Physics Parameters
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
 | Ice friction | 0.98 | Penguin sliding friction |
-| Stone friction | 0.92 | Stone sliding friction |
+| Ice block friction | 0.92 | Ice block sliding friction |
 | Max speed | 8 | Maximum sliding speed |
-| Push force | 5 | Force applied to stones |
-| Force transfer | 50% | Force transferred to stones |
+| Push force | 5 | Force applied to ice blocks |
+| Force transfer | 50% | Force transferred to ice blocks |
 
 ## Configuration
 
@@ -203,7 +203,7 @@ Create a new JSON file in `levels/` directory:
 ### Code Structure
 
 - **Base classes** (`js/base/`): Reusable base classes for game objects
-- **Runtime objects** (`js/runtime/`): Game entities (penguin, stones, etc.)
+- **Runtime objects** (`js/runtime/`): Game entities (penguin, ice blocks, etc.)
 - **Physics** (`js/physics/`): Physics simulation and collision detection
 - **Levels** (`js/levels/`): Level loading and management
 

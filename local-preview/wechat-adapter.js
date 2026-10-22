@@ -17,6 +17,15 @@ gameCanvas.height = 667;
 window.canvas = gameCanvas;
 window.ctx = gameCtx;
 
+// 画布可能被 CSS 缩放，触摸坐标需换算回游戏逻辑坐标
+function getCanvasPoint(clientX, clientY) {
+  const rect = gameCanvas.getBoundingClientRect();
+  return {
+    clientX: (clientX - rect.left) * (gameCanvas.width / rect.width),
+    clientY: (clientY - rect.top) * (gameCanvas.height / rect.height)
+  };
+}
+
 // 触摸事件适配
 let touchStartX = 0;
 let touchStartY = 0;
@@ -26,12 +35,10 @@ let touchMoveCallback = null;
 
 gameCanvas.addEventListener('touchstart', (e) => {
   e.preventDefault();
-  const rect = gameCanvas.getBoundingClientRect();
-  
-  // 转换所有触摸点
+
+  // 转换所有触摸点（含画布缩放换算）
   const touches = Array.from(e.touches).map(t => ({
-    clientX: t.clientX - rect.left,
-    clientY: t.clientY - rect.top,
+    ...getCanvasPoint(t.clientX, t.clientY),
     identifier: t.identifier
   }));
   
@@ -49,11 +56,9 @@ gameCanvas.addEventListener('touchstart', (e) => {
 
 gameCanvas.addEventListener('touchend', (e) => {
   e.preventDefault();
-  const rect = gameCanvas.getBoundingClientRect();
-  
+
   const changedTouches = Array.from(e.changedTouches).map(t => ({
-    clientX: t.clientX - rect.left,
-    clientY: t.clientY - rect.top,
+    ...getCanvasPoint(t.clientX, t.clientY),
     identifier: t.identifier
   }));
   
@@ -68,11 +73,10 @@ gameCanvas.addEventListener('touchend', (e) => {
 
 gameCanvas.addEventListener('touchmove', (e) => {
   e.preventDefault();
-  const rect = gameCanvas.getBoundingClientRect();
-  
+
+  // 转换所有触摸点（含画布缩放换算）
   const touches = Array.from(e.touches).map(t => ({
-    clientX: t.clientX - rect.left,
-    clientY: t.clientY - rect.top,
+    ...getCanvasPoint(t.clientX, t.clientY),
     identifier: t.identifier
   }));
   
@@ -87,9 +91,9 @@ gameCanvas.addEventListener('touchmove', (e) => {
 
 // 鼠标事件适配（用于桌面浏览器测试）
 gameCanvas.addEventListener('mousedown', (e) => {
-  const rect = gameCanvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+  const point = getCanvasPoint(e.clientX, e.clientY);
+  const x = point.clientX;
+  const y = point.clientY;
   touchStartX = x;
   touchStartY = y;
   
@@ -106,9 +110,9 @@ gameCanvas.addEventListener('mousedown', (e) => {
 });
 
 gameCanvas.addEventListener('mouseup', (e) => {
-  const rect = gameCanvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+  const point = getCanvasPoint(e.clientX, e.clientY);
+  const x = point.clientX;
+  const y = point.clientY;
   
   // 模拟触摸事件格式
   const touchEvent = {
@@ -124,10 +128,10 @@ gameCanvas.addEventListener('mouseup', (e) => {
 
 gameCanvas.addEventListener('mousemove', (e) => {
   if (e.buttons !== 1) return; // 只在鼠标按下时移动
-  
-  const rect = gameCanvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+
+  const point = getCanvasPoint(e.clientX, e.clientY);
+  const x = point.clientX;
+  const y = point.clientY;
   
   // 模拟触摸事件格式
   const touchEvent = {

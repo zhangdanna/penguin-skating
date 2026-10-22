@@ -189,7 +189,9 @@ export default class FoodManager {
    * @returns {number} 消耗数量
    */
   getLevelCost(difficulty) {
-    return this.levelCost[difficulty] || 1
+    const cost = this.levelCost[difficulty]
+    // tutorial 等难度配置为 0，不能被 || 当成未配置
+    return cost === undefined ? 1 : cost
   }
 
   /**

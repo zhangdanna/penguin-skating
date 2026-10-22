@@ -1,29 +1,14 @@
 {
   "id": 2,
   "name": "双石挑战",
-  "grid": {
-    "width": 8,
-    "height": 10,
-    "cellSize": 50
-  },
-  "penguin": {
-    "x": 50,
-    "y": 50
-  },
+  "grid": { "width": 7, "height": 9, "cellSize": 50 },
+  "penguin": { "x": 50, "y": 50 },
   "stones": [
-    { "x": 150, "y": 200, "size": 40 },
-    { "x": 250, "y": 250, "size": 40 }
+    { "x": 250, "y": 250, "size": 40 },
+    { "x": 300, "y": 250, "size": 40 }
   ],
-  "target": {
-    "x": 300,
-    "y": 400,
-    "width": 50,
-    "height": 50
-  },
-  "par": 5,
-  "stars": {
-    "5": 1,
-    "8": 2,
-    "12": 3
-  }
+  "target": { "x": 250, "y": 400, "width": 100, "height": 50 },
+  "obstacles": [],
+  "par": 17,
+  "difficulty": "easy"
 }

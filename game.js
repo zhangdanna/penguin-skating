@@ -141,11 +141,9 @@ export default class Main {
   initFood() {
     this.foodManager = new FoodManager()
     this.foodDisplay = new FoodDisplay(this.foodManager)
-    // 放到棋盘下方的空档
-    this.foodDisplay.setPosition(
-      BOARD_OFFSET_X,
-      BOARD_OFFSET_Y + GRID_ROWS * CELL_SIZE + 14
-    )
+    // 顶部信息面板内，与关卡信息上下排列
+    this.foodDisplay.setPosition(8, 6)
+    this.foodDisplay.setSize(canvas.width - 16)
   }
 
   /**
@@ -216,6 +214,8 @@ export default class Main {
     // 创建游戏HUD
     this.gameHUD = new GameHUD()
     this.gameHUD.onPauseClick = () => this.pauseGame()
+    this.gameHUD.onRestartClick = () => this.restartLevel()
+    this.gameHUD.onBackClick = () => this.backToMenu()
     
     // 注册游戏主场景
     this.gameScene = new GameScene(this)
@@ -290,7 +290,11 @@ export default class Main {
       this.background = new Background(this.ctx, grid)
       this.penguin = new Penguin({ ...this.toBoardPixel(levelData.penguin), size: CELL_SIZE })
       this.stones = levelData.stones.map(s => new Stone({ ...this.toBoardPixel(s), size: CELL_SIZE }))
-      this.target = new Target({ ...levelData.target, ...this.toBoardPixel(levelData.target) })
+      this.target = new Target({
+        ...levelData.target,
+        ...this.toBoardPixel(levelData.target),
+        cellSize: CELL_SIZE
+      })
 
       // 创建障碍物（同样偏移到棋盘位置）
       this.obstacles = ObstacleFactory.createFromLevelData(levelData.obstacles)
@@ -370,13 +374,22 @@ export default class Main {
   }
 
   /**
-   * 获取指定格子上的石头
+   * 获取指定格子上的冰块
    */
   getStoneAt(col, row) {
     return this.stones.find(stone => {
       const cell = this.getCell(stone)
       return cell.col === col && cell.row === row
     })
+  }
+
+  /**
+   * 获取移动补间时长（雪堆上减速）
+   */
+  getMoveDuration(fromCol, fromRow, toCol, toRow) {
+    const onSnow = this.getObstacleAt(fromCol, fromRow, 'snow') ||
+      this.getObstacleAt(toCol, toRow, 'snow')
+    return onSnow ? 220 : 120
   }
 
   /**
@@ -401,12 +414,13 @@ export default class Main {
       return false
     }
 
+    const duration = this.getMoveDuration(current.col, current.row, next.col, next.row)
     const stone = this.getStoneAt(next.col, next.row)
 
     if (stone) {
       const stoneNext = { col: next.col + step.col, row: next.row + step.row }
 
-      // 石头前方是边界、冰墙、雪堆或另一块石头，推不动
+      // 冰块前方是边界、冰墙、雪堆或另一块冰块，推不动
       const stoneBlocked = !this.isCellInside(stoneNext.col, stoneNext.row) ||
         this.getObstacleAt(stoneNext.col, stoneNext.row, 'wall') ||
         this.getObstacleAt(stoneNext.col, stoneNext.row, 'snow') ||
@@ -418,15 +432,17 @@ export default class Main {
       }
 
       if (this.getObstacleAt(stoneNext.col, stoneNext.row, 'hole')) {
-        // 石头掉入冰窟窿，消失
-        this.stones.splice(this.stones.indexOf(stone), 1)
-      } else {
-        const stonePixel = this.cellToPixel(stoneNext.col, stoneNext.row)
-        stone.moveTo(stonePixel.x, stonePixel.y)
+        // 所有冰块都必须送入目标，掉进冰窟窿后关卡无法完成，直接失败
+        this.gameState = 'fail'
+        this.onFail('冰块掉入冰窟窿')
+        return false
       }
 
+      const stonePixel = this.cellToPixel(stoneNext.col, stoneNext.row)
+      stone.moveTo(stonePixel.x, stonePixel.y, duration)
+
       const nextPixel = this.cellToPixel(next.col, next.row)
-      this.penguin.moveTo(nextPixel.x, nextPixel.y)
+      this.penguin.moveTo(nextPixel.x, nextPixel.y, duration)
       this.audioManager.playPushSound()
     } else if (this.getObstacleAt(next.col, next.row, 'hole')) {
       // 企鹅掉入冰窟窿：停留在安全格（便于复活恢复），直接失败
@@ -435,7 +451,7 @@ export default class Main {
       return false
     } else {
       const nextPixel = this.cellToPixel(next.col, next.row)
-      this.penguin.moveTo(nextPixel.x, nextPixel.y)
+      this.penguin.moveTo(nextPixel.x, nextPixel.y, duration)
     }
 
     if (typeof wx !== 'undefined') {
@@ -473,6 +489,16 @@ export default class Main {
       this.reviveManager.resetLevelRevive()
     }
     this.loadLevel(this.currentLevel)
+  }
+
+  /**
+   * 返回主菜单
+   */
+  backToMenu() {
+    this.gameState = 'menu'
+    this.isPaused = false
+    this.penguin = null
+    this.sceneManager.switchTo('menu')
   }
 
   /**
@@ -623,17 +649,21 @@ export default class Main {
 
       // 只有企鹅停止时才响应新的滑动
       if (direction && !this.penguin.isMoving) {
-        this.tryMove(direction)
-        this.moves++
-        this.gameHUD.setMoves(this.moves)
+        const moved = this.tryMove(direction)
 
-        // 记录步数到结算管理器
-        if (this.settlementManager) {
-          this.settlementManager.recordMove()
+        // 撞墙、推不动、掉入冰窟窿都不计入步数
+        if (moved) {
+          this.moves++
+          this.gameHUD.setMoves(this.moves)
+
+          // 记录步数到结算管理器
+          if (this.settlementManager) {
+            this.settlementManager.recordMove()
+          }
+
+          // 播放滑动音效
+          this.audioManager.playSlideSound()
         }
-
-        // 播放滑动音效
-        this.audioManager.playSlideSound()
       }
     }
   }
@@ -737,7 +767,7 @@ export default class Main {
       this.penguin.isMoving = false
     }
 
-    // 恢复石头位置
+    // 恢复冰块位置
     if (result.lastStones && this.stones.length === result.lastStones.length) {
       result.lastStones.forEach((stoneState, index) => {
         this.stones[index].x = stoneState.x
@@ -805,16 +835,20 @@ export default class Main {
       return
     }
 
-    // 目标格只容得下一块冰块，因此任意一块冰块进入目标即通关
-    let reachedTarget = false
+    if (this.stones.length === 0) {
+      return
+    }
+
+    // 所有冰块都进入目标区域才算通关
+    let allInTarget = true
     this.stones.forEach(stone => {
       stone.inTarget = this.target.contains(stone)
-      if (stone.inTarget) {
-        reachedTarget = true
+      if (!stone.inTarget) {
+        allInTarget = false
       }
     })
 
-    if (reachedTarget) {
+    if (allInTarget) {
       this.gameState = 'win'
       this.onWin()
     }
@@ -1027,7 +1061,7 @@ export default class Main {
     // 渲染障碍物
     this.obstacles.forEach(obstacle => obstacle.render(this.ctx))
 
-    // 渲染石头
+    // 渲染冰块
     this.stones.forEach(stone => stone.render(this.ctx))
 
     // 渲染企鹅

@@ -116,8 +116,8 @@ const audioFiles = {
 |------|------|----------|
 | 游戏启动 | BGM | `init()` |
 | 企鹅滑动 | slide | `touchEndHandler()` |
-| 企鹅推动石头 | push | `checkCollisions()` |
-| 石头碰撞 | collision | `checkCollisions()` |
+| 企鹅推动冰块 | push | `checkCollisions()` |
+| 冰块碰撞 | collision | `checkCollisions()` |
 | 通关 | win | `onWin()` |
 | 失败 | fail | `onFail()` |
 
@@ -142,7 +142,7 @@ const audioFiles = {
 |------|------|------|------|
 | bgm | 60-120秒 | MP3 | 循环播放，轻松愉快 |
 | slide | 0.5-1秒 | MP3 | 冰面滑动声 |
-| push | 0.3-0.5秒 | MP3 | 石头推动声 |
+| push | 0.3-0.5秒 | MP3 | 冰块推动声 |
 | collision | 0.2-0.3秒 | MP3 | 碰撞声 |
 | win | 2-3秒 | MP3 | 欢快通关音乐 |
 | fail | 1-2秒 | MP3 | 低沉失败音效 |
@@ -188,7 +188,7 @@ initAudio() {
 // 滑动时
 this.audioManager.playSlideSound()
 
-// 推动石头时
+// 推动冰块时
 this.audioManager.playPushSound()
 
 // 碰撞时

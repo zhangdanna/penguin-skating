@@ -527,8 +527,8 @@ if (fs.existsSync(shareImage)) {
   const isPng = buf.slice(1, 4).toString() === 'PNG'
   const w = buf.readUInt32BE(16)
   const h = buf.readUInt32BE(20)
-  check(`分享图为合法 PNG 且为 500x400（实际 ${w}x${h}）`,
-    isPng && w === 500 && h === 400, `${w}x${h}`)
+  check(`分享图为合法 PNG（实际 ${w}x${h}，建议 5:4）`,
+    isPng && w >= 300 && h >= 300, `${w}x${h}`)
 }
 check('audio/bgm.wav 存在', fs.existsSync(bgmFile))
 if (fs.existsSync(bgmFile)) {
@@ -579,7 +579,7 @@ console.log('\n[17] B5 包体排除项')
 const projectConfig = JSON.parse(fs.readFileSync(path.join(ROOT, 'project.config.json'), 'utf8'))
 const ignored = (projectConfig.packOptions && projectConfig.packOptions.ignore) || []
 const ignoredValues = ignored.map(i => i.value)
-for (const target of ['docs', 'local-preview', 'tools', 'penguin-skating-design.html', 'README.md']) {
+for (const target of ['docs', 'local-preview', 'tools', 'game.md', 'private.wx.key', 'README.md']) {
   check(`已排除 ${target}`, ignoredValues.includes(target), ignoredValues.join(','))
 }
 

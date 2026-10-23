@@ -1,18 +1,75 @@
 {
-  "description": "企鹅滑冰 - 微信小游戏",
+  "description": "一企推推乐 - 微信小游戏",
   "packOptions": {
     "ignore": [
-      { "type": "folder", "value": "docs" },
-      { "type": "folder", "value": "local-preview" },
-      { "type": "folder", "value": "tools" },
-      { "type": "folder", "value": ".workbuddy-ai" },
-      { "type": "folder", "value": ".git" },
-      { "type": "file", "value": "README.md" },
-      { "type": "file", "value": "README.zh-CN.md" },
-      { "type": "file", "value": "penguin-skating-design.html" },
-      { "type": "file", "value": "project.private.config.json" },
-      { "type": "file", "value": "audio/generate-audio.html" },
-      { "type": "file", "value": "audio/README.md" }
+      {
+        "value": "docs",
+        "type": "folder"
+      },
+      {
+        "value": "local-preview",
+        "type": "folder"
+      },
+      {
+        "value": "tools",
+        "type": "folder"
+      },
+      {
+        "value": ".workbuddy",
+        "type": "folder"
+      },
+      {
+        "value": ".workbuddy-ai",
+        "type": "folder"
+      },
+      {
+        "value": ".git",
+        "type": "folder"
+      },
+      {
+        "value": "node_modules",
+        "type": "folder"
+      },
+      {
+        "value": "dist-h5",
+        "type": "folder"
+      },
+      {
+        "value": "dist-weapp",
+        "type": "folder"
+      },
+      {
+        "value": "README.md",
+        "type": "file"
+      },
+      {
+        "value": "game.md",
+        "type": "file"
+      },
+      {
+        "value": "package.json",
+        "type": "file"
+      },
+      {
+        "value": "package-lock.json",
+        "type": "file"
+      },
+      {
+        "value": "project.private.config.json",
+        "type": "file"
+      },
+      {
+        "value": "private.wx.key",
+        "type": "file"
+      },
+      {
+        "value": "preview-qrcode.png",
+        "type": "file"
+      },
+      {
+        "value": ".wbapp_hjDG7BG911lkYn79M1Mtzf.genie",
+        "type": "file"
+      }
     ],
     "include": []
   },
@@ -55,7 +112,7 @@
   },
   "compileType": "game",
   "libVersion": "3.17.4",
-  "appid": "wx25bf5262c669e9a9",
+  "appid": "wxf7f7eb0563f85b47",
   "projectname": "penguin-skating",
   "condition": {},
   "simulatorPluginLibVersion": {},

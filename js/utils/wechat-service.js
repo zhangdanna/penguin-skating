@@ -48,7 +48,7 @@ export default class WechatService {
     const stars = this.getTotalStars()
 
     return {
-      title: `我在企鹅滑冰已通关${level}关，获得${stars}颗星！快来挑战吧！`,
+      title: `我在一企推推乐已通关${level}关，获得${stars}颗星！快来挑战吧！`,
       imageUrl: 'images/share-image.png',
       query: `from=share&level=${level}`
     }
@@ -60,7 +60,7 @@ export default class WechatService {
    */
   getTimelineShareConfig() {
     return {
-      title: '企鹅滑冰 - 超好玩的冰上推箱子游戏！',
+      title: '一企推推乐 - 超好玩的冰上推箱子游戏！',
       imageUrl: 'images/share-image.png'
     }
   }

@@ -168,7 +168,7 @@ def draw_text_center(text, y, font, fill, stroke=None, stroke_w=0):
         d.text((x, y * S), text, font=font, fill=fill)
 
 
-draw_text_center("企鹅滑冰", 52, F_TITLE, YELLOW, NAVY_DEEP, 6 * S)
+draw_text_center("一企推推乐", 52, F_TITLE, YELLOW, NAVY_DEEP, 6 * S)
 
 # 副标题胶囊
 sub_text = "冰上推箱子 · 一滑到底"

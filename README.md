@@ -1,284 +1,125 @@
-# Penguin Skating
+# 一企推推乐
 
-English | [简体中文](./README.zh-CN.md)
+一款微信小游戏：滑动一次让企鹅移动一格，把冰块推到目标区域。
 
-A WeChat mini-game: guide a penguin across an ice rink, one cell per swipe, and push ice blocks onto the target area.
-
-The board is 7 columns × 9 rows. **Each swipe moves exactly one cell.** Blocks that hit an obstacle can't be pushed. If a block is pushed into a hole, or the penguin steps into one, the level fails. Get every block onto the target to win.
+棋盘 7 列 × 9 行。共 60 关（7 关手工设计 + 53 关程序化生成），之后按 60 关循环。
 
 ---
 
-## How to Play
+## 技术框架
 
-1. Swipe in a direction → the penguin moves **one cell**
-2. Swiping into a block pushes it one cell too (if it can't move, you only get a bump sound and no move is counted)
-3. Push every block onto the target area to clear the level
-4. Stars: moves ≤ par → ★★★; ≤ par × 1.5 → ★★☆; otherwise ★☆☆
-
-### Obstacles
-
-| Type | Effect |
+| 层级 | 方案 |
 |---|---|
-| Ice wall `wall` | Blocks both penguin and ice blocks |
-| Hole `hole` | Penguin falls in → instant fail; a block falls in → level becomes unsolvable, also a fail |
-| Snow `snow` | Slower movement (tween 120ms → 220ms); blocks can't be pushed onto snow |
+| 运行平台 | 微信小游戏（原生 Canvas 2D），同时提供 H5 适配预览 |
+| 语言 / 模块 | 原生 JavaScript + ES Modules，无第三方游戏引擎 |
+| 渲染 | Canvas 2D 自绘；离屏图层缓存（`LayerCache`）复用海洋背景与棋盘静态层 |
+| 主循环 | `game.js` 中 `requestAnimationFrame` 驱动 `update / render` |
+| 场景管理 | 自研 `SceneManager`：菜单、关卡、暂停、结算、复活、排行、隐私等场景 |
+| 棋盘实体 | `Penguin / Stone / Target / Obstacle / Background` 独立运行时类 |
+| 坐标适配 | `js/ui/layout.js` 以 375×667 设计稿为基准，等比缩放并做 `project / unproject` |
+| 输入 | `wx.onTouchStart / Move / End`，滑动方向判定，一次滑动移动一格 |
+| 关卡数据 | `js/levels/level-manager.js` + `generated-levels.js`，由离线 BFS 求解器验证 |
+| 存档 | `wx.getStorageSync / setStorageSync`（H5 下映射到 `localStorage`） |
+| 音频 | `wx.createInnerAudioContext`；BGM 优先 `bgm.mp3`，回落 `bgm.wav` |
+| 广告 | `wx.createRewardedVideoAd`；未配置广告位时自动隐藏所有广告入口 |
+| 社交 | 微信开放数据域 `open-data/` 好友排行榜；分享纯传播、不绑定奖励 |
+| 平台能力 | 隐私授权、热更新、`wx.onError` / `wx.onUnhandledRejection` |
+| 构建 / 发布 | Node.js ESM 脚本；`miniprogram-ci` 上传；H5 自带静态服务器 |
+| 测试 | `tools/regression/run.mjs` 用 `node:vm` 加载真实模块做离线断言 |
+| 后端 | 无后端；进度、食物、成就在本地，排行榜依赖微信开放数据域 |
+
+补充说明：
+
+- **无游戏引擎**：没有 Cocos / Laya / Phaser，全部是原生 Canvas 2D 绘制。
+- **无运行时第三方依赖**：`miniprogram-ci` 只用于上传，不进入游戏包。
+- **双端同源**：H5 通过 `local-preview/wechat-adapter.js` 把 `wx.*` 映射到浏览器 API；`tools/h5-server.js` 负责无后缀 `import` 的路径兜底。
+- **关卡生成**：`tools/gen-levels.mjs` 用逆向构造 + BFS 校验生成关卡，保证可解与难度递增。
 
 ---
 
-## Features
-
-**Gameplay & Content**
-- 60-level campaign: 7 hand-crafted levels + 53 procedurally generated ones, all verified solvable with a BFS solver
-- Difficulty rises monotonically with optimal move count: level 1 = 13 moves, level 60 = 39 moves
-- `par = ceil(optimal × 1.2)`, so three stars no longer require a flawless run
-- Levels 61+ cycle through the 60, mirrored horizontally on odd rounds
-
-**Progression**
-- Food (stamina): fish 🐟 / shrimp 🦐 / squid 🦑 / goldfish 🐠, costing 0–5 per level by difficulty
-- Natural recovery: +1 every 5 minutes, capped at 30, computed from real elapsed time with the remainder preserved
-- 19 achievements covering wins, stars, streaks, revives and food collection
-- Revive: watch a rewarded video (5/day) or spend food
-
-**Social & Platform**
-- Friend leaderboard via the open data context (`open-data/`); the main context only renders it
-- Report policy is monotonic: highest level + total stars + best moves for that level
-- Sharing is pure distribution — **no rewards attached** (compliance requirement)
-- Privacy authorization via `wx.onNeedPrivacyAuthorization` with a custom dialog, triggered on demand
-
-**Experience & Engineering**
-- Design-canvas coordinate system (375×667) with uniform scaling, covering every screen from 320 to 768 wide
-- App lifecycle: auto-pause on background, BGM stops, timer does not jump when returning
-- Window resize recomputes the board and every UI button position
-- Offscreen caching for static layers (ocean backdrop, board tiles, glass panel shadows); no `shadowBlur` anywhere
-- 171 offline regression assertions covering layout, timing, economy, levels, leaderboard and rendering
-
----
-
-## Quick Start
-
-### Option 1: WeChat DevTools (simulator / real device)
-
-1. Install [WeChat DevTools](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html)
-2. "Import Project" → select this directory
-3. Enter your own mini-game AppID (or use a test account)
-4. Click "Compile"
-
-> `project.config.json` uses `compileType: "game"` and `libVersion: "3.17.4"`.
-> The privacy authorization API requires base library **≥ 2.32.3**.
-
-### Option 2: Browser preview
+## 快速开始
 
 ```bash
-node local-preview/server.js
-# open http://localhost:8080/local-preview/index.html
+npm install
 ```
 
-`local-preview/wechat-adapter.js` maps `wx.*` onto browser APIs: the canvas is fixed at 375×667,
-touch is mapped to mouse events, `visibilitychange` simulates background/foreground switching,
-and ads plus privacy authorization are stubbed.
+| 目的 | 命令 |
+|---|---|
+| 浏览器预览 | `npm run preview` → http://localhost:8080 |
+| 构建 H5 | `npm run build:h5` → `dist-h5/` |
+| 构建微信小游戏 | `npm run build:weapp` → `dist-weapp/` |
+| 上传小游戏 | `npm run upload -- 1.0.1 "版本说明"` |
+| 构建并上传 | `npm run release -- 1.0.1 "版本说明"` |
+| 生成预览二维码 | `npm run preview -- 1.0.0 "预览说明"` |
+| 回归测试 | `node --experimental-vm-modules tools/regression/run.mjs .` |
+
+完整发布步骤见 [docs/PUBLISH.md](./docs/PUBLISH.md)。
+
+### 微信开发者工具
+
+1. 安装 [微信开发者工具](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html)。
+2. **导入项目** → 选择本目录。
+3. 项目类型选 **小游戏**，不要选小程序。
+4. 填入 AppID → 点「编译」。
+
+> 如果提示 `未找到 app.json`，说明导入时选成了小程序。删除项目引用（不要删文件）后重新导入为小游戏。
+
+### H5
+
+```bash
+npm run build:h5
+cd dist-h5
+node server.js
+# http://localhost:8080
+```
+
+H5 包自带 `server.js`：源码里的 `import` 没写 `.js` 后缀，纯静态托管会 404。H5 下登录、云存档、好友排行榜、分享、广告都是模拟的，只保留单机玩法。
 
 ---
 
-## Project Structure
+## 项目结构
 
 ```
 penguin-skating-game/
-├── game.js                       # Entry: main loop, state machine, level loading, lifecycle
-├── game.json                     # Mini-game config (portrait, open data context)
-├── project.config.json           # DevTools config (incl. package exclusions)
+├── game.js                  # 入口：主循环、状态机
+├── game.json                # 小游戏配置（竖屏、开放数据域）
+├── project.config.json      # 开发者工具配置 + 包体排除项
 ├── js/
-│   ├── config.js                 # Ad units, version, other configurable values
-│   ├── base/
-│   │   └── sprite.js             # Sprite base class (position/size/tween)
-│   ├── runtime/                  # Entities on the board
-│   │   ├── penguin.js            # Penguin (swipe detection + rendering)
-│   │   ├── stone.js              # Pushable ice blocks
-│   │   ├── target.js             # Target area
-│   │   ├── obstacle.js           # Obstacle factory (wall/hole/snow)
-│   │   └── background.js         # Aquarium backdrop + ice board (cached static layers)
-│   ├── levels/
-│   │   ├── level-manager.js      # Campaign assembly (hand-crafted + generated, single source)
-│   │   └── generated-levels.js   # Levels 8–60, produced by tools/gen-levels.mjs
-│   ├── ui/
-│   │   ├── layout.js             # Design-canvas coordinate system + uniform scaling
-│   │   ├── theme.js              # Palette, fonts, panel/button/backdrop primitives
-│   │   ├── scene-manager.js      # Scene stack
-│   │   ├── game-scene.js         # Gameplay scene (thin shell; logic lives in game.js)
-│   │   ├── menu-scene.js         # Main menu
-│   │   ├── pause-scene.js        # Pause
-│   │   ├── result-scene.js       # Level clear
-│   │   ├── gameover-scene.js     # Game over
-│   │   ├── revive-scene.js       # Revive options
-│   │   ├── rank-scene.js         # Leaderboard (composites the open data canvas)
-│   │   ├── achievement-scene.js  # Achievement list
-│   │   ├── achievement-notification.js  # Achievement unlock toast
-│   │   ├── privacy-scene.js      # Privacy authorization dialog
-│   │   ├── game-hud.js           # In-game HUD (level/moves/timer/action bar)
-│   │   ├── food-display.js       # Food counters and reward animation
-│   │   └── button.js             # Button component
-│   └── utils/
-│       ├── audio-manager.js      # BGM + SFX, sound toggle persisted
-│       ├── ad-manager.js         # Rewarded video (whole chain off when unconfigured)
-│       ├── wechat-service.js     # Share / cloud storage / leaderboard reporting
-│       ├── food-manager.js       # Food economy and natural recovery
-│       ├── achievement-manager.js# Achievement rules and stats
-│       ├── revive-manager.js     # Revive counts and daily limits
-│       ├── settlement-manager.js # Per-run settlement and cumulative stats
-│       ├── score.js              # Star rules (single implementation)
-│       └── layer-cache.js        # Offscreen static-layer cache
-├── open-data/
-│   └── index.js                  # Open data context: friend leaderboard rendering
-├── audio/                        # bgm.wav + 6 sound effects
-├── images/
-│   └── share-image.png           # Share card, 500×400
-├── tools/
-│   ├── gen-levels.mjs            # Level generator (reverse construction + BFS solve)
-│   ├── gen-share-image.py        # Share image generator
-│   ├── gen-bgm.py                # BGM generator
-│   └── regression/run.mjs        # Offline regression suite
-├── local-preview/                # Browser preview (not packaged)
-└── docs/                         # Design and review docs (not packaged)
+│   ├── config.js            # 广告位、版本号
+│   ├── base/                # 精灵基类
+│   ├── runtime/             # 棋盘实体与背景
+│   ├── levels/              # 60 关（手工 + 生成）
+│   ├── ui/                  # 场景、HUD、按钮、主题、布局
+│   └── utils/               # 音频、广告、存储、食物、成就、星级
+├── open-data/               # 好友排行榜（开放数据域）
+├── audio/                   # bgm.wav + 音效
+├── images/                  # 分享图
+├── local-preview/           # 浏览器预览适配层（不打包）
+├── tools/                   # 构建、上传、生成、回归脚本
+├── docs/PUBLISH.md          # H5 + 微信小游戏发布指南
+├── game.md                  # 玩法、关卡、系统说明
+└── README.md                # 项目入口
 ```
+
+`docs/`、`tools/`、`local-preview/` 只在开发期使用，上传包会自动排除。
 
 ---
 
-## Levels and Numbers
+## 配置
 
-### Level data
+- AppID：`project.config.json` → `appid`
+- 激励视频广告位：`js/config.js` → `AD_UNITS.rewardedVideo`（留空 = 关闭广告）
+- 上传密钥：项目根目录 `private.wx.key`（已 gitignore）
+- 分享图：`images/share-image.png`（PNG，建议 5:4）
 
-Levels are no longer read from `levels/*.json` — everything lives in `js/levels/level-manager.js`:
+---
 
-- `HANDCRAFTED_LEVELS`: 7 hand-designed levels with `originalId` and a measured `optimal`
-- `GENERATED_LEVELS`: 53 generated levels (`js/levels/generated-levels.js`)
-- Both are merged, **sorted by `optimal` ascending**, then renumbered 1..60
+## 文档
 
-### Generation algorithm
-
-`tools/gen-levels.mjs` uses **reverse construction** instead of random placement (with 3 blocks, random boards are solvable only ~0.2% of the time — about 700 attempts per hit in practice):
-
-1. Start from the solved state (all blocks already on the target) — guaranteed solvable
-2. Randomly walk backwards (penguin retreats, dragging a block); Sokoban moves are reversible, so any board reached this way is solvable
-3. Score each candidate direction: +3 when the block's Manhattan distance to the target grows, −1 when it shrinks, then sample by weight — without this, blocks end up right next to the target and difficulty collapses
-4. Run BFS for the true optimal move count (integer state encoding `p | s0<<6 | s1<<12 | s2<<18`)
-5. Build a pool of 96 boards with `optimal ≥ 18`, sort by `optimal`, and take 53 at even intervals
-
-Regenerate after tweaking difficulty:
-
-```bash
-node tools/gen-levels.mjs
-```
-
-### Stars
-
-Defined once in `js/utils/score.js` (`calcStars(moves, par)`):
-
-| Stars | Condition |
+| 文档 | 内容 |
 |---|---|
-| ★★★ | moves ≤ par |
-| ★★☆ | moves ≤ par × 1.5 |
-| ★☆☆ | otherwise |
-
-### Food
-
-| Food | Value | Source |
-|---|---|---|
-| 🐟 Fish | 1 | Level clear reward, natural recovery, ads |
-| 🦐 Shrimp | 3 | Time bonus |
-| 🦑 Squid | 10 | Time bonus, win streak |
-| 🐠 Goldfish | 50 | Speed clear, 10-win streak |
-
-Level cost: tutorial 0 / easy 1 / medium 2 / hard 3 / expert 5. Natural recovery: +1 per 5 minutes, cap 30.
-
----
-
-## Configuration
-
-### Ad units (`js/config.js`)
-
-```js
-export const AD_UNITS = {
-  rewardedVideo: ''   // empty = whole ad chain disabled, all ad entries hidden
-}
-```
-
-Fill in a real unit (an `adunit-` ID) to enable the "watch video" entries on the revive screen and in the out-of-food dialog. Leaving it empty doesn't affect gameplay or review.
-
-### AppID (`project.config.json`)
-
-```json
-{ "appid": "your-appid-here" }
-```
-
-`project.private.config.json` holds local DevTools settings and is excluded via `.gitignore`.
-
-### Package exclusions
-
-`packOptions.ignore` in `project.config.json` excludes `docs/`, `local-preview/`, `tools/`, `.workbuddy-ai/`, the READMEs and the design mockup. These belong in the repo but not in the upload package.
-
----
-
-## Development
-
-### Run the regression suite
-
-```bash
-node --experimental-vm-modules tools/regression/run.mjs .
-```
-
-Runs the real modules offline (`vm.SourceTextModule`) with a controllable clock and simulated touch chain. 171 assertions covering layout adaptation, level coordinate mapping, pause/back state resets, settlement idempotency, achievement rewards, compliance items, ad stubs, privacy authorization, package exclusions, the design-canvas system, background timing, food economy, level uniqueness and leaderboard policy.
-
-### Working with UI coordinates
-
-All overlay scenes are authored in **375×667 design coordinates**:
-
-```js
-import { CENTER_X, stage } from './layout'
-
-render(ctx) {
-  drawOverlay(ctx, 0.6)        // overlay covers real pixels
-  const s = stage()
-  ctx.save()
-  s.apply(ctx)                 // everything below uses design coordinates
-  // ...
-  ctx.restore()
-}
-
-onTouchStart(touch) {
-  const t = stage().unproject(touch)   // screen → design coordinates
-}
-```
-
-**Never write `canvas.width / 2` inside a scene** — the regression suite asserts that button coordinates are independent of canvas size and will fail.
-
-### Adding a UI scene
-
-Implement `render / update / onTouchStart / onTouchMove / onTouchEnd`, register it with `sceneManager`, and expose `relayout()` for window-size changes. Note that `relayout()` rebuilds button objects, so callbacks must live on the constructor or be saved and restored around it.
-
----
-
-## Known Limitations
-
-- **No backend**: without `code2session` there is no account system. The leaderboard relies on the openid binding built into `wx.setUserCloudStorage`, so only friends' scores are visible.
-- **Generated level quality**: BFS guarantees solvability and the minimum move count, not that the solution is visually obvious. Hand-crafted levels read better.
-- **Ads unconfigured**: all ad entries stay hidden, and running out of food means waiting for natural recovery.
-- **Browser preview is locked to 375×667**: resizing the window only tests CSS scaling, not the 320-logical-pixel layout (that part is covered by the offline regression suite).
-
----
-
-## Documentation
-
-| Document | Contents |
-|---|---|
-| [Pre-release review](./docs/phase11-pre-release-review.md) | Technical and functional review (P0/P1/P2 with a fix list) |
-| [Publishing guide](./docs/phase12-publish-guide.md) | WeChat mini-game and H5 publishing steps |
-| [Batch A: Stability](./docs/review/batch-a-stability.md) | Crashes, deadlocks, state resets |
-| [Batch B: Compliance](./docs/review/batch-b-compliance.md) | Induced sharing, fake ads, privacy, package size |
-| [Batch C: Experience](./docs/review/batch-c-experience.md) | Screen adaptation, lifecycle, food economy, levels |
-| [Batch D: Engineering](./docs/review/batch-d-engineering.md) | Dead code, duplication, error handling, performance |
-
-`docs/phase1` through `phase10` are per-phase development logs describing the implementation at the time. Some of it (physics engine, level select screen, login) has since been removed.
-
----
+| [game.md](./game.md) | 玩法、障碍、关卡、食物、成就、复活、已知限制 |
+| [docs/PUBLISH.md](./docs/PUBLISH.md) | H5 与微信小游戏发布步骤、常见错误 |
 
 ## License
 

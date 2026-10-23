@@ -10,8 +10,13 @@ miniprogram_npm/
 node_modules/
 package-lock.json
 
+# 上传密钥（微信公众平台生成，每台机器不同，绝不可入库）
+private.wx.key
+
 # ---------- AI 协作工具 ----------
 .workbuddy-ai/
+# WorkBuddy 本地截图等临时产物
+.workbuddy/shots/
 
 # ---------- 系统 / 编辑器 ----------
 .DS_Store
@@ -21,6 +26,15 @@ Thumbs.db
 
 # ---------- 构建与临时产物 ----------
 dist/
+# H5 发布包（tools/build-h5.mjs 生成，可随时重建）
+dist-h5/
+# 微信小程序发布包（tools/build-weapp.mjs 生成，可随时重建）
+dist-weapp/
+# 预览二维码（tools/preview-weapp.mjs 生成）
+preview-qrcode.png
+
+.workbuddy/
+*.wxss
 *.log
 *.tmp
 

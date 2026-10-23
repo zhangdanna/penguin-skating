@@ -1,0 +1,16 @@
+{
+  "name": "penguin-island-push",
+  "version": "1.0.0",
+  "description": "一企推推乐 - 微信小游戏",
+  "private": true,
+  "scripts": {
+    "build:h5": "node tools/build-h5.mjs",
+    "build:weapp": "node tools/build-weapp.mjs",
+    "upload": "node tools/upload-weapp.mjs",
+    "preview": "node tools/preview-weapp.mjs",
+    "release": "node tools/release-weapp.mjs"
+  },
+  "devDependencies": {
+    "miniprogram-ci": "^2.1.31"
+  }
+}

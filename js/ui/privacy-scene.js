@@ -201,7 +201,7 @@ export default class PrivacyScene {
   }
 
   renderBody(ctx, panel) {
-    const text = '为了展示好友排行榜、保存游戏进度与成就，企鹅滑冰需要使用你的微信昵称、头像和游戏数据。我们不会收集与游戏无关的信息，也不会向第三方提供。'
+    const text = '为了展示好友排行榜、保存游戏进度与成就，一企推推乐需要使用你的微信昵称、头像和游戏数据。我们不会收集与游戏无关的信息，也不会向第三方提供。'
 
     ctx.save()
     ctx.font = font(13, 'normal')

@@ -499,12 +499,12 @@ const wxAPIs = {
   // 分享（模拟）
   shareAppMessage: (options) => {
     console.log('[Share] 分享到好友:', options);
-    showPreviewTip(`分享（本地预览为模拟）：${options.title || '企鹅滑冰'}`);
+    showPreviewTip(`分享（本地预览为模拟）：${options.title || '一企推推乐'}`);
   },
   
   shareAppMessageToGroup: (options) => {
     console.log('[Share] 分享到群:', options);
-    showPreviewTip(`分享到群（本地预览为模拟）：${options.title || '企鹅滑冰'}`);
+    showPreviewTip(`分享到群（本地预览为模拟）：${options.title || '一企推推乐'}`);
   },
   
   showShareMenu: (options = {}) => {

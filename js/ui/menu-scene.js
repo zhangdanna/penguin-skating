@@ -222,14 +222,14 @@ export default class MenuScene {
     const centerX = CENTER_X
 
     // 标题投影
-    drawStickerText(ctx, '企鹅滑冰', centerX, this.titleY + 5, {
+    drawStickerText(ctx, '一企推推乐', centerX, this.titleY + 5, {
       size: 50,
       color: 'rgba(31, 58, 95, 0.22)',
       strokeWidth: 0
     })
 
     // 主标题
-    drawStickerText(ctx, '企鹅滑冰', centerX, this.titleY, {
+    drawStickerText(ctx, '一企推推乐', centerX, this.titleY, {
       size: 50,
       color: COLORS.white,
       stroke: COLORS.navyDeep,

@@ -1,256 +1,157 @@
 /**
- * 广告管理器
- * 管理微信小游戏的各种广告类型
+ * 广告管理器（B2）
+ *
+ * 设计原则：
+ * 1. 只有配置了合法广告位 ID 才创建实例，未开通流量主时整条链路静默关闭；
+ * 2. 只做激励视频。Banner / 插屏在本游戏里没有合适的展示位（会遮挡底部操作条），
+ *    不做无意义的预加载；
+ * 3. 是否发放奖励只看 onClose 的 `isEnded`，中途关闭一律不给；
+ * 4. `showRewardedVideoAd()` 返回 Promise<boolean>，调用方无需关心回调时序。
  */
 export default class AdManager {
-  constructor() {
-    // 广告实例
+  constructor(adUnits = {}) {
+    this.adUnitId = (adUnits && adUnits.rewardedVideo) || ''
     this.rewardedVideoAd = null
-    this.bannerAd = null
-    this.interstitialAd = null
 
-    // 广告状态
-    this.rewardedVideoReady = false
-    this.bannerVisible = false
+    // 当前是否已加载完成
+    this.ready = false
 
-    // 广告单元ID（需要替换为实际的广告单元ID）
-    this.adUnitIds = {
-      rewardedVideo: 'adunit-xxx',  // 激励视频广告
-      banner: 'adunit-yyy',          // Banner广告
-      interstitial: 'adunit-zzz'     // 插屏广告
-    }
-
-    // 回调
-    this.onRewardCallback = null
+    // 正在等待结果的 resolve（同一时刻只允许一次播放）
+    this.pendingResolve = null
   }
 
   /**
-   * 初始化广告
+   * 广告位 ID 是否形如 adunit-xxxx（长度足够，非占位符）
+   * @param {string} id
+   * @returns {boolean}
+   */
+  static isValidAdUnitId(id) {
+    return typeof id === 'string' && /^adunit-[0-9a-zA-Z_-]{6,}$/.test(id)
+  }
+
+  /**
+   * 是否已配置广告位
+   * @returns {boolean}
+   */
+  isConfigured() {
+    return AdManager.isValidAdUnitId(this.adUnitId)
+  }
+
+  /**
+   * 初始化：未配置或基础库不支持时直接跳过
    */
   init() {
-    this.initRewardedVideoAd()
-    this.initBannerAd()
-    this.initInterstitialAd()
-  }
-
-  /**
-   * 初始化激励视频广告
-   */
-  initRewardedVideoAd() {
-    if (!wx.createRewardedVideoAd) {
-      console.warn('当前版本不支持激励视频广告')
+    if (!this.isConfigured()) {
+      console.log('[Ad] 未配置激励视频广告位，广告相关入口将隐藏')
       return
     }
 
-    this.rewardedVideoAd = wx.createRewardedVideoAd({
-      adUnitId: this.adUnitIds.rewardedVideo
-    })
+    if (typeof wx === 'undefined' || !wx.createRewardedVideoAd) {
+      console.warn('[Ad] 当前基础库不支持激励视频广告')
+      return
+    }
 
-    // 监听加载成功
+    try {
+      this.rewardedVideoAd = wx.createRewardedVideoAd({ adUnitId: this.adUnitId })
+    } catch (e) {
+      console.warn('[Ad] 创建激励视频实例失败:', e)
+      this.rewardedVideoAd = null
+      return
+    }
+
     this.rewardedVideoAd.onLoad(() => {
-      console.log('激励视频广告加载成功')
-      this.rewardedVideoReady = true
+      this.ready = true
     })
 
-    // 监听加载失败
     this.rewardedVideoAd.onError((err) => {
-      console.error('激励视频广告加载失败:', err)
-      this.rewardedVideoReady = false
+      this.ready = false
+      console.warn('[Ad] 激励视频出错:', err && err.errMsg)
+      // 若错误发生在播放过程中，按"未完成观看"结束本次请求
+      this.settle(false)
     })
 
-    // 监听关闭
     this.rewardedVideoAd.onClose((res) => {
-      this.rewardedVideoReady = false
-
-      if (res && res.isEnded) {
-        // 用户完整观看了广告，给予奖励
-        console.log('用户完整观看了广告')
-        if (this.onRewardCallback) {
-          this.onRewardCallback(true)
-        }
-      } else {
-        // 用户中途退出，不给予奖励
-        console.log('用户中途退出了广告')
-        if (this.onRewardCallback) {
-          this.onRewardCallback(false)
-        }
+      this.ready = false
+      const ended = !!(res && res.isEnded)
+      if (!ended) {
+        console.log('[Ad] 用户中途关闭激励视频，不发放奖励')
       }
+      this.settle(ended)
+      // 提前预拉下一条，缩短下次点击的等待
+      this.preload()
     })
 
-    // 预加载
-    this.rewardedVideoAd.load().catch(() => {
-      console.log('激励视频广告预加载失败')
-    })
+    this.preload()
   }
 
   /**
-   * 初始化Banner广告
+   * 预加载
+   * @returns {Promise<void>}
    */
-  initBannerAd() {
-    if (!wx.createBannerAd) {
-      console.warn('当前版本不支持Banner广告')
-      return
-    }
+  preload() {
+    if (!this.rewardedVideoAd) return Promise.resolve()
 
-    const systemInfo = wx.getSystemInfoSync()
-
-    this.bannerAd = wx.createBannerAd({
-      adUnitId: this.adUnitIds.banner,
-      style: {
-        left: 0,
-        top: systemInfo.windowHeight - 80,
-        width: systemInfo.windowWidth
-      }
-    })
-
-    // 监听加载成功
-    this.bannerAd.onLoad(() => {
-      console.log('Banner广告加载成功')
-    })
-
-    // 监听加载失败
-    this.bannerAd.onError((err) => {
-      console.error('Banner广告加载失败:', err)
-    })
-
-    // 监听尺寸变化
-    this.bannerAd.onResize((size) => {
-      this.bannerAd.style.left = (systemInfo.windowWidth - size.width) / 2
-      this.bannerAd.style.top = systemInfo.windowHeight - size.height
-    })
+    return this.rewardedVideoAd.load()
+      .then(() => { this.ready = true })
+      .catch(() => { this.ready = false })
   }
 
   /**
-   * 初始化插屏广告
-   */
-  initInterstitialAd() {
-    if (!wx.createInterstitialAd) {
-      console.warn('当前版本不支持插屏广告')
-      return
-    }
-
-    this.interstitialAd = wx.createInterstitialAd({
-      adUnitId: this.adUnitIds.interstitial
-    })
-
-    // 监听加载成功
-    this.interstitialAd.onLoad(() => {
-      console.log('插屏广告加载成功')
-    })
-
-    // 监听加载失败
-    this.interstitialAd.onError((err) => {
-      console.error('插屏广告加载失败:', err)
-    })
-  }
-
-  /**
-   * 显示激励视频广告
-   * @param {Function} callback - 奖励回调，参数为是否完整观看
-   */
-  showRewardedVideoAd(callback) {
-    if (!this.rewardedVideoAd) {
-      console.warn('激励视频广告未初始化')
-      callback && callback(false)
-      return
-    }
-
-    this.onRewardCallback = callback
-
-    if (this.rewardedVideoReady) {
-      this.rewardedVideoAd.show().catch(() => {
-        // 显示失败，尝试重新加载
-        this.rewardedVideoAd.load().then(() => {
-          this.rewardedVideoAd.show()
-        }).catch(err => {
-          console.error('激励视频广告显示失败:', err)
-          callback && callback(false)
-        })
-      })
-    } else {
-      // 广告未准备好，尝试加载
-      this.rewardedVideoAd.load().then(() => {
-        this.rewardedVideoAd.show()
-      }).catch(err => {
-        console.error('激励视频广告加载失败:', err)
-        callback && callback(false)
-      })
-    }
-  }
-
-  /**
-   * 显示Banner广告
-   */
-  showBannerAd() {
-    if (!this.bannerAd) {
-      console.warn('Banner广告未初始化')
-      return
-    }
-
-    if (!this.bannerVisible) {
-      this.bannerAd.show().then(() => {
-        this.bannerVisible = true
-        console.log('Banner广告显示成功')
-      }).catch(err => {
-        console.error('Banner广告显示失败:', err)
-      })
-    }
-  }
-
-  /**
-   * 隐藏Banner广告
-   */
-  hideBannerAd() {
-    if (!this.bannerAd) {
-      return
-    }
-
-    if (this.bannerVisible) {
-      this.bannerAd.hide()
-      this.bannerVisible = false
-      console.log('Banner广告已隐藏')
-    }
-  }
-
-  /**
-   * 显示插屏广告
-   */
-  showInterstitialAd() {
-    if (!this.interstitialAd) {
-      console.warn('插屏广告未初始化')
-      return
-    }
-
-    this.interstitialAd.show().catch(err => {
-      console.error('插屏广告显示失败:', err)
-    })
-  }
-
-  /**
-   * 检查激励视频是否可用
+   * 是否有可用的激励视频（决定入口是否展示）
    * @returns {boolean}
    */
   isRewardedVideoAvailable() {
-    return this.rewardedVideoAd && this.rewardedVideoReady
+    return !!this.rewardedVideoAd
   }
 
   /**
-   * 销毁广告实例
+   * 结束一次播放请求
+   * @param {boolean} value
+   */
+  settle(value) {
+    const resolve = this.pendingResolve
+    this.pendingResolve = null
+    if (resolve) resolve(value)
+  }
+
+  /**
+   * 播放激励视频
+   * @returns {Promise<boolean>} 是否完整观看（true 才应发放奖励）
+   */
+  showRewardedVideoAd() {
+    if (!this.rewardedVideoAd) return Promise.resolve(false)
+    // 上一次播放尚未结束，直接忽略重复点击
+    if (this.pendingResolve) return Promise.resolve(false)
+
+    return new Promise((resolve) => {
+      this.pendingResolve = resolve
+
+      this.rewardedVideoAd.show().catch(() => {
+        // show 失败通常是素材未就绪，重新拉一次再试
+        return this.rewardedVideoAd.load()
+          .then(() => this.rewardedVideoAd.show())
+          .catch((err) => {
+            console.warn('[Ad] 激励视频展示失败:', err && err.errMsg)
+            this.settle(false)
+          })
+      })
+    })
+  }
+
+  /**
+   * 销毁
    */
   destroy() {
+    this.settle(false)
+
     if (this.rewardedVideoAd) {
-      this.rewardedVideoAd.destroy()
+      try {
+        this.rewardedVideoAd.destroy()
+      } catch (e) {
+        // 部分基础库无 destroy，忽略
+      }
       this.rewardedVideoAd = null
     }
-
-    if (this.bannerAd) {
-      this.bannerAd.destroy()
-      this.bannerAd = null
-    }
-
-    if (this.interstitialAd) {
-      this.interstitialAd.destroy()
-      this.interstitialAd = null
-    }
+    this.ready = false
   }
 }

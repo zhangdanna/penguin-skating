@@ -1,7 +1,19 @@
 {
   "description": "企鹅滑冰 - 微信小游戏",
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      { "type": "folder", "value": "docs" },
+      { "type": "folder", "value": "local-preview" },
+      { "type": "folder", "value": "tools" },
+      { "type": "folder", "value": ".workbuddy-ai" },
+      { "type": "folder", "value": ".git" },
+      { "type": "file", "value": "README.md" },
+      { "type": "file", "value": "README.zh-CN.md" },
+      { "type": "file", "value": "penguin-skating-design.html" },
+      { "type": "file", "value": "project.private.config.json" },
+      { "type": "file", "value": "audio/generate-audio.html" },
+      { "type": "file", "value": "audio/README.md" }
+    ],
     "include": []
   },
   "setting": {
@@ -42,7 +54,7 @@
     "condition": false
   },
   "compileType": "game",
-  "libVersion": "2.25.0",
+  "libVersion": "3.17.4",
   "appid": "wx25bf5262c669e9a9",
   "projectname": "penguin-skating",
   "condition": {},

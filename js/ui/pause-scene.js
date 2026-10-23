@@ -6,6 +6,7 @@ import {
   drawStickerText,
   font
 } from './theme'
+import { CENTER_X, stage } from './layout'
 
 /**
  * 暂停场景
@@ -16,11 +17,17 @@ export default class PauseScene {
     this.buttons = []
     this.isVisible = false
 
+    // 回调（放在构造函数里，避免 relayout 重建按钮时被清空）
+    this.onResume = null
+    this.onRestart = null
+    this.onBackToMenu = null
+
     this.init()
   }
 
   init() {
-    const centerX = canvas.width / 2
+    this.buttons = []
+    const centerX = CENTER_X
     const buttonWidth = 180
     const buttonHeight = 50
     const buttonSpacing = 15
@@ -75,14 +82,22 @@ export default class PauseScene {
       hoverColor: COLORS.lavenderDeep,
       borderColor: '#7255CC',
       onClick: () => {
-        this.hide()
-        this.sceneManager.switchTo('menu')
+        // 必须由外部统一复位 isPaused / gameState，否则主菜单会被输入拦截卡死
+        if (this.onBackToMenu) {
+          this.onBackToMenu()
+        } else {
+          this.hide()
+          this.sceneManager.switchTo('menu')
+        }
       }
     }))
+  }
 
-    // 回调
-    this.onResume = null
-    this.onRestart = null
+  /**
+   * 窗口尺寸变化后重建按钮（C1/C2）
+   */
+  relayout() {
+    this.init()
   }
 
   show() {
@@ -108,8 +123,12 @@ export default class PauseScene {
   render(ctx) {
     if (!this.isVisible) return
 
-    // 深蓝遮罩
+    // 深蓝遮罩（真实像素铺满）
     drawOverlay(ctx, 0.5)
+
+    const s = stage()
+    ctx.save()
+    s.apply(ctx)
 
     // 居中面板
     drawGlassPanel(ctx, 57, 150, 261, 330, 28, {
@@ -117,7 +136,7 @@ export default class PauseScene {
     })
 
     // 标题
-    drawStickerText(ctx, '游戏暂停', canvas.width / 2, 202, {
+    drawStickerText(ctx, '游戏暂停', CENTER_X, 202, {
       size: 30,
       color: COLORS.navy,
       strokeWidth: 0
@@ -128,31 +147,36 @@ export default class PauseScene {
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillStyle = COLORS.navySoft
-    ctx.fillText('PAUSED', canvas.width / 2, 226)
+    ctx.fillText('PAUSED', CENTER_X, 226)
 
     // 绘制按钮
     this.buttons.forEach(btn => btn.render(ctx))
+
+    ctx.restore()
   }
 
   onTouchStart(touch) {
     if (!this.isVisible) return false
 
-    this.buttons.forEach(btn => btn.onTouchStart(touch))
+    const t = stage().unproject(touch)
+    this.buttons.forEach(btn => btn.onTouchStart(t))
     return true
   }
 
   onTouchMove(touch) {
     if (!this.isVisible) return
 
+    const t = stage().unproject(touch)
     this.buttons.forEach(btn => {
-      btn.isHovered = btn.contains(touch.clientX, touch.clientY)
+      btn.isHovered = btn.contains(t.clientX, t.clientY)
     })
   }
 
   onTouchEnd(touch) {
     if (!this.isVisible) return false
 
-    this.buttons.forEach(btn => btn.onTouchEnd(touch))
+    const t = stage().unproject(touch)
+    this.buttons.forEach(btn => btn.onTouchEnd(t))
     return true
   }
 }

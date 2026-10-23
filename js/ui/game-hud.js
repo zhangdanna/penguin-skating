@@ -19,6 +19,19 @@ export default class GameHUD {
     this.par = 3
     this.isVisible = true
 
+    // 操作按钮回调
+    this.onPauseClick = null
+    this.onRestartClick = null
+    this.onBackClick = null
+
+    this.computeLayout()
+  }
+
+  /**
+   * 按当前画布尺寸计算面板与操作按钮位置
+   * 窗口尺寸变化时由 relayout() 重新调用
+   */
+  computeLayout() {
     // 顶部信息面板（食物行由 FoodDisplay 绘制在同一面板内）
     this.panel = {
       x: 8,
@@ -26,11 +39,6 @@ export default class GameHUD {
       width: canvas.width - 16,
       height: 82
     }
-
-    // 操作按钮回调
-    this.onPauseClick = null
-    this.onRestartClick = null
-    this.onBackClick = null
 
     // 底部操作按钮（图标 + 文案，一行展示）
     const marginX = 12
@@ -73,6 +81,13 @@ export default class GameHUD {
       height: 40,
       hovered: false
     }))
+  }
+
+  /**
+   * 窗口尺寸变化后重建布局
+   */
+  relayout() {
+    this.computeLayout()
   }
 
   /**

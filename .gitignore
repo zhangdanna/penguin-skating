@@ -1,0 +1,30 @@
+# ---------- 微信开发者工具 ----------
+# 个人配置（含本机路径、编译模式等），不同机器会互相覆盖，不入库
+project.private.config.json
+# 开发者工具生成的本地缓存
+.idea/
+.vscode/
+miniprogram_npm/
+
+# ---------- 依赖 ----------
+node_modules/
+package-lock.json
+
+# ---------- AI 协作工具 ----------
+.workbuddy-ai/
+
+# ---------- 系统 / 编辑器 ----------
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# ---------- 构建与临时产物 ----------
+dist/
+*.log
+*.tmp
+
+# ---------- 注意 ----------
+# docs/ local-preview/ tools/ 是开发期资料，需要入库，
+# 只是通过 project.config.json 的 packOptions.ignore 排除在上传包之外，
+# 所以这里不要把它们加进 .gitignore。

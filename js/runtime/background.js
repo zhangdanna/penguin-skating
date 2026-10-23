@@ -1,13 +1,18 @@
 import {
   COLORS,
-  drawOceanBackdrop,
+  drawOceanCached,
+  drawOceanMotion,
   fillRoundRect,
   roundRectPath
 } from '../ui/theme'
+import LayerCache from '../utils/layer-cache'
 
 /**
  * 背景类
  * 绘制极地海洋馆场景与浮冰棋盘
+ *
+ * D7：静态部分（水体渐变、玻璃反光、沙底珊瑚、棋盘底座与 63 块浮冰瓷砖）
+ * 缓存到离屏 canvas，每帧只重绘光束 / 气泡 / 鱼群 / 海草 / 闪光点。
  */
 export default class Background {
   /**
@@ -20,7 +25,10 @@ export default class Background {
     this.height = canvas.height
     this.grid = grid
 
-    // 棋盘上的随机闪光点
+    // 棋盘静态层（展台底座 + 浮冰瓷砖 + 外框）
+    this.boardLayer = new LayerCache('board')
+
+    // 棋盘上的随机闪光点（动态闪烁，不缓存）
     this.sparkles = this.generateSparkles()
   }
 
@@ -46,13 +54,24 @@ export default class Background {
   }
 
   /**
+   * 棋盘布局签名：任何一项变化都要重建静态层
+   */
+  getBoardKey() {
+    const { cols, rows, cellSize, offsetX, offsetY } = this.grid
+    return `${cols}x${rows}@${cellSize}:${offsetX},${offsetY}`
+  }
+
+  /**
    * 渲染背景
    */
   render() {
     const time = Date.now() / 1000
 
-    // 海洋馆场景（水体、光束、气泡、鱼群、沙底珊瑚）
-    drawOceanBackdrop(this.ctx, time)
+    // 海洋静态层（与菜单 / 排行榜共用同一份离屏缓存）
+    drawOceanCached(this.ctx)
+
+    // 海洋动态层
+    drawOceanMotion(this.ctx, time)
 
     // 浮冰棋盘
     this.renderBoard(time)
@@ -64,24 +83,69 @@ export default class Background {
   renderBoard(time) {
     const ctx = this.ctx
     const { cols, rows, cellSize, offsetX, offsetY } = this.grid
+    const width = canvas.width
+    const height = canvas.height
+
+    // 底座 + 瓷砖 + 外框一次性画进离屏层
+    const cached = this.boardLayer.render(
+      ctx, this.getBoardKey(), width, height,
+      (layerCtx) => this.drawBoardStatic(layerCtx)
+    )
+    if (!cached) {
+      this.drawBoardStatic(ctx)
+    }
+
+    // 闪光点（每帧闪烁，保持实时绘制）
+    this.sparkles.forEach(sparkle => {
+      const alpha = ((Math.sin(time * 2 + sparkle.phase) + 1) / 2) * 0.8
+      const x = offsetX + sparkle.col * cellSize + sparkle.offsetX
+      const y = offsetY + sparkle.row * cellSize + sparkle.offsetY
+
+      ctx.save()
+      ctx.globalAlpha = alpha
+      ctx.strokeStyle = COLORS.white
+      ctx.lineWidth = 1.2
+      ctx.lineCap = 'round'
+      ctx.beginPath()
+      ctx.moveTo(x - sparkle.size, y)
+      ctx.lineTo(x + sparkle.size, y)
+      ctx.moveTo(x, y - sparkle.size)
+      ctx.lineTo(x, y + sparkle.size)
+      ctx.stroke()
+      ctx.restore()
+    })
+  }
+
+  /**
+   * 棋盘静态部分：玻璃展台底座 + 浮冰瓷砖 + 外框
+   * @param {CanvasRenderingContext2D} ctx - 目标上下文（主画布或离屏层）
+   */
+  drawBoardStatic(ctx) {
+    const { cols, rows, cellSize, offsetX, offsetY } = this.grid
     const boardWidth = cols * cellSize
     const boardHeight = rows * cellSize
 
     // 棋盘底座：玻璃展台
-    ctx.save()
-    ctx.shadowColor = 'rgba(31, 58, 95, 0.22)'
-    ctx.shadowBlur = 18
-    ctx.shadowOffsetY = 8
+    // D7：原来用 shadowBlur=18 做投影，这是每帧最贵的一笔；
+    // 现在改成两层半透明圆角矩形模拟柔和投影，效果接近但成本低一个数量级
     fillRoundRect(
       ctx,
-      offsetX - 8,
-      offsetY - 8,
-      boardWidth + 16,
-      boardHeight + 16,
-      20,
+      offsetX - 12,
+      offsetY - 4,
+      boardWidth + 24,
+      boardHeight + 24,
+      24,
+      'rgba(31, 58, 95, 0.10)'
+    )
+    fillRoundRect(
+      ctx,
+      offsetX - 9,
+      offsetY - 7,
+      boardWidth + 18,
+      boardHeight + 18,
+      21,
       'rgba(255, 255, 255, 0.35)'
     )
-    ctx.restore()
 
     // 浮冰瓷砖
     for (let row = 0; row < rows; row++) {
@@ -119,25 +183,5 @@ export default class Background {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)'
     ctx.lineWidth = 3
     ctx.stroke()
-
-    // 闪光点
-    this.sparkles.forEach(sparkle => {
-      const alpha = ((Math.sin(time * 2 + sparkle.phase) + 1) / 2) * 0.8
-      const x = offsetX + sparkle.col * cellSize + sparkle.offsetX
-      const y = offsetY + sparkle.row * cellSize + sparkle.offsetY
-
-      ctx.save()
-      ctx.globalAlpha = alpha
-      ctx.strokeStyle = COLORS.white
-      ctx.lineWidth = 1.2
-      ctx.lineCap = 'round'
-      ctx.beginPath()
-      ctx.moveTo(x - sparkle.size, y)
-      ctx.lineTo(x + sparkle.size, y)
-      ctx.moveTo(x, y - sparkle.size)
-      ctx.lineTo(x, y + sparkle.size)
-      ctx.stroke()
-      ctx.restore()
-    })
   }
 }

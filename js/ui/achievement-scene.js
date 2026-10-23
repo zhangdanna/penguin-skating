@@ -31,6 +31,15 @@ export default class AchievementScene {
     this.init()
   }
 
+  /**
+   * 窗口尺寸变化后重排关闭按钮（其余内容在 render 时按实时画布尺寸计算）
+   */
+  relayout() {
+    if (this.closeButton) {
+      this.closeButton.x = canvas.width - 60
+    }
+  }
+
   init() {
     // 计算总页数
     const allAchievements = this.achievementManager.getAllAchievements()

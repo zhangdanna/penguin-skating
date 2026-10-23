@@ -9,6 +9,8 @@ import {
   fillRoundRect,
   font
 } from './theme'
+import { CENTER_X, DESIGN_WIDTH, stage } from './layout'
+import { calcStars } from '../utils/score'
 
 /**
  * 结算场景
@@ -38,7 +40,8 @@ export default class ResultScene {
   }
 
   init() {
-    const centerX = canvas.width / 2
+    this.buttons = []
+    const centerX = CENTER_X
     const buttonWidth = 138
     const buttonHeight = 50
     const startY = 452
@@ -79,9 +82,18 @@ export default class ResultScene {
       }
     }))
 
-    // 回调
-    this.onNextLevel = null
-    this.onReplay = null
+  }
+
+  /**
+   * 窗口尺寸变化后重建按钮（C1/C2）
+   * 注意：这里不能重置回调，否则 resize 后"下一关/重玩"会失效
+   */
+  relayout() {
+    const onNext = this.onNextLevel
+    const onReplay = this.onReplay
+    this.init()
+    this.onNextLevel = onNext
+    this.onReplay = onReplay
   }
 
   /**
@@ -103,16 +115,10 @@ export default class ResultScene {
   }
 
   /**
-   * 计算星级
+   * 计算星级（口径见 js/utils/score.js，D2 统一）
    */
   calculateStars() {
-    if (this.moves <= this.par) {
-      return 3
-    } else if (this.moves <= this.par * 1.5) {
-      return 2
-    } else {
-      return 1
-    }
+    return calcStars(this.moves, this.par)
   }
 
   show() {
@@ -160,10 +166,16 @@ export default class ResultScene {
   render(ctx) {
     if (!this.isVisible) return
 
-    const centerX = canvas.width / 2
-
-    // 深蓝遮罩 + 奶油面板
+    // 遮罩铺满真实屏幕
     drawOverlay(ctx, 0.6)
+
+    // 面板与内容使用设计稿坐标
+    const s = stage()
+    ctx.save()
+    s.apply(ctx)
+
+    const centerX = CENTER_X
+
     drawGlassPanel(ctx, 30, 88, 315, 540, 30, {
       fill: 'rgba(255, 249, 238, 0.97)'
     })
@@ -213,13 +225,15 @@ export default class ResultScene {
 
     // 绘制按钮
     this.buttons.forEach(btn => btn.render(ctx))
+
+    ctx.restore()
   }
 
   /**
    * 渲染奖励信息
    */
   renderRewards(ctx) {
-    const centerX = canvas.width / 2
+    const centerX = CENTER_X
     const labelY = 394
     const pillY = 420
 
@@ -248,7 +262,7 @@ export default class ResultScene {
     const starSize = 36
     const spacing = 18
     const totalWidth = 3 * starSize + 2 * spacing
-    const startX = (canvas.width - totalWidth) / 2
+    const startX = (DESIGN_WIDTH - totalWidth) / 2
     const y = 264
 
     for (let i = 0; i < 3; i++) {
@@ -283,22 +297,25 @@ export default class ResultScene {
   onTouchStart(touch) {
     if (!this.isVisible) return false
 
-    this.buttons.forEach(btn => btn.onTouchStart(touch))
+    const t = stage().unproject(touch)
+    this.buttons.forEach(btn => btn.onTouchStart(t))
     return true
   }
 
   onTouchMove(touch) {
     if (!this.isVisible) return
 
+    const t = stage().unproject(touch)
     this.buttons.forEach(btn => {
-      btn.isHovered = btn.contains(touch.clientX, touch.clientY)
+      btn.isHovered = btn.contains(t.clientX, t.clientY)
     })
   }
 
   onTouchEnd(touch) {
     if (!this.isVisible) return false
 
-    this.buttons.forEach(btn => btn.onTouchEnd(touch))
+    const t = stage().unproject(touch)
+    this.buttons.forEach(btn => btn.onTouchEnd(t))
     return true
   }
 }

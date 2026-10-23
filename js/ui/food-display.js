@@ -148,9 +148,10 @@ export default class FoodDisplay {
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
 
-    // 文字阴影
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
-    ctx.shadowBlur = 5
+    // 文字阴影：D7 改用一次偏移描边替代 shadowBlur（每帧一次模糊不划算）
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)'
+    ctx.fillText(this.rewardText, centerX, centerY + 1.5)
+    ctx.fillStyle = '#f1c40f'
     ctx.fillText(this.rewardText, centerX, centerY)
 
     ctx.restore()

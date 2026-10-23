@@ -2,10 +2,12 @@ import Button from './button'
 import {
   COLORS,
   drawCandyButton,
-  drawOceanBackdrop,
+  drawOceanCached,
+  drawOceanMotion,
   drawPenguin,
   drawStickerText
 } from './theme'
+import { CENTER_X, stage } from './layout'
 
 /**
  * 主菜单场景（极地海洋馆）
@@ -14,6 +16,11 @@ export default class MenuScene {
   constructor(sceneManager) {
     this.sceneManager = sceneManager
     this.buttons = []
+
+    // 外部注入的回调（C8）
+    this.onToggleSound = null
+    this.onShare = null
+    this.soundEnabled = true
 
     // 动画参数
     this.titleY = 0
@@ -24,7 +31,8 @@ export default class MenuScene {
   }
 
   init() {
-    const centerX = canvas.width / 2
+    this.buttons = []
+    const centerX = CENTER_X
 
     // 主按钮
     const mainWidth = 220
@@ -56,15 +64,16 @@ export default class MenuScene {
     const subStartX = centerX - subWidth - gapX / 2
     const subStartY = 500
 
+    // C8：登录体系采用"轻量方案"——去掉伪登录入口（无后端 code2session，
+    // wx.getUserInfo 也已不返回真实资料）。原「个人中心」位改为纯分享。
     const subButtons = [
       {
-        text: '设置',
+        text: '音效 开',
         color: COLORS.lavender,
         hover: COLORS.lavenderDeep,
         border: '#7255CC',
         onClick: () => {
-          // TODO: 打开设置界面
-          console.log('打开设置')
+          if (this.onToggleSound) this.onToggleSound()
         }
       },
       {
@@ -86,12 +95,12 @@ export default class MenuScene {
         }
       },
       {
-        text: '个人中心',
+        text: '分享',
         color: COLORS.pink,
         hover: COLORS.pinkDeep,
         border: '#CE4D80',
         onClick: () => {
-          this.sceneManager.switchTo('login')
+          if (this.onShare) this.onShare()
         }
       }
     ]
@@ -112,6 +121,21 @@ export default class MenuScene {
         onClick: config.onClick
       }))
     })
+
+    // 音效开关按钮（第 0 个是主按钮，第 1 个是音效）
+    this.soundButton = this.buttons[1]
+    this.soundEnabled = true
+  }
+
+  /**
+   * 刷新音效按钮文案（C8：原「设置」入口只是个 console.log，换成真实可用的开关）
+   * @param {boolean} enabled
+   */
+  setSoundEnabled(enabled) {
+    this.soundEnabled = !!enabled
+    if (this.soundButton) {
+      this.soundButton.setText(this.soundEnabled ? '音效 开' : '音效 关')
+    }
   }
 
   /**
@@ -157,27 +181,36 @@ export default class MenuScene {
   render(ctx) {
     const time = Date.now() / 1000
 
-    // 海洋馆背景
-    drawOceanBackdrop(ctx, time)
+    // 海洋馆背景（真实像素铺满整屏，不参与缩放）
+    // D7：静态层（水色 / 玻璃反光 / 沙底珊瑚）走共享离屏缓存，只重绘动态层
+    drawOceanCached(ctx)
+    drawOceanMotion(ctx, time)
 
-    // 标题
+    // 以下全部使用 375×667 设计稿坐标
+    const s = stage()
+    ctx.save()
+    s.apply(ctx)
+
     this.renderTitle(ctx)
-
-    // 企鹅吉祥物
     this.renderPenguin(ctx, time)
-
-    // 按钮
     this.buttons.forEach(btn => btn.render(ctx))
-
-    // 操作说明（入口页展示，关卡页不再展示）
     this.renderInstructions(ctx)
+
+    ctx.restore()
+  }
+
+  /**
+   * 窗口尺寸变化后重建按钮（C1/C2）
+   */
+  relayout() {
+    this.init()
   }
 
   /**
    * 渲染操作说明
    */
   renderInstructions(ctx) {
-    drawStickerText(ctx, '滑动屏幕控制企鹅 · 推动冰块到目标区域', canvas.width / 2, 634, {
+    drawStickerText(ctx, '滑动屏幕控制企鹅 · 推动冰块到目标区域', CENTER_X, 634, {
       size: 13,
       color: COLORS.white,
       stroke: COLORS.navyDeep,
@@ -186,7 +219,7 @@ export default class MenuScene {
   }
 
   renderTitle(ctx) {
-    const centerX = canvas.width / 2
+    const centerX = CENTER_X
 
     // 标题投影
     drawStickerText(ctx, '企鹅滑冰', centerX, this.titleY + 5, {
@@ -217,7 +250,7 @@ export default class MenuScene {
   }
 
   renderPenguin(ctx, time) {
-    const centerX = canvas.width / 2
+    const centerX = CENTER_X
     const baseY = 280
     const centerY = baseY + Math.sin(time * 1.6) * 4
 
@@ -239,16 +272,19 @@ export default class MenuScene {
   }
 
   onTouchStart(touch) {
-    this.buttons.forEach(btn => btn.onTouchStart(touch))
+    const t = stage().unproject(touch)
+    this.buttons.forEach(btn => btn.onTouchStart(t))
   }
 
   onTouchMove(touch) {
+    const t = stage().unproject(touch)
     this.buttons.forEach(btn => {
-      btn.isHovered = btn.contains(touch.clientX, touch.clientY)
+      btn.isHovered = btn.contains(t.clientX, t.clientY)
     })
   }
 
   onTouchEnd(touch) {
-    this.buttons.forEach(btn => btn.onTouchEnd(touch))
+    const t = stage().unproject(touch)
+    this.buttons.forEach(btn => btn.onTouchEnd(t))
   }
 }

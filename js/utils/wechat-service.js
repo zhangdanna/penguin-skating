@@ -1,164 +1,42 @@
 /**
  * 微信服务管理器
- * 管理微信登录、用户信息、分享等功能
+ *
+ * C8 说明：登录体系采用「轻量方案」。
+ * 本项目没有后端，`wx.login` 拿到的 code 无处可换（缺 code2session），
+ * 且 `wx.getUserInfo` 自 2022 年起已不再返回真实昵称/头像。
+ * 因此移除伪登录入口与相关方法，只保留真正需要的能力：
+ *   - 分享（纯传播，无奖励）
+ *   - 好友排行榜数据上报（wx.setUserCloudStorage，绑定 openid，无需登录）
  */
 export default class WechatService {
   constructor() {
-    // 用户信息
-    this.userInfo = null
-    this.isLogin = false
-    this.openId = null
-
-    // 回调
-    this.onLoginSuccess = null
-    this.onLoginFail = null
-
-    // 分享奖励
-    this.onShareReward = null
-    this.lastShareTime = 0
-    this.shareCooldown = 60000 // 分享冷却时间（1分钟）
+    // 是否已初始化分享菜单
+    this.shareReady = false
   }
 
   /**
-   * 初始化微信服务
+   * 初始化
    */
   init() {
-    // 检查登录状态
-    this.checkLoginStatus()
-
-    // 监听分享
     this.initShare()
-  }
-
-  /**
-   * 检查登录状态
-   */
-  checkLoginStatus() {
-    const savedUser = wx.getStorageSync('userInfo')
-    if (savedUser) {
-      this.userInfo = savedUser
-      this.isLogin = true
-      console.log('用户已登录:', this.userInfo.nickName)
-    }
-  }
-
-  /**
-   * 微信登录
-   * @returns {Promise<Object>} 登录结果
-   */
-  login() {
-    return new Promise((resolve, reject) => {
-      wx.login({
-        success: (res) => {
-          if (res.code) {
-            // 这里应该发送code到后端换取openId和session_key
-            // 简化版：直接使用code作为标识
-            this.openId = res.code
-            console.log('登录成功，code:', res.code)
-
-            // 获取用户信息
-            this.getUserInfo().then(userInfo => {
-              this.userInfo = userInfo
-              this.isLogin = true
-
-              // 保存用户信息
-              wx.setStorageSync('userInfo', userInfo)
-              wx.setStorageSync('openId', this.openId)
-
-              resolve({ success: true, userInfo, openId: this.openId })
-            }).catch(err => {
-              // 即使获取用户信息失败，也认为登录成功
-              resolve({ success: true, openId: this.openId })
-            })
-          } else {
-            console.error('登录失败:', res.errMsg)
-            reject({ success: false, error: res.errMsg })
-          }
-        },
-        fail: (err) => {
-          console.error('登录失败:', err)
-          reject({ success: false, error: err })
-        }
-      })
-    })
-  }
-
-  /**
-   * 获取用户信息
-   * @returns {Promise<Object>} 用户信息
-   */
-  getUserInfo() {
-    return new Promise((resolve, reject) => {
-      wx.getUserInfo({
-        success: (res) => {
-          const userInfo = {
-            nickName: res.userInfo.nickName,
-            avatarUrl: res.userInfo.avatarUrl,
-            gender: res.userInfo.gender,
-            country: res.userInfo.country,
-            province: res.userInfo.province,
-            city: res.userInfo.city
-          }
-          resolve(userInfo)
-        },
-        fail: (err) => {
-          console.warn('获取用户信息失败:', err)
-          // 返回默认用户信息
-          resolve({
-            nickName: '微信用户',
-            avatarUrl: '',
-            gender: 0
-          })
-        }
-      })
-    })
-  }
-
-  /**
-   * 获取用户信息（新版API，需要按钮触发）
-   * @param {Object} event - 按钮事件
-   * @returns {Promise<Object>} 用户信息
-   */
-  getUserProfile() {
-    return new Promise((resolve, reject) => {
-      wx.getUserProfile({
-        desc: '用于完善用户资料',
-        success: (res) => {
-          const userInfo = {
-            nickName: res.userInfo.nickName,
-            avatarUrl: res.userInfo.avatarUrl,
-            gender: res.userInfo.gender
-          }
-          this.userInfo = userInfo
-          wx.setStorageSync('userInfo', userInfo)
-          resolve(userInfo)
-        },
-        fail: (err) => {
-          console.warn('获取用户信息失败:', err)
-          reject(err)
-        }
-      })
-    })
   }
 
   /**
    * 初始化分享功能
    */
   initShare() {
-    // 设置默认分享内容
-    wx.showShareMenu({
-      withShareTicket: true,
-      menus: ['shareAppMessage', 'shareTimeline']
-    })
+    try {
+      wx.showShareMenu({
+        withShareTicket: true,
+        menus: ['shareAppMessage', 'shareTimeline']
+      })
 
-    // 监听分享
-    wx.onShareAppMessage(() => {
-      return this.getShareConfig()
-    })
-
-    wx.onShareTimeline(() => {
-      return this.getTimelineShareConfig()
-    })
+      wx.onShareAppMessage(() => this.getShareConfig())
+      wx.onShareTimeline(() => this.getTimelineShareConfig())
+      this.shareReady = true
+    } catch (e) {
+      console.warn('[Share] 分享菜单初始化失败:', e)
+    }
   }
 
   /**
@@ -171,7 +49,7 @@ export default class WechatService {
 
     return {
       title: `我在企鹅滑冰已通关${level}关，获得${stars}颗星！快来挑战吧！`,
-      imageUrl: 'images/share-image.png', // 分享图片
+      imageUrl: 'images/share-image.png',
       query: `from=share&level=${level}`
     }
   }
@@ -188,62 +66,22 @@ export default class WechatService {
   }
 
   /**
-   * 主动分享（带奖励）
+   * 主动分享（纯传播，无任何游戏内奖励）
    */
   share() {
-    const now = Date.now()
-    if (now - this.lastShareTime < this.shareCooldown) {
-      const remaining = Math.ceil((this.shareCooldown - (now - this.lastShareTime)) / 1000)
-      wx.showToast({
-        title: `分享冷却中(${remaining}秒)`,
-        icon: 'none'
-      })
-      return false
-    }
+    wx.shareAppMessage(this.getShareConfig())
+  }
 
-    wx.shareAppMessage({
-      ...this.getShareConfig(),
-      success: (res) => {
-        this.lastShareTime = now
-        console.log('分享成功')
-        // 触发分享奖励
-        if (this.onShareReward) {
-          this.onShareReward()
-        }
-      },
-      fail: (err) => {
-        console.log('分享取消或失败')
-      }
-    })
+  /**
+   * 检查是否可以分享（分享已无冷却限制）
+   * @returns {boolean}
+   */
+  canShare() {
     return true
   }
 
   /**
-   * 设置分享奖励回调
-   */
-  setShareRewardCallback(callback) {
-    this.onShareReward = callback
-  }
-
-  /**
-   * 检查是否可以分享
-   */
-  canShare() {
-    const now = Date.now()
-    return now - this.lastShareTime >= this.shareCooldown
-  }
-
-  /**
-   * 获取分享冷却时间
-   */
-  getShareCooldownRemaining() {
-    const now = Date.now()
-    const remaining = this.shareCooldown - (now - this.lastShareTime)
-    return Math.max(0, Math.ceil(remaining / 1000))
-  }
-
-  /**
-   * 获取当前关卡
+   * 获取当前关卡（已解锁的最高关）
    */
   getCurrentLevel() {
     try {
@@ -256,11 +94,13 @@ export default class WechatService {
 
   /**
    * 获取总星星数
+   * 关卡是无限的，所以按"已解锁关卡"遍历，而不是写死 30
    */
   getTotalStars() {
     let totalStars = 0
     try {
-      for (let i = 1; i <= 30; i++) {
+      const cleared = Math.max(0, (parseInt(this.getCurrentLevel(), 10) || 1) - 1)
+      for (let i = 1; i <= cleared; i++) {
         const data = wx.getStorageSync(`level_${i}`)
         if (data && data.stars) {
           totalStars += data.stars
@@ -273,78 +113,97 @@ export default class WechatService {
   }
 
   /**
-   * 上报分数到排行榜
-   * @param {number} level - 关卡编号
-   * @param {number} moves - 步数
-   * @param {number} stars - 星星数
+   * 读取本地的云端记录镜像（用于"只升不降"比较）
+   * @returns {{level:number, stars:number, moves:number}}
+   */
+  loadCloudRecord() {
+    try {
+      const saved = wx.getStorageSync('cloudRecord')
+      if (saved && typeof saved === 'object') {
+        return {
+          level: parseInt(saved.level, 10) || 0,
+          stars: parseInt(saved.stars, 10) || 0,
+          moves: parseInt(saved.moves, 10) || 0
+        }
+      }
+    } catch (e) {
+      console.warn('[Rank] 读取云端记录镜像失败:', e)
+    }
+    return { level: 0, stars: 0, moves: 0 }
+  }
+
+  /**
+   * 保存云端记录镜像
+   * @param {{level:number, stars:number, moves:number}} record
+   */
+  saveCloudRecord(record) {
+    try {
+      wx.setStorageSync('cloudRecord', record)
+    } catch (e) {
+      console.warn('[Rank] 保存云端记录镜像失败:', e)
+    }
+  }
+
+  /**
+   * 综合分：关卡优先，其次总星数，最后步数越少越高
+   * @param {{level:number, stars:number, moves:number}} record
+   * @returns {number}
+   */
+  static computeScore(record) {
+    const level = Math.max(0, record.level)
+    const stars = Math.max(0, record.stars)
+    const moves = Math.max(0, record.moves)
+    const moveBonus = Math.max(0, 99 - Math.min(moves, 99))
+    return level * 10000 + stars * 100 + moveBonus
+  }
+
+  /**
+   * 上报分数到好友排行榜
+   *
+   * C6：改为"只升不降"——重玩低关卡或打出更差成绩都不会把已有记录覆盖掉。
+   * 三项指标各自的单调性：
+   *   level 只增（最高通关关卡）
+   *   stars 只增（总星数）
+   *   moves 只减（仅在刷新最高关时记录该关最佳步数）
+   *
+   * @param {number} level - 本次通关的关卡编号
+   * @param {number} moves - 本次步数
+   * @param {number} stars - 本次星级（保留参数，实际以总星数为准）
    */
   reportScore(level, moves, stars) {
-    if (!this.isLogin) {
-      console.warn('用户未登录，无法上报分数')
-      return
+    const prev = this.loadCloudRecord()
+    const totalStars = Math.max(prev.stars, this.getTotalStars())
+
+    let bestMoves = prev.moves
+    if (level > prev.level) {
+      // 刷新了最高关：记录这一关的步数
+      bestMoves = moves
+    } else if (level === prev.level) {
+      // 同一关重打：取更好的一次
+      bestMoves = prev.moves > 0 ? Math.min(prev.moves, moves) : moves
+    }
+    // level < prev.level 时保留旧记录，不回退
+
+    const next = {
+      level: Math.max(prev.level, level),
+      stars: totalStars,
+      moves: bestMoves
     }
 
-    // 上报到开放数据域
+    const score = WechatService.computeScore(next)
+
     wx.setUserCloudStorage({
       KVList: [
-        { key: 'level', value: level.toString() },
-        { key: 'moves', value: moves.toString() },
-        { key: 'stars', value: stars.toString() },
-        { key: 'score', value: (stars * 1000 - moves * 10).toString() }
+        { key: 'level', value: String(next.level) },
+        { key: 'stars', value: String(next.stars) },
+        { key: 'moves', value: String(next.moves) },
+        { key: 'score', value: String(score) }
       ],
       success: () => {
-        console.log('分数上报成功')
+        this.saveCloudRecord(next)
       },
       fail: (err) => {
-        console.error('分数上报失败:', err)
-      }
-    })
-  }
-
-  /**
-   * 获取好友排行
-   * @returns {Promise<Array>} 排行数据
-   */
-  getFriendRank() {
-    return new Promise((resolve, reject) => {
-      wx.getFriendCloudStorage({
-        keyList: ['level', 'moves', 'stars', 'score'],
-        success: (res) => {
-          // 按分数排序
-          const rankList = res.data
-            .map(item => {
-              const kv = {}
-              item.KVList.forEach(k => {
-                kv[k.key] = k.value
-              })
-              return {
-                nickName: item.nickname,
-                avatarUrl: item.avatarUrl,
-                level: parseInt(kv.level) || 0,
-                moves: parseInt(kv.moves) || 0,
-                stars: parseInt(kv.stars) || 0,
-                score: parseInt(kv.score) || 0
-              }
-            })
-            .sort((a, b) => b.score - a.score)
-
-          resolve(rankList)
-        },
-        fail: (err) => {
-          console.error('获取好友排行失败:', err)
-          reject(err)
-        }
-      })
-    })
-  }
-
-  /**
-   * 退出小程序
-   */
-  exitMiniProgram() {
-    wx.exitMiniProgram({
-      fail: (err) => {
-        console.error('退出失败:', err)
+        console.warn('[Rank] 分数上报失败:', err && err.errMsg)
       }
     })
   }
@@ -362,9 +221,7 @@ export default class WechatService {
         showCancel: options.showCancel !== false,
         confirmText: options.confirmText || '确定',
         cancelText: options.cancelText || '取消',
-        success: (res) => {
-          resolve(res)
-        }
+        success: (res) => resolve(res)
       })
     })
   }

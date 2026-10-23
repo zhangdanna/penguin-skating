@@ -2,266 +2,284 @@
 
 English | [简体中文](./README.zh-CN.md)
 
-A WeChat mini-game where you guide a penguin to push ice blocks onto target areas by sliding on ice.
+A WeChat mini-game: guide a penguin across an ice rink, one cell per swipe, and push ice blocks onto the target area.
+
+The board is 7 columns × 9 rows. **Each swipe moves exactly one cell.** Blocks that hit an obstacle can't be pushed. If a block is pushed into a hole, or the penguin steps into one, the level fails. Get every block onto the target to win.
+
+---
+
+## How to Play
+
+1. Swipe in a direction → the penguin moves **one cell**
+2. Swiping into a block pushes it one cell too (if it can't move, you only get a bump sound and no move is counted)
+3. Push every block onto the target area to clear the level
+4. Stars: moves ≤ par → ★★★; ≤ par × 1.5 → ★★☆; otherwise ★☆☆
+
+### Obstacles
+
+| Type | Effect |
+|---|---|
+| Ice wall `wall` | Blocks both penguin and ice blocks |
+| Hole `hole` | Penguin falls in → instant fail; a block falls in → level becomes unsolvable, also a fail |
+| Snow `snow` | Slower movement (tween 120ms → 220ms); blocks can't be pushed onto snow |
+
+---
 
 ## Features
 
-### Core Gameplay
-- Ice physics simulation with realistic sliding and friction
-- Touch-based controls: swipe to choose direction, release to slide
-- Sokoban-style puzzle: push ice blocks onto target areas
-- Multiple levels with increasing difficulty (7 built-in levels + procedural generation)
-- Collision detection between penguin, ice blocks, and boundaries
+**Gameplay & Content**
+- 60-level campaign: 7 hand-crafted levels + 53 procedurally generated ones, all verified solvable with a BFS solver
+- Difficulty rises monotonically with optimal move count: level 1 = 13 moves, level 60 = 39 moves
+- `par = ceil(optimal × 1.2)`, so three stars no longer require a flawless run
+- Levels 61+ cycle through the 60, mirrored horizontally on odd rounds
 
-### Obstacle System
-- Ice walls: block movement and cause bouncing
-- Ice holes: instant failure when penguin falls in
-- Snow piles: slow down movement
-- Dynamic obstacle placement per level
+**Progression**
+- Food (stamina): fish 🐟 / shrimp 🦐 / squid 🦑 / goldfish 🐠, costing 0–5 per level by difficulty
+- Natural recovery: +1 every 5 minutes, capped at 30, computed from real elapsed time with the remainder preserved
+- 19 achievements covering wins, stars, streaks, revives and food collection
+- Revive: watch a rewarded video (5/day) or spend food
 
-### UI System
-- Main menu with animated penguin
-- Level selection with star ratings
-- Pause/resume functionality
-- Level completion screen with rewards
-- Game over screen with revival options
-- In-game HUD (steps, time, level info)
+**Social & Platform**
+- Friend leaderboard via the open data context (`open-data/`); the main context only renders it
+- Report policy is monotonic: highest level + total stars + best moves for that level
+- Sharing is pure distribution — **no rewards attached** (compliance requirement)
+- Privacy authorization via `wx.onNeedPrivacyAuthorization` with a custom dialog, triggered on demand
 
-### Progression Systems
-- Food/stamina system (fish 🐟, shrimp 🦐, squid 🦑, goldfish 🐠)
-- Achievement system (20+ achievements to unlock)
-- Revival mechanism (share to friends/groups, watch ads, consume food)
-- Star rating system (1-3 stars per level)
-- Local save system for progress
+**Experience & Engineering**
+- Design-canvas coordinate system (375×667) with uniform scaling, covering every screen from 320 to 768 wide
+- App lifecycle: auto-pause on background, BGM stops, timer does not jump when returning
+- Window resize recomputes the board and every UI button position
+- Offscreen caching for static layers (ocean backdrop, board tiles, glass panel shadows); no `shadowBlur` anywhere
+- 171 offline regression assertions covering layout, timing, economy, levels, leaderboard and rendering
 
-### Social Features
-- WeChat login integration
-- Leaderboard (open data domain)
-- Share to friends and groups
-- Share for rewards
-
-### Audio System
-- Background music (placeholder)
-- Sound effects for push, collision, slide, win, fail
-- Audio manager with volume control
-
-### Game Statistics
-- Settlement manager tracking all game data
-- Best times and moves per level
-- Total games, wins, streaks
-- Perfect game tracking
-
-## Tech Stack
-
-- **Platform**: WeChat Mini Game
-- **Rendering**: Canvas 2D
-- **Physics**: Custom ice physics engine
-- **Language**: JavaScript (ES6+)
-- **Framework**: WeChat Mini Game API
+---
 
 ## Quick Start
 
-### Prerequisites
+### Option 1: WeChat DevTools (simulator / real device)
 
-- [WeChat Developer Tools](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html) installed
+1. Install [WeChat DevTools](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html)
+2. "Import Project" → select this directory
+3. Enter your own mini-game AppID (or use a test account)
+4. Click "Compile"
 
-### Run Locally
+> `project.config.json` uses `compileType: "game"` and `libVersion: "3.17.4"`.
+> The privacy authorization API requires base library **≥ 2.32.3**.
 
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd penguin-skating-game
-   ```
+### Option 2: Browser preview
 
-2. Open WeChat Developer Tools
+```bash
+node local-preview/server.js
+# open http://localhost:8080/local-preview/index.html
+```
 
-3. Import the project:
-   - Click "Import Project"
-   - Select the `penguin-skating-game` directory
-   - Enter your AppID (or use "Test AppID" for testing)
+`local-preview/wechat-adapter.js` maps `wx.*` onto browser APIs: the canvas is fixed at 375×667,
+touch is mapped to mouse events, `visibilitychange` simulates background/foreground switching,
+and ads plus privacy authorization are stubbed.
 
-4. Click "Compile" to run the game
+---
 
 ## Project Structure
 
 ```
 penguin-skating-game/
-├── game.js                      # Game entry point
-├── game.json                    # Mini game configuration
-├── project.config.json          # Project configuration
+├── game.js                       # Entry: main loop, state machine, level loading, lifecycle
+├── game.json                     # Mini-game config (portrait, open data context)
+├── project.config.json           # DevTools config (incl. package exclusions)
 ├── js/
-│   ├── base/                    # Base classes
-│   │   ├── sprite.js           # Sprite base class
-│   │   └── pool.js             # Object pool
-│   ├── runtime/                 # Game objects
-│   │   ├── penguin.js          # Penguin (player character)
-│   │   ├── stone.js            # Pushable ice blocks
-│   │   ├── target.js           # Target area
-│   │   ├── background.js       # Ice background
-│   │   └── obstacle.js         # Obstacles (ice walls, holes, snow piles)
-│   ├── physics/                 # Physics system
-│   │   ├── physics.js          # Physics engine
-│   │   └── collision.js        # Collision detection
-│   ├── levels/                  # Level management
-│   │   └── level-manager.js    # Level loader and manager
-│   ├── ui/                      # UI components
-│   │   ├── scene-manager.js    # Scene management
-│   │   ├── menu-scene.js       # Main menu
-│   │   ├── level-select-scene.js # Level selection
-│   │   ├── pause-scene.js      # Pause screen
-│   │   ├── result-scene.js     # Level completion
-│   │   ├── gameover-scene.js   # Game over screen
-│   │   ├── login-scene.js      # Login screen
-│   │   ├── rank-scene.js       # Leaderboard
-│   │   ├── achievement-scene.js # Achievement display
-│   │   ├── achievement-notification.js # Achievement popups
-│   │   ├── revive-scene.js     # Revival options
-│   │   ├── game-hud.js         # In-game HUD
-│   │   ├── food-display.js     # Food counter
-│   │   └── button.js           # Reusable button component
-│   └── utils/                   # Utility managers
-│       ├── audio-manager.js    # Sound effects and music
-│       ├── wechat-service.js   # WeChat API integration
-│       ├── food-manager.js     # Food/stamina system
-│       ├── achievement-manager.js # Achievement tracking
-│       ├── revive-manager.js   # Revival system
-│       ├── settlement-manager.js # Game statistics
-│       └── ad-manager.js       # Ad management
-├── levels/                      # Level data (JSON)
-│   ├── level1.json ~ level7.json
-├── audio/                       # Sound effects (placeholder)
-└── docs/                        # Phase documentation
-    ├── phase1-core-prototype.md
-    ├── phase2-ui-system.md
-    ├── phase3-obstacle-system.md
-    ├── phase4-audio-system.md
-    ├── phase5-wechat-integration.md
-    ├── phase6-login-rank.md
-    ├── phase7-food-system.md
-    ├── phase8-achievement-share.md
-    ├── phase9-revive-system.md
-    └── phase10-gameover-settlement.md
+│   ├── config.js                 # Ad units, version, other configurable values
+│   ├── base/
+│   │   └── sprite.js             # Sprite base class (position/size/tween)
+│   ├── runtime/                  # Entities on the board
+│   │   ├── penguin.js            # Penguin (swipe detection + rendering)
+│   │   ├── stone.js              # Pushable ice blocks
+│   │   ├── target.js             # Target area
+│   │   ├── obstacle.js           # Obstacle factory (wall/hole/snow)
+│   │   └── background.js         # Aquarium backdrop + ice board (cached static layers)
+│   ├── levels/
+│   │   ├── level-manager.js      # Campaign assembly (hand-crafted + generated, single source)
+│   │   └── generated-levels.js   # Levels 8–60, produced by tools/gen-levels.mjs
+│   ├── ui/
+│   │   ├── layout.js             # Design-canvas coordinate system + uniform scaling
+│   │   ├── theme.js              # Palette, fonts, panel/button/backdrop primitives
+│   │   ├── scene-manager.js      # Scene stack
+│   │   ├── game-scene.js         # Gameplay scene (thin shell; logic lives in game.js)
+│   │   ├── menu-scene.js         # Main menu
+│   │   ├── pause-scene.js        # Pause
+│   │   ├── result-scene.js       # Level clear
+│   │   ├── gameover-scene.js     # Game over
+│   │   ├── revive-scene.js       # Revive options
+│   │   ├── rank-scene.js         # Leaderboard (composites the open data canvas)
+│   │   ├── achievement-scene.js  # Achievement list
+│   │   ├── achievement-notification.js  # Achievement unlock toast
+│   │   ├── privacy-scene.js      # Privacy authorization dialog
+│   │   ├── game-hud.js           # In-game HUD (level/moves/timer/action bar)
+│   │   ├── food-display.js       # Food counters and reward animation
+│   │   └── button.js             # Button component
+│   └── utils/
+│       ├── audio-manager.js      # BGM + SFX, sound toggle persisted
+│       ├── ad-manager.js         # Rewarded video (whole chain off when unconfigured)
+│       ├── wechat-service.js     # Share / cloud storage / leaderboard reporting
+│       ├── food-manager.js       # Food economy and natural recovery
+│       ├── achievement-manager.js# Achievement rules and stats
+│       ├── revive-manager.js     # Revive counts and daily limits
+│       ├── settlement-manager.js # Per-run settlement and cumulative stats
+│       ├── score.js              # Star rules (single implementation)
+│       └── layer-cache.js        # Offscreen static-layer cache
+├── open-data/
+│   └── index.js                  # Open data context: friend leaderboard rendering
+├── audio/                        # bgm.wav + 6 sound effects
+├── images/
+│   └── share-image.png           # Share card, 500×400
+├── tools/
+│   ├── gen-levels.mjs            # Level generator (reverse construction + BFS solve)
+│   ├── gen-share-image.py        # Share image generator
+│   ├── gen-bgm.py                # BGM generator
+│   └── regression/run.mjs        # Offline regression suite
+├── local-preview/                # Browser preview (not packaged)
+└── docs/                         # Design and review docs (not packaged)
 ```
 
-## How to Play
+---
 
-1. **Swipe** on the screen to choose the sliding direction
-2. **Release** to make the penguin slide in that direction
-3. **Push ice blocks** by sliding into them
-4. **Win** by getting all ice blocks onto the green target area
+## Levels and Numbers
 
-## Physics Parameters
+### Level data
 
-| Parameter | Value | Description |
-|-----------|-------|-------------|
-| Ice friction | 0.98 | Penguin sliding friction |
-| Ice block friction | 0.92 | Ice block sliding friction |
-| Max speed | 8 | Maximum sliding speed |
-| Push force | 5 | Force applied to ice blocks |
-| Force transfer | 50% | Force transferred to ice blocks |
+Levels are no longer read from `levels/*.json` — everything lives in `js/levels/level-manager.js`:
+
+- `HANDCRAFTED_LEVELS`: 7 hand-designed levels with `originalId` and a measured `optimal`
+- `GENERATED_LEVELS`: 53 generated levels (`js/levels/generated-levels.js`)
+- Both are merged, **sorted by `optimal` ascending**, then renumbered 1..60
+
+### Generation algorithm
+
+`tools/gen-levels.mjs` uses **reverse construction** instead of random placement (with 3 blocks, random boards are solvable only ~0.2% of the time — about 700 attempts per hit in practice):
+
+1. Start from the solved state (all blocks already on the target) — guaranteed solvable
+2. Randomly walk backwards (penguin retreats, dragging a block); Sokoban moves are reversible, so any board reached this way is solvable
+3. Score each candidate direction: +3 when the block's Manhattan distance to the target grows, −1 when it shrinks, then sample by weight — without this, blocks end up right next to the target and difficulty collapses
+4. Run BFS for the true optimal move count (integer state encoding `p | s0<<6 | s1<<12 | s2<<18`)
+5. Build a pool of 96 boards with `optimal ≥ 18`, sort by `optimal`, and take 53 at even intervals
+
+Regenerate after tweaking difficulty:
+
+```bash
+node tools/gen-levels.mjs
+```
+
+### Stars
+
+Defined once in `js/utils/score.js` (`calcStars(moves, par)`):
+
+| Stars | Condition |
+|---|---|
+| ★★★ | moves ≤ par |
+| ★★☆ | moves ≤ par × 1.5 |
+| ★☆☆ | otherwise |
+
+### Food
+
+| Food | Value | Source |
+|---|---|---|
+| 🐟 Fish | 1 | Level clear reward, natural recovery, ads |
+| 🦐 Shrimp | 3 | Time bonus |
+| 🦑 Squid | 10 | Time bonus, win streak |
+| 🐠 Goldfish | 50 | Speed clear, 10-win streak |
+
+Level cost: tutorial 0 / easy 1 / medium 2 / hard 3 / expert 5. Natural recovery: +1 per 5 minutes, cap 30.
+
+---
 
 ## Configuration
 
-### game.json
+### Ad units (`js/config.js`)
 
-```json
-{
-  "deviceOrientation": "portrait",
-  "showStatusBar": false
+```js
+export const AD_UNITS = {
+  rewardedVideo: ''   // empty = whole ad chain disabled, all ad entries hidden
 }
 ```
 
-### project.config.json
+Fill in a real unit (an `adunit-` ID) to enable the "watch video" entries on the revive screen and in the out-of-food dialog. Leaving it empty doesn't affect gameplay or review.
 
-Update the `appid` field with your WeChat Mini Game AppID:
+### AppID (`project.config.json`)
 
 ```json
-{
-  "appid": "your-appid-here"
-}
+{ "appid": "your-appid-here" }
 ```
+
+`project.private.config.json` holds local DevTools settings and is excluded via `.gitignore`.
+
+### Package exclusions
+
+`packOptions.ignore` in `project.config.json` excludes `docs/`, `local-preview/`, `tools/`, `.workbuddy-ai/`, the READMEs and the design mockup. These belong in the repo but not in the upload package.
+
+---
 
 ## Development
 
-### Adding New Levels
+### Run the regression suite
 
-Create a new JSON file in `levels/` directory:
+```bash
+node --experimental-vm-modules tools/regression/run.mjs .
+```
 
-```json
-{
-  "id": 4,
-  "name": "Level Name",
-  "penguin": { "x": 50, "y": 50 },
-  "stones": [
-    { "x": 200, "y": 150, "size": 40 }
-  ],
-  "target": { "x": 300, "y": 400, "width": 50, "height": 50 },
-  "par": 5
+Runs the real modules offline (`vm.SourceTextModule`) with a controllable clock and simulated touch chain. 171 assertions covering layout adaptation, level coordinate mapping, pause/back state resets, settlement idempotency, achievement rewards, compliance items, ad stubs, privacy authorization, package exclusions, the design-canvas system, background timing, food economy, level uniqueness and leaderboard policy.
+
+### Working with UI coordinates
+
+All overlay scenes are authored in **375×667 design coordinates**:
+
+```js
+import { CENTER_X, stage } from './layout'
+
+render(ctx) {
+  drawOverlay(ctx, 0.6)        // overlay covers real pixels
+  const s = stage()
+  ctx.save()
+  s.apply(ctx)                 // everything below uses design coordinates
+  // ...
+  ctx.restore()
+}
+
+onTouchStart(touch) {
+  const t = stage().unproject(touch)   // screen → design coordinates
 }
 ```
 
-### Code Structure
+**Never write `canvas.width / 2` inside a scene** — the regression suite asserts that button coordinates are independent of canvas size and will fail.
 
-- **Base classes** (`js/base/`): Reusable base classes for game objects
-- **Runtime objects** (`js/runtime/`): Game entities (penguin, ice blocks, etc.)
-- **Physics** (`js/physics/`): Physics simulation and collision detection
-- **Levels** (`js/levels/`): Level loading and management
+### Adding a UI scene
+
+Implement `render / update / onTouchStart / onTouchMove / onTouchEnd`, register it with `sceneManager`, and expose `relayout()` for window-size changes. Note that `relayout()` rebuilds button objects, so callbacks must live on the constructor or be saved and restored around it.
+
+---
+
+## Known Limitations
+
+- **No backend**: without `code2session` there is no account system. The leaderboard relies on the openid binding built into `wx.setUserCloudStorage`, so only friends' scores are visible.
+- **Generated level quality**: BFS guarantees solvability and the minimum move count, not that the solution is visually obvious. Hand-crafted levels read better.
+- **Ads unconfigured**: all ad entries stay hidden, and running out of food means waiting for natural recovery.
+- **Browser preview is locked to 375×667**: resizing the window only tests CSS scaling, not the 320-logical-pixel layout (that part is covered by the offline regression suite).
+
+---
 
 ## Documentation
 
-### Phase Documentation
-- [Phase 1: Core Prototype](./docs/phase1-core-prototype.md) - Basic gameplay and physics
-- [Phase 2: UI System](./docs/phase2-ui-system.md) - Menu, level select, pause, result screens
-- [Phase 3: Obstacle System](./docs/phase3-obstacle-system.md) - Ice walls, holes, snow piles
-- [Phase 4: Audio System](./docs/phase4-audio-system.md) - Sound effects and music
-- [Phase 5: WeChat Integration](./docs/phase5-wechat-integration.md) - WeChat API setup
-- [Phase 6: Login & Rank](./docs/phase6-login-rank.md) - User login and leaderboard
-- [Phase 7: Food System](./docs/phase7-food-system.md) - Stamina and rewards
-- [Phase 8: Achievement & Share](./docs/phase8-achievement-share.md) - Achievements and sharing
-- [Phase 9: Revive System](./docs/phase9-revive-system.md) - Revival mechanisms
-- [Phase 10: Game Over & Settlement](./docs/phase10-gameover-settlement.md) - Statistics and game over
+| Document | Contents |
+|---|---|
+| [Pre-release review](./docs/phase11-pre-release-review.md) | Technical and functional review (P0/P1/P2 with a fix list) |
+| [Publishing guide](./docs/phase12-publish-guide.md) | WeChat mini-game and H5 publishing steps |
+| [Batch A: Stability](./docs/review/batch-a-stability.md) | Crashes, deadlocks, state resets |
+| [Batch B: Compliance](./docs/review/batch-b-compliance.md) | Induced sharing, fake ads, privacy, package size |
+| [Batch C: Experience](./docs/review/batch-c-experience.md) | Screen adaptation, lifecycle, food economy, levels |
+| [Batch D: Engineering](./docs/review/batch-d-engineering.md) | Dead code, duplication, error handling, performance |
 
-## Current Status
+`docs/phase1` through `phase10` are per-phase development logs describing the implementation at the time. Some of it (physics engine, level select screen, login) has since been removed.
 
-✅ **All 10 phases completed!** The game is feature-complete with:
-- Core gameplay mechanics
-- Full UI system
-- Obstacle system
-- Audio system
-- WeChat integration
-- Login and leaderboard
-- Food/stamina system
-- Achievement system
-- Revival mechanism
-- Game statistics tracking
-
-## Roadmap
-
-### Completed
-- [x] UI system (main menu, level select, pause screen)
-- [x] Obstacle system (ice walls, holes, snow piles)
-- [x] Sound effects and music (placeholder audio files)
-- [x] Local storage (level progress)
-- [x] WeChat login and leaderboard
-- [x] Food/stamina system
-- [x] Achievement system
-- [x] Revival mechanism
-- [x] Game statistics
-
-### Future Enhancements
-- [ ] Replace placeholder audio with real sound files
-- [ ] Add more levels (currently 7 + procedural generation)
-- [ ] Implement real ad integration (currently placeholder)
-- [ ] Add daily challenges
-- [ ] Implement道具 shop (power-ups)
-- [ ] Add more achievements
-- [ ] Social features enhancement (friend challenges)
-- [ ] Performance optimization for large levels
+---
 
 ## License
 
 MIT
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.

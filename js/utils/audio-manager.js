@@ -18,7 +18,6 @@ export default class AudioManager {
 
     // 音效文件路径（支持 mp3 和 wav 格式）
     this.audioFiles = {
-      bgm: 'audio/bgm.mp3',
       slide: 'audio/slide.wav',
       push: 'audio/push.wav',
       collision: 'audio/collision.wav',
@@ -27,6 +26,13 @@ export default class AudioManager {
       button: 'audio/button.wav',
       star: 'audio/star.wav'
     }
+
+    // 背景音乐候选源：优先 mp3（体积小，正式素材），回落 wav（仓库内置占位曲）
+    this.bgmSources = ['audio/bgm.mp3', 'audio/bgm.wav']
+    this.bgmSourceIndex = 0
+
+    // 是否"希望"播放背景音乐（用于换源后自动续播）
+    this.bgmWanted = false
 
     // 初始化
     this.init()
@@ -44,44 +50,106 @@ export default class AudioManager {
   }
 
   /**
+   * 创建音频实例（统一处理 iOS 静音键）
+   *
+   * 微信默认 obeyMuteSwitch = true：iOS 打开侧边静音键后游戏一点声音都没有，
+   * 玩家会当成 Bug 来报。游戏音效统一改为不受静音键影响。
+   * @param {string} src - 音频路径
+   */
+  createAudio(src) {
+    const audio = wx.createInnerAudioContext()
+    // 老基础库可能没有这个属性，赋值失败也不影响播放
+    try {
+      audio.obeyMuteSwitch = false
+    } catch (e) {
+      // 忽略：不支持该属性的环境保持默认行为
+    }
+    audio.src = src
+    return audio
+  }
+
+  /**
    * 预加载音效
    */
   preloadSounds() {
+    // 背景音乐单独处理（需要支持换源回退）
+    this.initBGM()
+
     Object.keys(this.audioFiles).forEach(key => {
       try {
-        if (key === 'bgm') {
-          // 背景音乐单独处理
-          this.bgm = wx.createInnerAudioContext()
-          this.bgm.src = this.audioFiles.bgm
-          this.bgm.loop = true
-          this.bgm.volume = this.musicVolume
+        const audio = this.createAudio(this.audioFiles[key])
+        audio.volume = this.soundVolume
+        this.sounds[key] = audio
 
-          this.bgm.onError((err) => {
-            console.warn(`背景音乐加载失败: ${this.audioFiles.bgm}`, err)
-            this.bgm = null
-          })
-        } else {
-          // 音效
-          const audio = wx.createInnerAudioContext()
-          audio.src = this.audioFiles[key]
-          audio.volume = this.soundVolume
-          this.sounds[key] = audio
-
-          audio.onError((err) => {
-            console.warn(`音效加载失败: ${this.audioFiles[key]}`, err)
-            delete this.sounds[key]
-          })
-        }
+        audio.onError((err) => {
+          console.warn(`[Audio] 音效加载失败: ${this.audioFiles[key]}`, err && err.errMsg)
+          delete this.sounds[key]
+        })
       } catch (e) {
-        console.warn(`音频初始化失败: ${key}`, e)
+        console.warn(`[Audio] 音效初始化失败: ${key}`, e)
       }
     })
+  }
+
+  /**
+   * 初始化背景音乐
+   * 依次尝试 bgmSources，某个源加载失败就自动换下一个，全部失败则静默关闭 BGM
+   */
+  initBGM() {
+    const src = this.bgmSources[this.bgmSourceIndex]
+
+    if (!src) {
+      this.bgm = null
+      console.warn('[Audio] 没有可用的背景音乐资源，BGM 已关闭')
+      return
+    }
+
+    let audio
+    try {
+      audio = this.createAudio(src)
+    } catch (e) {
+      console.warn('[Audio] 创建背景音乐实例失败:', e)
+      this.bgm = null
+      return
+    }
+
+    audio.loop = true
+    audio.volume = this.musicVolume
+
+    audio.onError((err) => {
+      console.warn(`[Audio] 背景音乐加载失败: ${src}`, err && err.errMsg)
+
+      try {
+        audio.destroy()
+      } catch (e) {
+        // 忽略
+      }
+
+      if (this.bgm === audio) this.bgm = null
+
+      // 换下一个候选源重试
+      this.bgmSourceIndex++
+      this.initBGM()
+    })
+
+    // 换源后若原本正在播放，自动续播（不依赖 onCanplay，兼容本地预览桩）
+    this.bgm = audio
+
+    if (this.bgmWanted && this.musicEnabled) {
+      try {
+        audio.play()
+      } catch (e) {
+        // 忽略
+      }
+    }
   }
 
   /**
    * 播放背景音乐
    */
   playBGM() {
+    this.bgmWanted = true
+
     if (!this.musicEnabled || !this.bgm) return
 
     try {
@@ -95,6 +163,8 @@ export default class AudioManager {
    * 暂停背景音乐
    */
   pauseBGM() {
+    this.bgmWanted = false
+
     if (!this.bgm) return
 
     try {
@@ -108,6 +178,8 @@ export default class AudioManager {
    * 停止背景音乐
    */
   stopBGM() {
+    this.bgmWanted = false
+
     if (!this.bgm) return
 
     try {
@@ -304,6 +376,15 @@ export default class AudioManager {
     })
 
     this.sounds = {}
+
+    if (this.bgm) {
+      try {
+        this.bgm.destroy()
+      } catch (e) {
+        // 忽略
+      }
+    }
     this.bgm = null
+    this.bgmSourceIndex = this.bgmSources.length
   }
 }

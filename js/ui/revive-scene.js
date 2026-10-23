@@ -1,6 +1,12 @@
 /**
  * 复活选择场景
- * 显示复活选项界面
+ *
+ * 合规说明（B1）：
+ * 微信《小程序运营规范》明确禁止"分享后才能继续游戏/获得奖励"的诱导分享行为。
+ * 因此这里只保留两种复活方式：
+ *   1. 看激励视频（需后台开通流量主并配置真实广告位）
+ *   2. 消耗游戏内食物
+ * 分享仅作为纯传播能力保留在菜单/登录页，不与任何奖励挂钩。
  */
 import Button from './button'
 import {
@@ -12,12 +18,16 @@ import {
   fillRoundRect,
   font
 } from './theme'
+import { CENTER_X, DESIGN_HEIGHT, DESIGN_WIDTH, stage } from './layout'
+
+// "放弃重玩"与复活方式之间留出更大间距，避免误触
+const GIVE_UP_GAP = 20
 
 export default class ReviveScene {
-  constructor(reviveManager, foodManager, wechatService) {
+  constructor(reviveManager, foodManager, adManager = null) {
     this.reviveManager = reviveManager
     this.foodManager = foodManager
-    this.wechatService = wechatService
+    this.adManager = adManager
     this.isVisible = false
 
     // 回调
@@ -30,44 +40,17 @@ export default class ReviveScene {
   }
 
   init() {
-    const centerX = canvas.width / 2
+    this.buttons = []
+    const centerX = CENTER_X
     const buttonWidth = 250
     const buttonHeight = 46
     const buttonSpacing = 24
     const startY = 226
 
-    // 分享给好友按钮
-    this.buttons.push(new Button({
-      x: centerX - buttonWidth / 2,
-      y: startY,
-      width: buttonWidth,
-      height: buttonHeight,
-      text: '🎯 分享给好友',
-      fontSize: 17,
-      bgColor: COLORS.water,
-      hoverColor: COLORS.waterDeep,
-      borderColor: '#1F7FAE',
-      onClick: () => this.handleRevive('shareFriend')
-    }))
-
-    // 分享到群按钮
-    this.buttons.push(new Button({
-      x: centerX - buttonWidth / 2,
-      y: startY + (buttonHeight + buttonSpacing),
-      width: buttonWidth,
-      height: buttonHeight,
-      text: '👥 分享到群聊',
-      fontSize: 17,
-      bgColor: COLORS.mint,
-      hoverColor: COLORS.mintDeep,
-      borderColor: '#17876C',
-      onClick: () => this.handleRevive('shareGroup')
-    }))
-
     // 看广告按钮
     this.buttons.push(new Button({
       x: centerX - buttonWidth / 2,
-      y: startY + (buttonHeight + buttonSpacing) * 2,
+      y: startY,
       width: buttonWidth,
       height: buttonHeight,
       text: '📺 看视频复活',
@@ -81,7 +64,7 @@ export default class ReviveScene {
     // 消耗食物按钮
     this.buttons.push(new Button({
       x: centerX - buttonWidth / 2,
-      y: startY + (buttonHeight + buttonSpacing) * 3,
+      y: startY + (buttonHeight + buttonSpacing),
       width: buttonWidth,
       height: buttonHeight,
       text: `🐟 ${this.reviveManager.foodCost}食物复活`,
@@ -95,7 +78,7 @@ export default class ReviveScene {
     // 放弃按钮
     this.buttons.push(new Button({
       x: centerX - buttonWidth / 2,
-      y: startY + (buttonHeight + buttonSpacing) * 4 + 20,
+      y: startY + (buttonHeight + buttonSpacing) * 2 + GIVE_UP_GAP,
       width: buttonWidth,
       height: buttonHeight,
       text: '放弃重玩',
@@ -105,12 +88,80 @@ export default class ReviveScene {
       borderColor: '#7255CC',
       onClick: () => this.handleGiveUp()
     }))
+
+    // 按钮与复活方式的对应关系：按 key 隐藏/重排，避免依赖数组下标
+    this.buttonKeys = ['watchAd', 'useFood', 'giveUp']
+    this.buttonStartY = startY
+    this.buttonHeight = buttonHeight
+    this.buttonSpacing = buttonSpacing
+    this.relayoutButtons()
+  }
+
+  /**
+   * 显示/隐藏某个复活入口
+   * @param {string} key - watchAd | useFood | giveUp
+   * @param {boolean} visible
+   */
+  setOptionVisible(key, visible) {
+    const index = this.buttonKeys ? this.buttonKeys.indexOf(key) : -1
+    if (index < 0) return
+
+    this.buttons[index].setVisible(!!visible)
+    this.relayoutButtons()
+  }
+
+  /**
+   * 按当前可见按钮重新排布纵向位置，隐藏后不留空档
+   */
+  relayoutButtons() {
+    if (!this.buttonKeys) return
+
+    const step = this.buttonHeight + this.buttonSpacing
+    let slot = 0
+
+    this.buttonKeys.forEach((key, index) => {
+      const btn = this.buttons[index]
+      if (!btn || !btn.isVisible) return
+      const extra = key === 'giveUp' ? GIVE_UP_GAP : 0
+      btn.y = Math.round(this.buttonStartY + slot * step + extra)
+      slot++
+    })
+  }
+
+  /**
+   * 面板矩形：高度随可见按钮数量收缩，避免底部大片空白
+   */
+  getPanelRect() {
+    const last = this.buttons[this.buttons.length - 1]
+    const bottom = last ? last.y + last.height : this.buttonStartY + this.buttonHeight
+    const height = Math.min(DESIGN_HEIGHT - 70 - 24, bottom + 96 - 70)
+
+    return {
+      x: 24,
+      y: 70,
+      width: DESIGN_WIDTH - 48,
+      height
+    }
+  }
+
+  /**
+   * 窗口尺寸变化后重建按钮（C1/C2）
+   */
+  relayout() {
+    this.init()
   }
 
   /**
    * 处理复活
    */
   handleRevive(type) {
+    // 入口被隐藏时直接忽略（如广告位未接入）
+    const index = this.buttonKeys ? this.buttonKeys.indexOf(type) : -1
+    if (index >= 0 && !this.buttons[index].isVisible) {
+      wx.showToast({ title: '该复活方式暂不可用', icon: 'none' })
+      return
+    }
+
     // 检查是否可以复活
     if (!this.reviveManager.canRevive(type)) {
       wx.showToast({
@@ -122,12 +173,6 @@ export default class ReviveScene {
 
     // 根据类型执行不同操作
     switch (type) {
-      case 'shareFriend':
-        this.shareToFriend(() => this.doRevive(type))
-        break
-      case 'shareGroup':
-        this.shareToGroup(() => this.doRevive(type))
-        break
       case 'watchAd':
         this.watchAd(() => this.doRevive(type))
         break
@@ -152,7 +197,7 @@ export default class ReviveScene {
 
     if (result.success) {
       wx.showToast({
-        title: '复活成功！步数+5',
+        title: `复活成功！步数+${result.movePenalty}`,
         icon: 'none'
       })
 
@@ -170,57 +215,23 @@ export default class ReviveScene {
   }
 
   /**
-   * 分享给好友
-   */
-  shareToFriend(callback) {
-    if (this.wechatService) {
-      this.wechatService.share()
-      // 分享成功回调
-      setTimeout(() => {
-        callback && callback()
-      }, 500)
-    } else {
-      // 模拟分享
-      wx.showModal({
-        title: '分享给好友',
-        content: '模拟分享成功',
-        showCancel: false,
-        success: () => {
-          callback && callback()
-        }
-      })
-    }
-  }
-
-  /**
-   * 分享到群
-   */
-  shareToGroup(callback) {
-    wx.shareAppMessage({
-      title: '快来挑战企鹅滑冰！',
-      imageUrl: 'images/share-image.png',
-      query: 'from=group',
-      success: () => {
-        callback && callback()
-      }
-    })
-  }
-
-  /**
-   * 看广告
+   * 看广告复活
+   * 只有完整观看（isEnded === true）才发放奖励，中途关闭一律不复活。
    */
   watchAd(callback) {
-    // TODO: 接入真实的激励视频广告
-    // 这里模拟广告观看
-    wx.showModal({
-      title: '观看视频',
-      content: '模拟观看30秒视频广告',
-      confirmText: '完成',
-      success: (res) => {
-        if (res.confirm) {
-          callback && callback()
-        }
+    if (!this.adManager || !this.adManager.isRewardedVideoAvailable()) {
+      wx.showToast({ title: '广告暂不可用', icon: 'none' })
+      return
+    }
+
+    this.adManager.showRewardedVideoAd().then((ended) => {
+      if (ended) {
+        callback && callback()
+      } else {
+        wx.showToast({ title: '未看完视频，无法复活', icon: 'none' })
       }
+    }).catch(() => {
+      wx.showToast({ title: '广告加载失败，请稍后再试', icon: 'none' })
     })
   }
 
@@ -261,27 +272,31 @@ export default class ReviveScene {
   render(ctx) {
     if (!this.isVisible) return
 
-    // 深蓝遮罩 + 奶油面板
+    // 深蓝遮罩（真实像素铺满）
     drawOverlay(ctx, 0.62)
-    drawGlassPanel(ctx, 24, 70, 327, 580, 30, {
+
+    const s = stage()
+    ctx.save()
+    s.apply(ctx)
+
+    const panel = this.getPanelRect()
+
+    drawGlassPanel(ctx, panel.x, panel.y, panel.width, panel.height, 30, {
       fill: 'rgba(255, 249, 238, 0.97)'
     })
 
-    // 标题
     this.renderTitle(ctx)
-
-    // 状态信息
-    this.renderStatus(ctx)
-
-    // 按钮
+    this.renderStatus(ctx, panel)
     this.renderButtons(ctx)
+
+    ctx.restore()
   }
 
   /**
    * 渲染标题
    */
   renderTitle(ctx) {
-    const centerX = canvas.width / 2
+    const centerX = CENTER_X
 
     // 落水企鹅
     drawPenguin(ctx, centerX, 118, 1.5, { sad: true })
@@ -303,11 +318,12 @@ export default class ReviveScene {
   }
 
   /**
-   * 渲染状态信息
+   * 渲染状态信息（贴在面板底部，随面板高度浮动）
    */
-  renderStatus(ctx) {
+  renderStatus(ctx, panel) {
     const status = this.reviveManager.getStatus()
-    const centerX = canvas.width / 2
+    const centerX = CENTER_X
+    const baseY = panel.y + panel.height - 46
 
     ctx.save()
 
@@ -316,12 +332,12 @@ export default class ReviveScene {
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillStyle = COLORS.yellowDeep
-    ctx.fillText(`当前食物: ${this.foodManager.getTotalFood()}🐟`, centerX, 604)
+    ctx.fillText(`当前食物: ${this.foodManager.getTotalFood()}🐟`, centerX, baseY)
 
     // 复活惩罚提示
     ctx.font = font(11, 'normal')
     ctx.fillStyle = COLORS.navySoft
-    ctx.fillText(`复活后步数 +${status.movePenalty}`, centerX, 626)
+    ctx.fillText(`复活后步数 +${status.movePenalty}`, centerX, baseY + 22)
 
     ctx.restore()
   }
@@ -333,30 +349,22 @@ export default class ReviveScene {
     const status = this.reviveManager.getStatus()
 
     this.buttons.forEach((btn, index) => {
-      // 检查是否可用
+      if (!btn.isVisible) return
+
+      const key = this.buttonKeys[index]
       let disabled = false
       let subText = ''
 
-      if (index === 0) {
-        // 分享给好友
-        disabled = status.remaining.shareFriend <= 0
-        subText = `(今日剩余${status.remaining.shareFriend}次)`
-      } else if (index === 1) {
-        // 分享到群
-        disabled = status.remaining.shareGroup <= 0
-        subText = `(今日剩余${status.remaining.shareGroup}次)`
-      } else if (index === 2) {
-        // 看广告
+      if (key === 'watchAd') {
         disabled = status.remaining.watchAd <= 0
         subText = `(今日剩余${status.remaining.watchAd}次)`
-      } else if (index === 3) {
-        // 消耗食物
+      } else if (key === 'useFood') {
         disabled = !this.reviveManager.hasEnoughFood(this.foodManager)
         subText = `(当前: ${this.foodManager.getTotalFood()}🐟)`
       }
 
-      // 如果已复活，禁用所有复活按钮
-      if (status.currentLevelRevived && index < 4) {
+      // 本关已复活过：所有复活方式都不可用（"放弃重玩"除外）
+      if (status.currentLevelRevived && key !== 'giveUp') {
         disabled = true
         subText = '(本关已复活)'
       }
@@ -387,7 +395,8 @@ export default class ReviveScene {
    */
   onTouchStart(touch) {
     if (!this.isVisible) return
-    this.buttons.forEach(btn => btn.onTouchStart(touch))
+    const t = stage().unproject(touch)
+    this.buttons.forEach(btn => btn.onTouchStart(t))
   }
 
   /**
@@ -396,7 +405,8 @@ export default class ReviveScene {
   onTouchMove(touch) {
     if (!this.isVisible) return
     this.buttons.forEach(btn => {
-      btn.isHovered = btn.contains(touch.clientX, touch.clientY)
+      const t = stage().unproject(touch)
+      btn.isHovered = btn.contains(t.clientX, t.clientY)
     })
   }
 
@@ -405,7 +415,8 @@ export default class ReviveScene {
    */
   onTouchEnd(touch) {
     if (!this.isVisible) return
-    this.buttons.forEach(btn => btn.onTouchEnd(touch))
+    const t = stage().unproject(touch)
+    this.buttons.forEach(btn => btn.onTouchEnd(t))
   }
 
   /**

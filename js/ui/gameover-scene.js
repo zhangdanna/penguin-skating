@@ -11,6 +11,7 @@ import {
   drawStickerText,
   font
 } from './theme'
+import { CENTER_X, stage } from './layout'
 
 export default class GameOverScene {
   constructor() {
@@ -21,6 +22,14 @@ export default class GameOverScene {
     this.onBackToMenu = null
     this.onWatchAd = null
 
+    // 广告入口是否可用（未接入广告位时隐藏，避免点击未实现功能）
+    this.adVisible = true
+
+    // 布局参数（隐藏广告按钮后需要重排）
+    this.buttonStartY = 436
+    this.buttonHeight = 50
+    this.buttonSpacing = 16
+
     // 动画参数
     this.penguinAngle = 0
     this.teardropY = 0
@@ -30,11 +39,12 @@ export default class GameOverScene {
   }
 
   init() {
-    const centerX = canvas.width / 2
+    this.buttons = []
+    const centerX = CENTER_X
     const buttonWidth = 200
-    const buttonHeight = 50
-    const buttonSpacing = 16
-    const startY = 436
+    const buttonHeight = this.buttonHeight
+    const buttonSpacing = this.buttonSpacing
+    const startY = this.buttonStartY
 
     // 重玩按钮
     this.buttons.push(new Button({
@@ -86,6 +96,30 @@ export default class GameOverScene {
   }
 
   /**
+   * 窗口尺寸变化后重建按钮（C1/C2）
+   */
+  relayout() {
+    this.init()
+    this.setWatchAdVisible(this.adVisible)
+  }
+
+  /**
+   * 显示/隐藏"看广告复活"入口
+   * 隐藏后自动把"返回菜单"上移，避免按钮之间留空
+   * @param {boolean} visible
+   */
+  setWatchAdVisible(visible) {
+    this.adVisible = !!visible
+    if (this.buttons.length < 3) return
+
+    const [, adButton, backButton] = this.buttons
+    adButton.setVisible(this.adVisible)
+
+    const step = this.buttonHeight + this.buttonSpacing
+    backButton.y = this.buttonStartY + (this.adVisible ? step * 2 : step)
+  }
+
+  /**
    * 显示
    */
   show() {
@@ -123,24 +157,28 @@ export default class GameOverScene {
   render(ctx) {
     if (!this.isVisible) return
 
-    // 深蓝遮罩 + 奶油面板
+    // 深蓝遮罩（真实像素铺满）
     drawOverlay(ctx, 0.62)
+
+    const s = stage()
+    ctx.save()
+    s.apply(ctx)
+
     drawGlassPanel(ctx, 30, 76, 315, 560, 30, {
       fill: 'rgba(255, 249, 238, 0.97)'
     })
 
-    // 渲染内容
     this.renderContent(ctx)
-
-    // 渲染按钮
     this.buttons.forEach(btn => btn.render(ctx))
+
+    ctx.restore()
   }
 
   /**
    * 渲染内容
    */
   renderContent(ctx) {
-    const centerX = canvas.width / 2
+    const centerX = CENTER_X
 
     // 难过企鹅
     this.renderPenguin(ctx, centerX, 172)
@@ -164,10 +202,12 @@ export default class GameOverScene {
     ctx.fillStyle = COLORS.navySoft
     ctx.fillText('别灰心，再试一次吧！', centerX, 354)
 
-    // 提示广告
-    ctx.font = font(13)
-    ctx.fillStyle = COLORS.yellowDeep
-    ctx.fillText('看广告可以复活哦~', centerX, 396)
+    // 提示广告（广告入口不可用时不再提示）
+    if (this.adVisible) {
+      ctx.font = font(13)
+      ctx.fillStyle = COLORS.yellowDeep
+      ctx.fillText('看广告可以复活哦~', centerX, 396)
+    }
   }
 
   /**
@@ -193,7 +233,8 @@ export default class GameOverScene {
    */
   onTouchStart(touch) {
     if (!this.isVisible) return
-    this.buttons.forEach(btn => btn.onTouchStart(touch))
+    const t = stage().unproject(touch)
+    this.buttons.forEach(btn => btn.onTouchStart(t))
   }
 
   /**
@@ -202,7 +243,8 @@ export default class GameOverScene {
   onTouchMove(touch) {
     if (!this.isVisible) return
     this.buttons.forEach(btn => {
-      btn.isHovered = btn.contains(touch.clientX, touch.clientY)
+      const t = stage().unproject(touch)
+      btn.isHovered = btn.contains(t.clientX, t.clientY)
     })
   }
 
@@ -211,7 +253,8 @@ export default class GameOverScene {
    */
   onTouchEnd(touch) {
     if (!this.isVisible) return
-    this.buttons.forEach(btn => btn.onTouchEnd(touch))
+    const t = stage().unproject(touch)
+    this.buttons.forEach(btn => btn.onTouchEnd(t))
   }
 
   /**

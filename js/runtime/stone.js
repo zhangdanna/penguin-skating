@@ -31,18 +31,26 @@ export default class Stone extends Sprite {
    */
   render(ctx) {
     const cx = this.x + this.width / 2
-    const cy = this.y + this.height / 2
-    const size = Math.min(this.width, this.height) * 0.58  // 菱形边长
-    const radius = 5
-    const thickness = 4  // 底部厚度
-    const half = size / Math.SQRT2  // 菱形对角线的一半
+    const centerY = this.y + this.height / 2
+
+    // 以 40px 冰块为设计基准，所有硬编码偏移按 k 等比缩放（D6）
+    // 之前只有菱形本体跟着格子缩放，阴影、裂纹、高光、描边宽度都是固定像素，
+    // 在 42px / 56px 格子上会明显错位。
+    const k = Math.min(this.width, this.height) / 40
+    const size = 18.56 * k            // 菱形边长（= 0.464 × 格子）
+    const radius = 5 * k
+    const thickness = 4 * k           // 底部厚度
+    const half = size / Math.SQRT2    // 菱形对角线的一半
+
+    // 菱形 + 底部厚度整体上移 thickness/2，让视觉重心落在格子中心
+    const cy = centerY - thickness / 2
 
     ctx.save()
 
-    // 落地阴影
+    // 落地阴影（贴在格子底部，不跟着上移）
     ctx.fillStyle = 'rgba(19, 61, 90, 0.22)'
     ctx.beginPath()
-    ctx.ellipse(cx, cy + 20, 15, 4.5, 0, 0, Math.PI * 2)
+    ctx.ellipse(cx, centerY + 20 * k, 15 * k, 4.5 * k, 0, 0, Math.PI * 2)
     ctx.fill()
 
     // 底部厚度：先画一层向下偏移的菱形
@@ -50,12 +58,12 @@ export default class Stone extends Sprite {
     ctx.fillStyle = '#63B2D8'
     ctx.fill()
     ctx.strokeStyle = 'rgba(37, 110, 150, 0.7)'
-    ctx.lineWidth = 1.5
+    ctx.lineWidth = 1.5 * k
     ctx.stroke()
 
     // 冰晶主体
     diamondPath(ctx, cx, cy, size, radius)
-    const ice = ctx.createLinearGradient(0, cy - 21, 0, cy + 21)
+    const ice = ctx.createLinearGradient(0, cy - 21 * k, 0, cy + 21 * k)
     ice.addColorStop(0, '#F8FDFF')
     ice.addColorStop(0.45, '#E2F4FF')
     ice.addColorStop(1, '#A6D9F5')
@@ -83,76 +91,78 @@ export default class Stone extends Sprite {
     ctx.fillStyle = 'rgba(86, 173, 220, 0.2)'
     ctx.fill()
 
-    // 裂纹 / 冰晶切面线
+    // 裂纹 / 冰晶切面线（坐标按 k 缩放，避免小格子上裂纹糊成一团）
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
     const cracks = [
-      [[cx - 6, cy - 15], [cx - 2, cy - 7], [cx - 9, cy + 1], [cx - 5, cy + 12], [cx - 11, cy + 17]],
-      [[cx - 16, cy + 4], [cx - 7, cy + 2], [cx + 2, cy - 2], [cx + 10, cy + 2], [cx + 15, cy + 5]],
-      [[cx + 7, cy - 11], [cx + 4, cy - 4], [cx + 9, cy + 3]]
+      [[-6, -15], [-2, -7], [-9, 1], [-5, 12], [-11, 17]],
+      [[-16, 4], [-7, 2], [2, -2], [10, 2], [15, 5]],
+      [[7, -11], [4, -4], [9, 3]]
     ]
     cracks.forEach(points => {
       ctx.beginPath()
       points.forEach(([px, py], index) => {
-        if (index === 0) ctx.moveTo(px, py)
-        else ctx.lineTo(px, py)
+        const x = cx + px * k
+        const y = cy + py * k
+        if (index === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
       })
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)'
-      ctx.lineWidth = 2.2
+      ctx.lineWidth = 2.2 * k
       ctx.stroke()
       ctx.strokeStyle = 'rgba(94, 176, 219, 0.6)'
-      ctx.lineWidth = 1.2
+      ctx.lineWidth = 1.2 * k
       ctx.stroke()
     })
     ctx.restore()
 
     // 左上高光
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)'
-    ctx.lineWidth = 2
+    ctx.lineWidth = 2 * k
     ctx.lineCap = 'round'
     ctx.beginPath()
-    ctx.moveTo(cx - 13, cy - 7)
-    ctx.lineTo(cx - 2, cy - 17)
+    ctx.moveTo(cx - 13 * k, cy - 7 * k)
+    ctx.lineTo(cx - 2 * k, cy - 17 * k)
     ctx.stroke()
 
     // 外轮廓：让冰晶从浅色冰面中清晰跳出来
     diamondPath(ctx, cx, cy, size, radius)
     ctx.strokeStyle = 'rgba(64, 148, 196, 0.9)'
-    ctx.lineWidth = 2.2
+    ctx.lineWidth = 2.2 * k
     ctx.stroke()
 
     // 气泡与冰晶闪光
     ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
     ctx.beginPath()
-    ctx.arc(cx + 4, cy + 7, 2, 0, Math.PI * 2)
-    ctx.arc(cx - 5, cy + 12, 1.4, 0, Math.PI * 2)
+    ctx.arc(cx + 4 * k, cy + 7 * k, 2 * k, 0, Math.PI * 2)
+    ctx.arc(cx - 5 * k, cy + 12 * k, 1.4 * k, 0, Math.PI * 2)
     ctx.fill()
-    drawSnowflake(ctx, cx + 8, cy - 9, 4.5, 'rgba(255, 255, 255, 0.85)', 1.1)
+    drawSnowflake(ctx, cx + 8 * k, cy - 9 * k, 4.5 * k, 'rgba(255, 255, 255, 0.85)', 1.1 * k)
 
     // 已在目标位置：薄荷绿光晕 + 对勾
     if (this.inTarget) {
       ctx.save()
       ctx.strokeStyle = 'rgba(47, 191, 155, 0.85)'
-      ctx.lineWidth = 2.4
-      diamondPath(ctx, cx, cy, size + 7, radius + 2)
+      ctx.lineWidth = 2.4 * k
+      diamondPath(ctx, cx, cy, size + 7 * k, radius + 2 * k)
       ctx.stroke()
 
       // 深色描边打底，避免对勾和浅色冰面糊在一起
       ctx.strokeStyle = 'rgba(16, 110, 86, 0.9)'
-      ctx.lineWidth = 4
+      ctx.lineWidth = 4 * k
       ctx.lineCap = 'round'
       ctx.beginPath()
-      ctx.moveTo(cx - 7, cy + 1)
-      ctx.lineTo(cx - 2, cy + 6)
-      ctx.lineTo(cx + 7, cy - 5)
+      ctx.moveTo(cx - 7 * k, cy + 1 * k)
+      ctx.lineTo(cx - 2 * k, cy + 6 * k)
+      ctx.lineTo(cx + 7 * k, cy - 5 * k)
       ctx.stroke()
 
       ctx.strokeStyle = COLORS.white
-      ctx.lineWidth = 2.5
+      ctx.lineWidth = 2.5 * k
       ctx.beginPath()
-      ctx.moveTo(cx - 7, cy + 1)
-      ctx.lineTo(cx - 2, cy + 6)
-      ctx.lineTo(cx + 7, cy - 5)
+      ctx.moveTo(cx - 7 * k, cy + 1 * k)
+      ctx.lineTo(cx - 2 * k, cy + 6 * k)
+      ctx.lineTo(cx + 7 * k, cy - 5 * k)
       ctx.stroke()
       ctx.restore()
     }

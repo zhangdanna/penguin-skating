@@ -2,6 +2,8 @@
  * 成就管理器
  * 管理游戏中的成就系统
  */
+import { calcStars } from './score'
+
 export default class AchievementManager {
   constructor() {
     // 成就定义
@@ -136,22 +138,24 @@ export default class AchievementManager {
         condition: (stats) => stats.maxStreak >= 50
       },
 
-      // 分享相关成就
+      // 复活相关成就
+      // 原 first_share / share_10 依赖"分享次数"，分享奖励下线后已无法达成，
+      // 改为由复活次数驱动（复活可通过消耗食物无限次触发，稳定可达成）
       {
-        id: 'first_share',
-        name: '初次分享',
-        description: '首次分享游戏',
+        id: 'revive_first',
+        name: '重整旗鼓',
+        description: '首次使用复活继续游戏',
         icon: '📢',
         reward: { fish: 5 },
-        condition: (stats) => stats.totalShares >= 1
+        condition: (stats) => stats.revives >= 1
       },
       {
-        id: 'share_10',
-        name: '分享达人',
-        description: '分享游戏10次',
+        id: 'revive_10',
+        name: '不死企鹅',
+        description: '累计复活10次',
         icon: '📣',
         reward: { shrimp: 3 },
-        condition: (stats) => stats.totalShares >= 10
+        condition: (stats) => stats.revives >= 10
       },
 
       // 特殊成就
@@ -183,7 +187,7 @@ export default class AchievementManager {
       perfectMoves: 0,
       fastestTime: 0,
       maxStreak: 0,
-      totalShares: 0,
+      revives: 0,
       totalPlayTime: 0,
       allThreeStars: false,
       hasAllFoodTypes: false
@@ -219,7 +223,8 @@ export default class AchievementManager {
     this.stats.totalWins++
     this.stats.totalStars += stars
 
-    if (moves <= par) {
+    // 「精准操作」按统一星级口径判定（D2），不再单独维护一套步数比较
+    if (calcStars(moves, par) === 3) {
       this.stats.perfectMoves++
     }
 
@@ -243,10 +248,11 @@ export default class AchievementManager {
   }
 
   /**
-   * 记录分享
+   * 记录复活
+   * 原 recordShare 随分享奖励一起下线（B1）
    */
-  recordShare() {
-    this.stats.totalShares++
+  recordRevive() {
+    this.stats.revives++
     this.saveStats()
     this.checkAchievements()
   }
@@ -283,10 +289,12 @@ export default class AchievementManager {
 
   /**
    * 检查成就解锁
+   * 注意：这里只追加，不清空 newUnlocked。
+   * 一次通关会连续触发 recordWin / recordStreak / recordFoodCollection / recordPlayTime 等多个记录，
+   * 如果每次都清空，前面解锁的成就既不会弹通知也拿不到奖励。
+   * @returns {Array} 当前累计的新解锁成就
    */
   checkAchievements() {
-    this.newUnlocked = []
-
     this.achievements.forEach(achievement => {
       if (!this.unlockedAchievements.includes(achievement.id)) {
         if (achievement.condition(this.stats)) {
@@ -310,9 +318,18 @@ export default class AchievementManager {
   }
 
   /**
-   * 获取新解锁的成就
+   * 取出（并清空）新解锁的成就
+   * @returns {Array}
    */
   getNewUnlocked() {
+    return this.flushNewUnlocked()
+  }
+
+  /**
+   * 取出并清空新解锁成就列表
+   * @returns {Array}
+   */
+  flushNewUnlocked() {
     const newOnes = [...this.newUnlocked]
     this.newUnlocked = []
     return newOnes
@@ -425,7 +442,7 @@ export default class AchievementManager {
       perfectMoves: 0,
       fastestTime: 0,
       maxStreak: 0,
-      totalShares: 0,
+      revives: 0,
       totalPlayTime: 0,
       allThreeStars: false,
       hasAllFoodTypes: false

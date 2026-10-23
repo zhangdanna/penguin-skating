@@ -5,9 +5,8 @@
 export default class ReviveManager {
   constructor() {
     // 每日复活次数限制
+    // 注：分享类复活属于"分享后获得游戏内收益"，违反微信诱导分享规范，已下线（B1）
     this.dailyLimits = {
-      shareFriend: 3,   // 分享给好友
-      shareGroup: 2,    // 分享到群
       watchAd: 5,       // 看广告
       useFood: Infinity // 消耗食物（无限制）
     }
@@ -19,13 +18,7 @@ export default class ReviveManager {
     this.movePenalty = 5
 
     // 当前复活记录
-    this.dailyRevive = {
-      date: this.getTodayDate(),
-      shareFriend: 0,
-      shareGroup: 0,
-      watchAd: 0,
-      useFood: 0
-    }
+    this.dailyRevive = this.createDailyRevive()
 
     // 当前关卡是否已复活
     this.currentLevelRevived = false
@@ -46,6 +39,17 @@ export default class ReviveManager {
   }
 
   /**
+   * 生成一份全新的每日复活记录
+   */
+  createDailyRevive() {
+    return {
+      date: this.getTodayDate(),
+      watchAd: 0,
+      useFood: 0
+    }
+  }
+
+  /**
    * 获取今天日期字符串
    */
   getTodayDate() {
@@ -59,13 +63,7 @@ export default class ReviveManager {
   checkDateReset() {
     const today = this.getTodayDate()
     if (this.dailyRevive.date !== today) {
-      this.dailyRevive = {
-        date: today,
-        shareFriend: 0,
-        shareGroup: 0,
-        watchAd: 0,
-        useFood: 0
-      }
+      this.dailyRevive = this.createDailyRevive()
       this.saveDailyRevive()
     }
   }
@@ -179,9 +177,8 @@ export default class ReviveManager {
       foodCost: this.foodCost,
       movePenalty: this.movePenalty,
       remaining: {
-        shareFriend: this.getRemainingCount('shareFriend'),
-        shareGroup: this.getRemainingCount('shareGroup'),
-        watchAd: this.getRemainingCount('watchAd')
+        watchAd: this.getRemainingCount('watchAd'),
+        useFood: this.getRemainingCount('useFood')
       }
     }
   }
@@ -199,13 +196,19 @@ export default class ReviveManager {
 
   /**
    * 加载每日复活数据
+   * 只取回当前仍然存在的复活方式，旧存档里的 shareFriend / shareGroup 会被丢弃
    */
   loadDailyRevive() {
     try {
       const saved = wx.getStorageSync('dailyRevive')
-      if (saved) {
-        this.dailyRevive = { ...this.dailyRevive, ...saved }
-      }
+      if (!saved) return
+
+      const fresh = this.createDailyRevive()
+      fresh.date = saved.date || fresh.date
+      Object.keys(this.dailyLimits).forEach(key => {
+        if (Number.isFinite(saved[key])) fresh[key] = saved[key]
+      })
+      this.dailyRevive = fresh
     } catch (e) {
       console.error('加载复活数据失败:', e)
     }
@@ -215,13 +218,7 @@ export default class ReviveManager {
    * 重置数据（调试用）
    */
   resetData() {
-    this.dailyRevive = {
-      date: this.getTodayDate(),
-      shareFriend: 0,
-      shareGroup: 0,
-      watchAd: 0,
-      useFood: 0
-    }
+    this.dailyRevive = this.createDailyRevive()
     this.currentLevelRevived = false
     this.saveDailyRevive()
   }

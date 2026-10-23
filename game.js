@@ -6,10 +6,13 @@ import LevelManager from './js/levels/level-manager'
 import { ObstacleFactory } from './js/runtime/obstacle'
 import AudioManager from './js/utils/audio-manager'
 import WechatService from './js/utils/wechat-service'
+import AdManager from './js/utils/ad-manager'
 import FoodManager from './js/utils/food-manager'
 import AchievementManager from './js/utils/achievement-manager'
 import ReviveManager from './js/utils/revive-manager'
 import SettlementManager from './js/utils/settlement-manager'
+import { calcStars } from './js/utils/score'
+import { AD_UNITS } from './js/config'
 
 // UI组件
 import SceneManager from './js/ui/scene-manager'
@@ -17,21 +20,26 @@ import MenuScene from './js/ui/menu-scene'
 import PauseScene from './js/ui/pause-scene'
 import ResultScene from './js/ui/result-scene'
 import GameOverScene from './js/ui/gameover-scene'
-import LoginScene from './js/ui/login-scene'
 import RankScene from './js/ui/rank-scene'
 import AchievementScene from './js/ui/achievement-scene'
 import AchievementNotification from './js/ui/achievement-notification'
 import ReviveScene from './js/ui/revive-scene'
+import PrivacyScene from './js/ui/privacy-scene'
 import GameHUD from './js/ui/game-hud'
 import FoodDisplay from './js/ui/food-display'
 import GameScene from './js/ui/game-scene'
 
-// 棋盘配置：7列×9行，每格50px，整体居中
-const CELL_SIZE = 50
+// 关卡数据使用的网格单位：levels/*.json 里的坐标按 50px 一格书写
+const LEVEL_CELL = 50
 const GRID_COLS = 7
 const GRID_ROWS = 9
-const BOARD_OFFSET_X = Math.round((canvas.width - GRID_COLS * CELL_SIZE) / 2)
-const BOARD_OFFSET_Y = Math.round((canvas.height - GRID_ROWS * CELL_SIZE) / 2)
+
+// 棋盘自适应参数：顶部 HUD 面板 + 底部操作条之间为可用区域
+const LAYOUT_MARGIN_X = 10
+const LAYOUT_TOP = 96
+const LAYOUT_BOTTOM = 64
+const MIN_CELL_SIZE = 28
+const MAX_CELL_SIZE = 56
 
 // 滑动方向对应的一格位移
 const DIRECTION_STEP = {
@@ -62,7 +70,6 @@ export default class Main {
     this.sceneManager = new SceneManager()
     this.pauseScene = null
     this.resultScene = null
-    this.loginScene = null
     this.rankScene = null
     this.gameHUD = null
 
@@ -71,6 +78,13 @@ export default class Main {
 
     // 微信服务
     this.wechatService = null
+
+    // 广告（B2：只有配置了真实广告位才启用，否则整条链路关闭）
+    this.adManager = null
+    this.adAvailable = false
+
+    // 隐私授权弹窗（B4）
+    this.privacyScene = null
 
     // 食物系统
     this.foodManager = null
@@ -96,21 +110,294 @@ export default class Main {
     this.startTime = 0
     this.isPaused = false
 
+    // 计时补偿（C2）：切后台、手动暂停都不应计入关卡用时
+    this.pausedAccum = 0        // 已累计的暂停时长（毫秒）
+    this.pauseStartedAt = 0     // 本次暂停开始的时间戳，0 表示当前未暂停计时
+    this.hiddenAt = 0           // 切到后台的时间戳，0 表示在前台
+
+    // 画布像素 / 窗口逻辑像素的比值，resize 时据此保持原有清晰度
+    this.canvasRatio = this.getCanvasRatio()
+
+    // 全局异常自动复位只允许触发一次（见 initErrorHandler）
+    this.errorRecovered = false
+
+    // 棋盘布局（由 computeLayout 按画布尺寸计算，见 A5）
+    this.cellSize = LEVEL_CELL
+    this.boardWidth = GRID_COLS * LEVEL_CELL
+    this.boardHeight = GRID_ROWS * LEVEL_CELL
+    this.boardOffsetX = 0
+    this.boardOffsetY = 0
+
+    // 激励视频广告是否可用（由 js/config.js 的广告位配置决定）
+    this.adAvailable = false
+
+    this.gameScene = null
+
     this.init()
+  }
+
+  /**
+   * 计算棋盘布局：在顶部 HUD 与底部操作条之间的安全区里取最大可用格子
+   */
+  computeLayout() {
+    const availWidth = canvas.width - LAYOUT_MARGIN_X * 2
+    const availHeight = canvas.height - LAYOUT_TOP - LAYOUT_BOTTOM
+
+    const byWidth = Math.floor(availWidth / GRID_COLS)
+    const byHeight = Math.floor(availHeight / GRID_ROWS)
+    const cell = Math.max(MIN_CELL_SIZE, Math.min(byWidth, byHeight, MAX_CELL_SIZE))
+
+    this.cellSize = cell
+    this.boardWidth = cell * GRID_COLS
+    this.boardHeight = cell * GRID_ROWS
+    this.boardOffsetX = Math.round((canvas.width - this.boardWidth) / 2)
+    this.boardOffsetY = Math.round(LAYOUT_TOP + (availHeight - this.boardHeight) / 2)
+
+    console.log(`[Layout] 画布 ${canvas.width}x${canvas.height} → 格子 ${cell}px，棋盘原点 (${this.boardOffsetX}, ${this.boardOffsetY})`)
+  }
+
+  /**
+   * 读取窗口信息（新版基础库用 getWindowInfo，老版本回落到 getSystemInfoSync）
+   * @returns {Object|null}
+   */
+  getWindowInfo() {
+    if (typeof wx === 'undefined') return null
+    try {
+      if (typeof wx.getWindowInfo === 'function') {
+        const info = wx.getWindowInfo()
+        if (info && info.windowWidth > 0) return info
+      }
+      if (typeof wx.getSystemInfoSync === 'function') {
+        const info = wx.getSystemInfoSync()
+        if (info && info.windowWidth > 0) return info
+      }
+    } catch (e) {
+      console.warn('[Lifecycle] 读取窗口信息失败:', e)
+    }
+    return null
+  }
+
+  /**
+   * 画布像素与窗口逻辑像素的比值
+   * 小游戏里 canvas.width 可能是 windowWidth × pixelRatio，resize 时沿用同一比值才不会变模糊
+   */
+  getCanvasRatio() {
+    const info = this.getWindowInfo()
+    if (info && info.windowWidth > 0) {
+      const ratio = canvas.width / info.windowWidth
+      if (ratio > 0 && isFinite(ratio)) return ratio
+    }
+    return 1
+  }
+
+  /**
+   * 绑定前后台与窗口尺寸事件（C2）
+   */
+  bindLifecycle() {
+    if (typeof wx === 'undefined') return
+
+    if (typeof wx.onHide === 'function') {
+      wx.onHide(() => this.handleHide())
+    }
+    if (typeof wx.onShow === 'function') {
+      wx.onShow(() => this.handleShow())
+    }
+    if (typeof wx.onWindowResize === 'function') {
+      wx.onWindowResize((res) => this.handleResize(res))
+    }
+  }
+
+  /**
+   * 切到后台：暂停计时、停 BGM，对局中自动弹暂停面板
+   */
+  handleHide() {
+    this.hiddenAt = Date.now()
+    console.log('[Lifecycle] 切到后台')
+
+    // 后台不播 BGM，避免回到前台后出现叠音
+    if (this.audioManager) {
+      this.audioManager.pauseBGM()
+    }
+
+    // 对局中自动暂停：否则玩家回来时企鹅的补间动画已经按真实时间跑完
+    if (this.gameState === 'playing') {
+      this.pauseGame()
+    }
+  }
+
+  /**
+   * 回到前台：恢复 BGM，并刷新广告可用性
+   */
+  handleShow() {
+    const hiddenMs = this.hiddenAt ? Date.now() - this.hiddenAt : 0
+    this.hiddenAt = 0
+
+    if (hiddenMs > 0) {
+      console.log(`[Lifecycle] 回到前台，后台时长 ${Math.round(hiddenMs / 1000)}s`)
+    }
+
+    if (this.audioManager) {
+      this.audioManager.playBGM()
+    }
+
+    // 广告实例可能在后台被回收，回前台重新探测
+    if (this.adManager) {
+      this.adAvailable = this.adManager.isRewardedVideoAvailable()
+    }
+  }
+
+  /**
+   * 窗口尺寸变化：重算棋盘布局并重建所有 UI 场景的按钮坐标
+   * @param {Object} res - wx.onWindowResize 回调参数 {windowWidth, windowHeight}
+   */
+  handleResize(res) {
+    const info = res && res.windowWidth ? res : this.getWindowInfo()
+    if (!info || !info.windowWidth || !info.windowHeight) return
+
+    const ratio = this.canvasRatio || 1
+    const width = Math.round(info.windowWidth * ratio)
+    const height = Math.round(info.windowHeight * ratio)
+
+    if (width <= 0 || height <= 0) return
+    if (width === canvas.width && height === canvas.height) return
+
+    canvas.width = width
+    canvas.height = height
+    console.log(`[Lifecycle] 窗口变化 → 画布 ${width}x${height}`)
+
+    // 注意：必须先让 relayoutBoard 用旧布局把像素位置反算成格坐标，
+    // 再由它内部重算布局，所以这里不能提前调 computeLayout()
+    this.relayoutBoard()
+    this.relayoutUI()
+  }
+
+  /**
+   * 按新棋盘尺寸重建对局内的对象
+   * 先记下格坐标，重算布局后再按格还原，避免像素位置漂移
+   */
+  relayoutBoard() {
+    if (!this.penguin || !this.target) {
+      // 不在对局中（菜单 / 结算等），只需要把棋盘布局算好供下次进关使用
+      this.computeLayout()
+      return
+    }
+
+    const penguinCell = this.getCell(this.penguin)
+    const stoneCells = this.stones.map(stone => this.getCell(stone))
+    const targetCell = this.getCell(this.target)
+    const targetSpan = {
+      cols: Math.max(1, Math.round(this.target.width / this.cellSize)),
+      rows: Math.max(1, Math.round(this.target.height / this.cellSize))
+    }
+    const obstacleCells = this.obstacles.map(obstacle => this.getCell(obstacle))
+
+    // 格坐标已全部记录，可以安全地按新画布重算布局了
+    this.computeLayout()
+
+    // 新布局下重建背景（背景按 grid 参数绘制网格与光斑）
+    this.background = new Background(this.ctx, {
+      cols: GRID_COLS,
+      rows: GRID_ROWS,
+      cellSize: this.cellSize,
+      offsetX: this.boardOffsetX,
+      offsetY: this.boardOffsetY
+    })
+
+    const place = (obj, cell) => {
+      const pixel = this.cellToPixel(cell.col, cell.row)
+      obj.x = pixel.x
+      obj.y = pixel.y
+      obj.width = this.cellSize
+      obj.height = this.cellSize
+      obj.isMoving = false
+    }
+
+    place(this.penguin, penguinCell)
+    this.stones.forEach((stone, i) => place(stone, stoneCells[i]))
+    this.obstacles.forEach((obstacle, i) => place(obstacle, obstacleCells[i]))
+
+    const targetPixel = this.cellToPixel(targetCell.col, targetCell.row)
+    this.target.x = targetPixel.x
+    this.target.y = targetPixel.y
+    this.target.width = targetSpan.cols * this.cellSize
+    this.target.height = targetSpan.rows * this.cellSize
+    this.target.cellSize = this.cellSize
+    this.target.cols = targetSpan.cols
+    this.target.rows = targetSpan.rows
+  }
+
+  /**
+   * 让所有 UI 组件按当前画布尺寸重建按钮坐标
+   */
+  relayoutUI() {
+    const scenes = [
+      this.menuScene,
+      this.rankScene,
+      this.achievementScene,
+      this.pauseScene,
+      this.resultScene,
+      this.gameOverScene,
+      this.reviveScene,
+      this.privacyScene
+    ]
+
+    scenes.forEach(scene => {
+      if (scene && typeof scene.relayout === 'function') {
+        scene.relayout()
+      }
+    })
+
+    if (this.gameHUD && typeof this.gameHUD.relayout === 'function') {
+      this.gameHUD.relayout()
+    }
+
+    if (this.foodDisplay) {
+      this.foodDisplay.setPosition(8, 6)
+      this.foodDisplay.setSize(canvas.width - 16)
+    }
+  }
+
+  /**
+   * 当前关卡已用时（秒），已扣除暂停与后台时长
+   * 正在暂停时把当前这段暂停窗口也实时扣掉，避免回到前台瞬间计时跳变
+   * @returns {number}
+   */
+  getElapsedSeconds() {
+    if (!this.startTime) return 0
+    const activePause = this.pauseStartedAt ? Date.now() - this.pauseStartedAt : 0
+    return Math.max(0, Math.floor((Date.now() - this.startTime - this.pausedAccum - activePause) / 1000))
+  }
+
+  /**
+   * 把当前这次暂停的时长并入累计值
+   * @returns {number} 本次并入的毫秒数
+   */
+  accumulatePause() {
+    if (!this.pauseStartedAt) return 0
+    const elapsed = Date.now() - this.pauseStartedAt
+    this.pausedAccum += elapsed
+    this.pauseStartedAt = 0
+    return elapsed
   }
 
   /**
    * 初始化游戏
    */
   init() {
+    this.computeLayout()
     this.initWechat()
     this.initAudio()
+    this.initAds()
+    this.initPrivacy()
     this.initFood()
     this.initAchievement()
     this.initRevive()
     this.initSettlement()
     this.initUI()
     this.bindEvent()
+    this.bindLifecycle()
+    this.initErrorHandler()
+    this.initUpdateManager()
     this.loop()
 
     // 进入主菜单
@@ -121,11 +408,113 @@ export default class Main {
   }
 
   /**
+   * 初始化隐私授权
+   * 微信只会在真正调用隐私接口时回调，这里负责把系统请求转成自绘弹窗
+   */
+  initPrivacy() {
+    if (typeof wx === 'undefined' || !wx.onNeedPrivacyAuthorization) {
+      console.log('[Privacy] 当前基础库不支持 onNeedPrivacyAuthorization')
+      return
+    }
+
+    this.privacyScene = new PrivacyScene()
+
+    wx.onNeedPrivacyAuthorization((resolve, eventInfo) => {
+      console.log('[Privacy] 需要用户授权:', eventInfo && eventInfo.referrer)
+      this.privacyScene.show(resolve)
+    })
+  }
+
+  /**
+   * 初始化广告
+   * 未配置广告位时 adAvailable 保持 false，所有广告入口自动隐藏
+   */
+  initAds() {
+    this.adManager = new AdManager(AD_UNITS)
+    this.adManager.init()
+    this.adAvailable = this.adManager.isRewardedVideoAvailable()
+
+    console.log(`[Ad] 激励视频可用: ${this.adAvailable}`)
+  }
+
+  /**
    * 初始化微信服务
    */
   initWechat() {
     this.wechatService = new WechatService()
     this.wechatService.init()
+  }
+
+  /**
+   * 初始化全局错误兜底（D3）
+   * 小游戏里未捕获异常只会让画面静默卡死，玩家看到的是「点了没反应」，
+   * 这里至少把错误打出来，并在首次异常时尝试退回菜单复位状态。
+   */
+  initErrorHandler() {
+    if (typeof wx === 'undefined') return
+
+    // 只允许自动复位一次，避免渲染循环里每帧抛错 → 无限 backToMenu
+    this.errorRecovered = false
+
+    if (typeof wx.onError === 'function') {
+      wx.onError((error) => {
+        console.error('[Error] 未捕获异常:', error && (error.message || error), error && error.stack)
+
+        if (this.errorRecovered) return
+        this.errorRecovered = true
+
+        try {
+          this.clearOverlays()
+          this.backToMenu()
+          wx.showToast({ title: '出现异常，已返回菜单', icon: 'none' })
+        } catch (e) {
+          // 兜底逻辑自身不能再抛
+          console.error('[Error] 异常复位失败:', e)
+        }
+      })
+    }
+
+    if (typeof wx.onUnhandledRejection === 'function') {
+      wx.onUnhandledRejection((res) => {
+        const reason = res && res.reason
+        console.error('[Error] 未处理的 Promise 拒绝:', reason && (reason.message || reason))
+      })
+    }
+  }
+
+  /**
+   * 初始化热更新（D3）
+   * 小游戏默认会缓存旧包，不发版就永远跑老代码
+   */
+  initUpdateManager() {
+    if (typeof wx === 'undefined' || typeof wx.getUpdateManager !== 'function') return
+
+    try {
+      const updateManager = wx.getUpdateManager()
+      if (!updateManager || typeof updateManager.onUpdateReady !== 'function') return
+
+      updateManager.onUpdateReady(() => {
+        wx.showModal({
+          title: '发现新版本',
+          content: '新版本已准备好，重启后生效',
+          showCancel: false,
+          confirmText: '立即重启',
+          success: (res) => {
+            if (res.confirm) updateManager.applyUpdate()
+          }
+        })
+      })
+
+      updateManager.onUpdateFailed(() => {
+        wx.showModal({
+          title: '更新失败',
+          content: '新版本下载失败，请退出小游戏后重新进入',
+          showCancel: false
+        })
+      })
+    } catch (e) {
+      console.warn('[Update] 热更新不可用:', e)
+    }
   }
 
   /**
@@ -155,13 +544,6 @@ export default class Main {
       this.sceneManager.switchTo('menu')
     })
     this.achievementNotification = new AchievementNotification()
-
-    // 设置分享奖励回调
-    if (this.wechatService) {
-      this.wechatService.setShareRewardCallback(() => {
-        this.onShareReward()
-      })
-    }
   }
 
   /**
@@ -169,9 +551,12 @@ export default class Main {
    */
   initRevive() {
     this.reviveManager = new ReviveManager()
-    this.reviveScene = new ReviveScene(this.reviveManager, this.foodManager, this.wechatService)
+    this.reviveScene = new ReviveScene(this.reviveManager, this.foodManager, this.adManager)
     this.reviveScene.onReviveSuccess = (result) => this.onReviveSuccess(result)
     this.reviveScene.onGiveUp = () => this.onReviveGiveUp()
+
+    // 广告未接入时隐藏"看视频复活"入口
+    this.reviveScene.setOptionVisible('watchAd', this.adAvailable)
   }
 
   /**
@@ -183,6 +568,9 @@ export default class Main {
     this.gameOverScene.onRestart = () => this.onGameOverRestart()
     this.gameOverScene.onBackToMenu = () => this.onGameOverBackToMenu()
     this.gameOverScene.onWatchAd = () => this.onGameOverWatchAd()
+
+    // 广告位未接入前隐藏"看广告复活"，避免玩家点到未实现的入口（B 批次接入真实广告位）
+    this.gameOverScene.setWatchAdVisible(this.adAvailable)
   }
 
   /**
@@ -190,11 +578,12 @@ export default class Main {
    */
   initUI() {
     // 注册场景
-    this.sceneManager.register('menu', new MenuScene(this.sceneManager))
-
-    // 创建登录和排行榜场景
-    this.loginScene = new LoginScene(this.sceneManager, this.wechatService)
-    this.sceneManager.register('login', this.loginScene)
+    // C8：登录体系采用轻量方案，已移除伪登录入口（LoginScene）
+    this.menuScene = new MenuScene(this.sceneManager)
+    this.menuScene.onToggleSound = () => this.toggleSound()
+    this.menuScene.onShare = () => this.wechatService.share()
+    this.menuScene.setSoundEnabled(this.audioManager.soundEnabled)
+    this.sceneManager.register('menu', this.menuScene)
 
     this.rankScene = new RankScene(this.sceneManager, this.wechatService)
     this.sceneManager.register('rank', this.rankScene)
@@ -206,6 +595,8 @@ export default class Main {
     this.pauseScene = new PauseScene(this.sceneManager)
     this.pauseScene.onResume = () => this.resumeGame()
     this.pauseScene.onRestart = () => this.restartLevel()
+    // 关键：必须走 backToMenu 统一复位 isPaused / gameState，否则主菜单会被输入拦截卡死
+    this.pauseScene.onBackToMenu = () => this.backToMenu()
 
     this.resultScene = new ResultScene(this.sceneManager)
     this.resultScene.onNextLevel = () => this.nextLevel()
@@ -259,14 +650,12 @@ export default class Main {
           confirmText: '看广告',
           cancelText: '取消',
           success: (res) => {
-            if (res.confirm) {
-              // TODO: 显示广告
-              wx.showToast({ title: '广告功能待实现', icon: 'none' })
-            }
+            if (!res.confirm) return
+            this.watchAdForFood(cost, levelNum)
           }
         })
         // 无法开战时回到菜单，避免停留在空白的游戏场景
-        this.sceneManager.switchTo('menu')
+        this.backToMenu()
         return
       }
 
@@ -279,33 +668,38 @@ export default class Main {
       this.currentLevel = levelNum
       this.levelManager.setCurrentLevel(levelNum)
 
-      // 创建游戏对象（关卡坐标按格换算到居中的棋盘上）
+      // 创建游戏对象（关卡坐标按格换算到当前棋盘）
       const grid = {
         cols: GRID_COLS,
         rows: GRID_ROWS,
-        cellSize: CELL_SIZE,
-        offsetX: BOARD_OFFSET_X,
-        offsetY: BOARD_OFFSET_Y
+        cellSize: this.cellSize,
+        offsetX: this.boardOffsetX,
+        offsetY: this.boardOffsetY
       }
       this.background = new Background(this.ctx, grid)
-      this.penguin = new Penguin({ ...this.toBoardPixel(levelData.penguin), size: CELL_SIZE })
-      this.stones = levelData.stones.map(s => new Stone({ ...this.toBoardPixel(s), size: CELL_SIZE }))
+      this.penguin = new Penguin({ ...this.toBoardPixel(levelData.penguin), size: this.cellSize })
+      this.stones = levelData.stones.map(s => new Stone({ ...this.toBoardPixel(s), size: this.cellSize }))
       this.target = new Target({
-        ...levelData.target,
         ...this.toBoardPixel(levelData.target),
-        cellSize: CELL_SIZE
+        width: this.scaleLevelSize(levelData.target.width),
+        height: this.scaleLevelSize(levelData.target.height),
+        cellSize: this.cellSize
       })
 
-      // 创建障碍物（同样偏移到棋盘位置）
-      this.obstacles = ObstacleFactory.createFromLevelData(levelData.obstacles)
-      this.obstacles.forEach(obstacle => {
-        obstacle.x += BOARD_OFFSET_X
-        obstacle.y += BOARD_OFFSET_Y
-      })
+      // 创建障碍物：关卡坐标（50px 网格）换算到当前棋盘，尺寸对齐一格
+      this.obstacles = ObstacleFactory.createFromLevelData(
+        (levelData.obstacles || []).map(obstacle => ({
+          ...obstacle,
+          ...this.toBoardPixel(obstacle),
+          size: this.cellSize
+        }))
+      )
 
       // 重置状态
       this.moves = 0
       this.startTime = Date.now()
+      this.pausedAccum = 0
+      this.pauseStartedAt = 0
       this.gameState = 'playing'
       this.isPaused = false
 
@@ -325,15 +719,53 @@ export default class Main {
   }
 
   /**
-   * 关卡坐标（50px对齐）换算为棋盘像素坐标
+   * 观看激励视频换食物（食物不足时的兜底入口）
+   * 看完后直接续上刚才那一关，避免玩家还要回菜单再点一次
+   * @param {number} cost - 本关所需食物
+   * @param {number} levelNum - 关卡编号
+   */
+  watchAdForFood(cost, levelNum) {
+    if (!this.adAvailable) {
+      wx.showToast({ title: '广告暂不可用', icon: 'none' })
+      return
+    }
+
+    const reward = Math.max(10, cost)
+
+    this.adManager.showRewardedVideoAd().then((ended) => {
+      if (!ended) {
+        console.log('[Ad] 未看完激励视频，不发奖励')
+        return
+      }
+
+      this.foodManager.addFish(reward)
+      wx.showToast({ title: `获得 ${reward}🐟`, icon: 'none' })
+      console.log(`[Ad] 看完激励视频，获得 ${reward} 食物`)
+
+      // 食物已补足，重新进入该关（食物检查会通过）
+      this.sceneManager.switchTo('game', { level: levelNum })
+    })
+  }
+
+  /**
+   * 关卡坐标（50px 网格）换算为棋盘像素坐标
    * @param {Object} pos - 关卡坐标 {x, y}
    * @returns {Object} 棋盘坐标 {x, y}
    */
   toBoardPixel(pos) {
     return {
-      x: BOARD_OFFSET_X + Math.round(pos.x / CELL_SIZE) * CELL_SIZE,
-      y: BOARD_OFFSET_Y + Math.round(pos.y / CELL_SIZE) * CELL_SIZE
+      x: this.boardOffsetX + Math.round(pos.x / LEVEL_CELL) * this.cellSize,
+      y: this.boardOffsetY + Math.round(pos.y / LEVEL_CELL) * this.cellSize
     }
+  }
+
+  /**
+   * 关卡尺寸（50px 网格）换算为当前格子尺寸
+   * @param {number} value - 关卡中的像素尺寸
+   * @returns {number}
+   */
+  scaleLevelSize(value) {
+    return Math.round((value / LEVEL_CELL) * this.cellSize)
   }
 
   /**
@@ -341,8 +773,8 @@ export default class Main {
    */
   cellToPixel(col, row) {
     return {
-      x: BOARD_OFFSET_X + col * CELL_SIZE,
-      y: BOARD_OFFSET_Y + row * CELL_SIZE
+      x: this.boardOffsetX + col * this.cellSize,
+      y: this.boardOffsetY + row * this.cellSize
     }
   }
 
@@ -351,8 +783,8 @@ export default class Main {
    */
   getCell(obj) {
     return {
-      col: Math.round((obj.x - BOARD_OFFSET_X) / CELL_SIZE),
-      row: Math.round((obj.y - BOARD_OFFSET_Y) / CELL_SIZE)
+      col: Math.round((obj.x - this.boardOffsetX) / this.cellSize),
+      row: Math.round((obj.y - this.boardOffsetY) / this.cellSize)
     }
   }
 
@@ -468,6 +900,8 @@ export default class Main {
     if (this.gameState !== 'playing') return
     this.gameState = 'paused'
     this.isPaused = true
+    // 记录暂停起点，恢复时把这段时长从关卡用时里扣掉
+    this.pauseStartedAt = Date.now()
     this.pauseScene.show()
   }
 
@@ -475,6 +909,7 @@ export default class Main {
    * 恢复游戏
    */
   resumeGame() {
+    this.accumulatePause()
     this.gameState = 'playing'
     this.isPaused = false
     this.pauseScene.hide()
@@ -495,10 +930,24 @@ export default class Main {
    * 返回主菜单
    */
   backToMenu() {
+    this.clearOverlays()
     this.gameState = 'menu'
-    this.isPaused = false
     this.penguin = null
     this.sceneManager.switchTo('menu')
+  }
+
+  /**
+   * 复位所有覆盖层与暂停标记
+   * 任何"离开当前对局"的路径都必须先走这里，避免状态残留导致输入被拦截
+   */
+  clearOverlays() {
+    this.isPaused = false
+    // 离开对局时直接丢弃本次暂停区间（下一关会重置 pausedAccum）
+    this.pauseStartedAt = 0
+    if (this.pauseScene) this.pauseScene.hide()
+    if (this.resultScene) this.resultScene.hide()
+    if (this.reviveScene) this.reviveScene.hide()
+    if (this.gameOverScene) this.gameOverScene.hide()
   }
 
   /**
@@ -514,7 +963,7 @@ export default class Main {
       this.loadLevel(nextLevel)
     } else {
       console.log('恭喜通关所有关卡！')
-      this.sceneManager.switchTo('menu')
+      this.backToMenu()
     }
   }
 
@@ -523,6 +972,12 @@ export default class Main {
    */
   touchStartHandler(e) {
     const touch = e.touches[0]
+
+    // 隐私弹窗优先级最高，展示时吞掉所有输入
+    if (this.privacyScene && this.privacyScene.isVisible) {
+      this.privacyScene.onTouchStart(touch)
+      return
+    }
 
     // 优先处理游戏结束场景
     if (this.gameOverScene && this.gameOverScene.isVisible) {
@@ -536,8 +991,8 @@ export default class Main {
       return
     }
 
-    // 优先处理暂停场景
-    if (this.isPaused) {
+    // 优先处理暂停场景（仅在面板真正可见时拦截，避免残留 isPaused 吞掉所有输入）
+    if (this.isPaused && this.pauseScene.isVisible) {
       this.pauseScene.onTouchStart(touch)
       return
     }
@@ -570,6 +1025,12 @@ export default class Main {
   touchMoveHandler(e) {
     const touch = e.touches[0]
 
+    // 隐私弹窗优先级最高
+    if (this.privacyScene && this.privacyScene.isVisible) {
+      this.privacyScene.onTouchMove(touch)
+      return
+    }
+
     // 优先处理游戏结束场景
     if (this.gameOverScene && this.gameOverScene.isVisible) {
       this.gameOverScene.onTouchMove(touch)
@@ -582,8 +1043,8 @@ export default class Main {
       return
     }
 
-    // 优先处理暂停场景
-    if (this.isPaused) {
+    // 优先处理暂停场景（仅在面板真正可见时拦截）
+    if (this.isPaused && this.pauseScene.isVisible) {
       this.pauseScene.onTouchMove(touch)
       return
     }
@@ -609,6 +1070,12 @@ export default class Main {
   touchEndHandler(e) {
     const touch = e.changedTouches[0]
 
+    // 隐私弹窗优先级最高
+    if (this.privacyScene && this.privacyScene.isVisible) {
+      this.privacyScene.onTouchEnd(touch)
+      return
+    }
+
     // 优先处理游戏结束场景
     if (this.gameOverScene && this.gameOverScene.isVisible) {
       this.gameOverScene.onTouchEnd(touch)
@@ -621,8 +1088,8 @@ export default class Main {
       return
     }
 
-    // 优先处理暂停场景
-    if (this.isPaused) {
+    // 优先处理暂停场景（仅在面板真正可见时拦截）
+    if (this.isPaused && this.pauseScene.isVisible) {
       this.pauseScene.onTouchEnd(touch)
       return
     }
@@ -687,7 +1154,7 @@ export default class Main {
     }
 
     // 更新暂停场景
-    if (this.isPaused) {
+    if (this.isPaused && this.pauseScene.isVisible) {
       this.pauseScene.update()
       return
     }
@@ -710,9 +1177,8 @@ export default class Main {
     // 胜利检测
     this.checkWinCondition()
 
-    // 更新HUD时间
-    const currentTime = Math.floor((Date.now() - this.startTime) / 1000)
-    this.gameHUD.setTime(currentTime)
+    // 更新HUD时间（已扣除暂停与后台时长）
+    this.gameHUD.setTime(this.getElapsedSeconds())
 
     // 更新食物显示
     if (this.foodDisplay) {
@@ -734,11 +1200,10 @@ export default class Main {
     this.reviveManager.savePosition(this.penguin, this.stones)
 
     // 检查是否可以复活
+    // 注：分享类复活已下线（B1 诱导分享合规），只统计"看广告"与"消耗食物"
     const status = this.reviveManager.getStatus()
     const canRevive = !status.currentLevelRevived && (
-      status.remaining.shareFriend > 0 ||
-      status.remaining.shareGroup > 0 ||
-      status.remaining.watchAd > 0 ||
+      (this.adAvailable && status.remaining.watchAd > 0) ||
       this.reviveManager.hasEnoughFood(this.foodManager)
     )
 
@@ -782,6 +1247,16 @@ export default class Main {
 
     // 恢复游戏状态
     this.gameState = 'playing'
+
+    if (this.settlementManager) {
+      this.settlementManager.recordRevive()
+    }
+
+    // 复活次数驱动的成就（原"分享"成就已改为复活成就）
+    if (this.achievementManager) {
+      this.achievementManager.recordRevive()
+      this.flushAchievementRewards()
+    }
   }
 
   /**
@@ -806,24 +1281,43 @@ export default class Main {
    */
   onGameOverBackToMenu() {
     console.log('游戏结束-返回菜单')
-    this.gameOverScene.hide()
-    this.sceneManager.switchTo('menu')
+    this.backToMenu()
   }
 
   /**
    * 游戏结束-观看广告复活
+   * 走 ReviveManager 的统一复活入口；只有完整看完视频才发放复活
    */
   onGameOverWatchAd() {
     console.log('游戏结束-观看广告')
-    // 尝试通过观看广告复活
-    const result = this.reviveManager.reviveByWatchAd()
-    if (result.success) {
-      this.gameOverScene.hide()
-      this.onReviveSuccess(result)
-      wx.showToast({ title: '复活成功！', icon: 'success' })
-    } else {
-      wx.showToast({ title: result.message || '今日广告次数已用完', icon: 'none' })
+
+    if (!this.adAvailable || !this.adManager) {
+      wx.showToast({ title: '广告暂不可用', icon: 'none' })
+      return
     }
+
+    if (!this.reviveManager.canRevive('watchAd')) {
+      wx.showToast({ title: '今日广告次数已用完', icon: 'none' })
+      return
+    }
+
+    this.adManager.showRewardedVideoAd().then((ended) => {
+      if (!ended) {
+        wx.showToast({ title: '未看完视频，无法复活', icon: 'none' })
+        return
+      }
+
+      const result = this.reviveManager.revive('watchAd', this.foodManager)
+      if (result.success) {
+        this.gameOverScene.hide()
+        this.onReviveSuccess(result)
+        wx.showToast({ title: '复活成功！', icon: 'none' })
+      } else {
+        wx.showToast({ title: result.reason || '复活失败', icon: 'none' })
+      }
+    }).catch(() => {
+      wx.showToast({ title: '广告加载失败，请稍后再试', icon: 'none' })
+    })
   }
 
   /**
@@ -858,7 +1352,11 @@ export default class Main {
    * 胜利处理
    */
   onWin() {
-    const time = Math.floor((Date.now() - this.startTime) / 1000)
+    const time = this.getElapsedSeconds()
+    const levelData = this.levelManager.getLevel(this.currentLevel)
+    const par = levelData ? levelData.par : 3
+    const stars = this.calculateStars()
+
     console.log(`恭喜通关！关卡 ${this.currentLevel}，步数: ${this.moves}，时间: ${time}秒`)
 
     // 振动反馈
@@ -867,11 +1365,9 @@ export default class Main {
     // 播放通关音效
     this.audioManager.playWinSound()
 
-    // 通知结算管理器完成关卡
+    // 通知结算管理器完成关卡（使用对象参数，避免与旧的位置参数错位）
     if (this.settlementManager) {
-      const levelData = this.levelManager.getLevel(this.currentLevel)
-      const par = levelData ? levelData.par : 3
-      this.settlementManager.completeLevel(this.moves, time, par)
+      this.settlementManager.completeLevel({ moves: this.moves, time, par, stars })
     }
 
     // 保存关卡进度
@@ -881,8 +1377,6 @@ export default class Main {
     this.reportScore()
 
     // 计算并发放食物奖励
-    const levelData = this.levelManager.getLevel(this.currentLevel)
-    const par = levelData ? levelData.par : 3
     const rewards = this.foodManager.calculateRewards(this.currentLevel, this.moves, par, time)
     this.foodManager.giveRewards(rewards)
     console.log('获得食物奖励:', rewards.details)
@@ -890,21 +1384,14 @@ export default class Main {
     // 显示奖励动画
     this.foodDisplay.showRewardAnimation(rewards)
 
-    // 记录成就
-    const stars = this.calculateStars()
+    // 记录成就：多个维度依次记录，最后统一取"新解锁"列表，避免互相覆盖
     this.achievementManager.recordWin(this.currentLevel, stars, this.moves, par, time)
     this.achievementManager.recordStreak(this.foodManager.consecutiveWins)
     this.achievementManager.recordFoodCollection(this.foodManager.food)
+    this.achievementManager.recordPlayTime(time)
+    this.achievementManager.recordAllThreeStars(this.isAllThreeStars())
 
-    // 检查新解锁的成就
-    const newAchievements = this.achievementManager.getNewUnlocked()
-    newAchievements.forEach(achievement => {
-      this.achievementNotification.add(achievement)
-      // 发放成就奖励
-      if (achievement.reward) {
-        this.foodManager.giveRewards(achievement.reward)
-      }
-    })
+    this.flushAchievementRewards()
 
     // 显示结算界面
     this.resultScene.setResult(this.currentLevel, this.moves, par, time)
@@ -913,38 +1400,51 @@ export default class Main {
   }
 
   /**
-   * 计算星级
+   * 取出新解锁的成就：弹通知 + 发放奖励
+   * @returns {Array} 本次新解锁的成就
    */
-  calculateStars() {
-    const levelData = this.levelManager.getLevel(this.currentLevel)
-    const par = levelData ? levelData.par : 3
+  flushAchievementRewards() {
+    if (!this.achievementManager) return []
 
-    if (this.moves <= par) return 3
-    if (this.moves <= par * 1.5) return 2
-    return 1
-  }
-
-  /**
-   * 分享奖励处理
-   */
-  onShareReward() {
-    console.log('分享奖励：获得5🐟')
-    this.foodManager.addFish(5)
-    this.achievementManager.recordShare()
-
-    // 检查新解锁的成就
     const newAchievements = this.achievementManager.getNewUnlocked()
     newAchievements.forEach(achievement => {
-      this.achievementNotification.add(achievement)
+      if (this.achievementNotification) {
+        this.achievementNotification.add(achievement)
+      }
       if (achievement.reward) {
         this.foodManager.giveRewards(achievement.reward)
       }
     })
+    return newAchievements
+  }
 
-    wx.showToast({
-      title: '分享成功 +5🐟',
-      icon: 'none'
-    })
+  /**
+   * 是否所有已通关关卡都拿到了 3 星（至少通关 3 关后才有意义）
+   */
+  isAllThreeStars() {
+    try {
+      const progress = wx.getStorageSync('gameProgress') || {}
+      const cleared = Math.max(0, (parseInt(progress.unlockedLevel, 10) || 1) - 1)
+      if (cleared < 3) return false
+
+      for (let i = 1; i <= cleared; i++) {
+        const record = wx.getStorageSync(`level_${i}`)
+        if (!record || record.stars !== 3) return false
+      }
+      return true
+    } catch (e) {
+      console.error('统计三星进度失败:', e)
+      return false
+    }
+  }
+
+  /**
+   * 计算星级（口径见 js/utils/score.js，D2 统一）
+   */
+  calculateStars() {
+    const levelData = this.levelManager.getLevel(this.currentLevel)
+    const par = levelData ? levelData.par : 3
+    return calcStars(this.moves, par)
   }
 
   /**
@@ -955,9 +1455,7 @@ export default class Main {
       // 计算星级
       const levelData = this.levelManager.getLevel(this.currentLevel)
       const par = levelData ? levelData.par : 3
-      let stars = 1
-      if (this.moves <= par) stars = 3
-      else if (this.moves <= par * 1.5) stars = 2
+      const stars = calcStars(this.moves, par)
 
       // 保存当前关卡星级
       wx.setStorageSync(`level_${this.currentLevel}`, {
@@ -983,20 +1481,30 @@ export default class Main {
    * 上报分数到排行榜
    */
   reportScore() {
-    if (!this.wechatService || !this.wechatService.isLogin) {
-      console.log('用户未登录，跳过分数上报')
-      return
-    }
+    if (!this.wechatService) return
 
-    // 计算星级
+    // wx.setUserCloudStorage 本身就绑定当前 openid，不需要先"登录"。
+    // 旧代码用 isLogin 做门禁，而登录入口几乎没人点，导致排行榜长期为空（C6/C8）
     const levelData = this.levelManager.getLevel(this.currentLevel)
     const par = levelData ? levelData.par : 3
-    let stars = 1
-    if (this.moves <= par) stars = 3
-    else if (this.moves <= par * 1.5) stars = 2
+    const stars = calcStars(this.moves, par)
 
-    // 上报分数
     this.wechatService.reportScore(this.currentLevel, this.moves, stars)
+  }
+
+  /**
+   * 切换音效开关（菜单「音效」按钮）
+   */
+  toggleSound() {
+    const next = !this.audioManager.soundEnabled
+    this.audioManager.setSoundEnabled(next)
+    this.audioManager.setMusicEnabled(next)
+    if (this.menuScene) this.menuScene.setSoundEnabled(next)
+
+    wx.showToast({
+      title: next ? '音效已开启' : '音效已关闭',
+      icon: 'none'
+    })
   }
 
   /**
@@ -1008,7 +1516,7 @@ export default class Main {
 
     // 根据当前场景渲染
     const currentSceneName = this.sceneManager.getCurrentSceneName()
-    const uiScenes = ['menu', 'login', 'rank', 'achievement']
+    const uiScenes = ['menu', 'rank', 'achievement']
 
     if (uiScenes.includes(currentSceneName)) {
       // 渲染UI场景
@@ -1041,6 +1549,11 @@ export default class Main {
     // 渲染成就通知（最上层）
     if (this.achievementNotification) {
       this.achievementNotification.render(this.ctx)
+    }
+
+    // 渲染隐私授权弹窗（覆盖一切）
+    if (this.privacyScene && this.privacyScene.isVisible) {
+      this.privacyScene.render(this.ctx)
     }
   }
 

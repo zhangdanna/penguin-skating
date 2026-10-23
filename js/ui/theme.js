@@ -3,6 +3,14 @@
  * 统一色板与 Canvas 绘制工具，供游戏场景和 UI 场景复用
  */
 
+import LayerCache from '../utils/layer-cache'
+
+/**
+ * 菜单 / 排行榜 / 对局三个界面用的是同一张海洋背景，
+ * 共用一份离屏静态层，避免各持一张全屏画布（一张 ≈ 1MB）。
+ */
+const oceanLayer = new LayerCache('ocean-static')
+
 export const COLORS = {
   cream: '#FFF9EE',
   paper: '#FFFFFF',
@@ -160,11 +168,24 @@ export function drawGlassPanel(ctx, x, y, width, height, radius = 20, options = 
   } = options
 
   ctx.save()
-  ctx.shadowColor = shadow
-  ctx.shadowBlur = 16
-  ctx.shadowOffsetY = 6
-  fillRoundRect(ctx, x, y, width, height, radius, fill)
+  // D7：原来用 shadowBlur = 16 做大面板投影，低端机上这是每帧最贵的一笔；
+  // 改成 3 层递进放大的半透明圆角矩形，视觉接近但不需要高斯模糊
+  ctx.globalAlpha = 0.34
+  for (let i = 3; i >= 1; i--) {
+    const spread = i * 5
+    fillRoundRect(
+      ctx,
+      x - spread / 2,
+      y + 6 + spread / 2,
+      width + spread,
+      height + spread,
+      radius + spread / 2,
+      shadow
+    )
+  }
   ctx.restore()
+
+  fillRoundRect(ctx, x, y, width, height, radius, fill)
 
   strokeRoundRect(ctx, x, y, width, height, radius, stroke, lineWidth)
 
@@ -216,10 +237,26 @@ export function drawCandyButton(ctx, x, y, width, height, options = {}) {
 }
 
 /**
- * 海洋馆背景：水色渐变 + 光束 + 气泡 + 鱼群 + 沙底珊瑚
+ * 海洋静态层（带离屏缓存）
+ *
+ * 菜单、排行榜、对局三个界面用的是同一张背景，共用一份缓存，
+ * 避免每个场景各占一张全屏离屏画布。
  */
-export function drawOceanBackdrop(ctx, time = Date.now() / 1000, options = {}) {
-  const { sand = true } = options
+export function drawOceanCached(ctx) {
+  const width = canvas.width
+  const height = canvas.height
+  const cached = oceanLayer.render(
+    ctx, `ocean@${width}x${height}`, width, height,
+    (layerCtx) => drawOceanBase(layerCtx)
+  )
+  if (!cached) drawOceanBase(ctx)
+}
+
+/**
+ * 静态层：水体渐变 + 顶部玻璃反光 + 沙底与珊瑚
+ * 与时间无关，可以一次性画进离屏 canvas
+ */
+export function drawOceanBase(ctx) {
   const width = canvas.width
   const height = canvas.height
 
@@ -237,6 +274,16 @@ export function drawOceanBackdrop(ctx, time = Date.now() / 1000, options = {}) {
   glass.addColorStop(1, 'rgba(255, 255, 255, 0)')
   ctx.fillStyle = glass
   ctx.fillRect(0, 0, width, height * 0.35)
+
+  drawSeaFloorBase(ctx, width, height)
+}
+
+/**
+ * 动态层：光束 + 气泡 + 鱼群 + 海草摇摆
+ */
+export function drawOceanMotion(ctx, time) {
+  const width = canvas.width
+  const height = canvas.height
 
   // 光束
   ctx.save()
@@ -273,15 +320,13 @@ export function drawOceanBackdrop(ctx, time = Date.now() / 1000, options = {}) {
     drawFish(ctx, x, y, 9 + i * 3, 'rgba(255, 255, 255, 0.35)')
   }
 
-  if (sand) {
-    drawSeaFloor(ctx, time, width, height)
-  }
+  drawSeaweed(ctx, time, width, height)
 }
 
 /**
- * 沙底、珊瑚与海草
+ * 沙底与珊瑚（静态层）
  */
-function drawSeaFloor(ctx, time, width, height) {
+function drawSeaFloorBase(ctx, width, height) {
   const baseY = height - 104
 
   ctx.save()
@@ -311,9 +356,16 @@ function drawSeaFloor(ctx, time, width, height) {
   drawCoral(ctx, width * 0.27, height - 10, 18, COLORS.orange)
   drawCoral(ctx, width * 0.72, height - 14, 22, COLORS.lavender)
   drawCoral(ctx, width * 0.93, height - 20, 16, COLORS.mint)
+  ctx.restore()
+}
 
-  // 海草
+/**
+ * 海草摇摆（动态层）
+ */
+function drawSeaweed(ctx, time, width, height) {
   const grassCount = 7
+
+  ctx.save()
   for (let i = 0; i < grassCount; i++) {
     const x = width * (0.04 + i * 0.15)
     const sway = Math.sin(time * 1.2 + i) * 6

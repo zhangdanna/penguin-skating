@@ -2,6 +2,16 @@ import Sprite from '../base/sprite'
 import { drawPenguin } from '../ui/theme'
 
 /**
+ * 滑动判定阈值（px，逻辑像素）
+ *
+ * 原来只有 10px，手指按住时的轻微抖动（尤其是单手滑屏拇指落点）
+ * 就会被当成一次滑动，导致「想点暂停却推了一步」。
+ * 24px 大致相当于一个指尖的抖动范围，同时仍明显小于一格（42~56px），
+ * 滑一格不需要刻意拉长距离。
+ */
+const SWIPE_THRESHOLD = 24
+
+/**
  * 企鹅类
  * 玩家控制的角色，按格移动
  */
@@ -17,6 +27,7 @@ export default class Penguin extends Sprite {
     this.touchStartX = null
     this.touchStartY = null
     this.swiped = false  // 本次手势是否构成有效滑动
+    this.swipeDirection = null  // 锁定的滑动方向
   }
 
   /**
@@ -27,6 +38,7 @@ export default class Penguin extends Sprite {
     this.touchStartX = touch.clientX
     this.touchStartY = touch.clientY
     this.swiped = false
+    this.swipeDirection = null
   }
 
   /**
@@ -36,14 +48,16 @@ export default class Penguin extends Sprite {
   handleTouchMove(touch) {
     if (this.touchStartX === null) return
 
+    // 方向一旦确定就锁定：手指划出去再轻微回摆不该把方向改掉
+    if (this.swiped) return
+
     const dx = touch.clientX - this.touchStartX
     const dy = touch.clientY - this.touchStartY
     const distance = Math.sqrt(dx * dx + dy * dy)
 
-    // 滑动距离超过阈值才更新方向
-    if (distance > 10) {
-      const angle = Math.atan2(dy, dx)
-      this.direction = this.getDirection(angle)
+    if (distance >= SWIPE_THRESHOLD) {
+      this.swipeDirection = this.getDirection(Math.atan2(dy, dx))
+      this.direction = this.swipeDirection
       this.swiped = true
     }
   }
@@ -53,10 +67,11 @@ export default class Penguin extends Sprite {
    * @returns {string|null} 本次滑动的方向，未构成滑动则返回null
    */
   handleTouchEnd() {
-    const direction = this.swiped ? this.direction : null
+    const direction = this.swiped ? this.swipeDirection : null
     this.touchStartX = null
     this.touchStartY = null
     this.swiped = false
+    this.swipeDirection = null
     return direction
   }
 
@@ -115,6 +130,7 @@ export default class Penguin extends Sprite {
       ctx.restore()
     }
 
-    drawPenguin(ctx, centerX, centerY + bob, 1, { direction: this.direction })
+    // 企鹅按格子尺寸等比缩放（50px 格子时为原始大小）
+    drawPenguin(ctx, centerX, centerY + bob, this.width / 50, { direction: this.direction })
   }
 }

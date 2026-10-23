@@ -145,6 +145,39 @@ gameCanvas.addEventListener('mousemove', (e) => {
   }
 });
 
+/**
+ * 轻量提示条（替代 alert）
+ *
+ * 手机上 alert 会阻塞渲染、样式也脱离游戏风格，
+ * 本地预览一律用自绘提示条。
+ */
+function showPreviewTip(text, duration = 1800) {
+  const tip = document.createElement('div');
+  tip.textContent = text;
+  tip.style.cssText = `
+    position: fixed;
+    left: 50%;
+    top: 12%;
+    transform: translateX(-50%);
+    max-width: 80vw;
+    padding: 10px 18px;
+    background: rgba(31, 58, 95, 0.92);
+    color: #fff;
+    font-size: 14px;
+    line-height: 1.4;
+    border-radius: 10px;
+    text-align: center;
+    pointer-events: none;
+    z-index: 9999;
+    transition: opacity 0.25s ease;
+  `;
+  document.body.appendChild(tip);
+  setTimeout(() => {
+    tip.style.opacity = '0';
+    setTimeout(() => tip.remove(), 260);
+  }, duration);
+}
+
 // 微信API模拟 - 使用Proxy确保所有API都存在
 const wxAPIs = {
   // 触摸事件
@@ -201,6 +234,49 @@ const wxAPIs = {
   
   getSystemInfoSync: () => {
     return window.wx.getSystemInfo();
+  },
+
+  // 窗口信息（新版基础库接口，game.js 的 resize 逻辑优先用它）
+  getWindowInfo: () => {
+    return {
+      windowWidth: gameCanvas.width,
+      windowHeight: gameCanvas.height,
+      pixelRatio: window.devicePixelRatio || 1,
+      screenWidth: gameCanvas.width,
+      screenHeight: gameCanvas.height,
+      statusBarHeight: 0,
+      safeArea: {
+        top: 0,
+        left: 0,
+        right: gameCanvas.width,
+        bottom: gameCanvas.height,
+        width: gameCanvas.width,
+        height: gameCanvas.height
+      }
+    };
+  },
+
+  // 前后台切换：浏览器里用 visibilitychange 模拟（切标签页 = 切后台）
+  onShow: (cb) => {
+    if (typeof cb !== 'function') return;
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) cb({ scene: 1001 });
+    });
+  },
+
+  onHide: (cb) => {
+    if (typeof cb !== 'function') return;
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) cb({ scene: 1001 });
+    });
+  },
+
+  // 窗口尺寸变化：本地预览画布固定为 375x667，这里只做接口占位
+  onWindowResize: (cb) => {
+    if (typeof cb !== 'function') return;
+    window.addEventListener('resize', () => {
+      cb({ windowWidth: gameCanvas.width, windowHeight: gameCanvas.height });
+    });
   },
   
   // 文件系统环境变量（本地预览映射到站点根路径）
@@ -286,52 +362,125 @@ const wxAPIs = {
     }
   },
   
-  // 音效
+  // 音效：用真实 HTMLAudioElement 驱动，手机上能听到声音
+  // （原来只 console.log，本地预览完全静音，手机上根本没法验听感）
   createInnerAudioContext: () => {
-    return {
-      src: '',
+    const el = new Audio();
+    el.preload = 'auto';
+
+    const handlers = { play: [], pause: [], stop: [], ended: [], error: [], canplay: [] };
+    const emit = (name, arg) => {
+      handlers[name].forEach((fn) => {
+        try {
+          fn(arg);
+        } catch (e) {
+          console.warn(`[Audio] ${name} 回调异常:`, e);
+        }
+      });
+    };
+
+    el.addEventListener('play', () => emit('play'));
+    el.addEventListener('pause', () => emit('pause'));
+    el.addEventListener('ended', () => emit('ended'));
+    el.addEventListener('canplay', () => emit('canplay'));
+    // 关键：src 404 时要把错误抛给游戏，这样 bgm.mp3 → bgm.wav 的回退才能生效
+    el.addEventListener('error', () => {
+      emit('error', { errMsg: `audio error: ${el.currentSrc || el.src}` });
+    });
+
+    const ctx = {
       loop: false,
       autoplay: false,
-      volume: 1,
-      currentTime: 0,
-      duration: 0,
       buffered: 0,
-      paused: true,
-      
-      play: function() {
-        console.log('[Audio] Play:', this.src);
-        this.paused = false;
+
+      get src() {
+        return el.src;
       },
-      
-      pause: function() {
-        this.paused = true;
+      set src(value) {
+        el.src = value;
+        el.load();
       },
-      
-      stop: function() {
-        this.paused = true;
-        this.currentTime = 0;
+
+      get volume() {
+        return el.volume;
       },
-      
-      destroy: function() {
-        // No-op
+      set volume(value) {
+        const v = Number(value);
+        el.volume = Math.max(0, Math.min(1, Number.isFinite(v) ? v : 1));
       },
-      
-      onPlay: function(callback) {
-        // No-op
+
+      get paused() {
+        return el.paused;
       },
-      
-      onPause: function(callback) {
-        // No-op
+
+      get currentTime() {
+        return el.currentTime || 0;
       },
-      
-      onStop: function(callback) {
-        // No-op
+      set currentTime(value) {
+        try {
+          el.currentTime = value;
+        } catch (e) {
+          // 元数据还没加载完时赋值会抛，忽略
+        }
       },
-      
-      onError: function(callback) {
-        // No-op
-      }
+
+      get duration() {
+        return Number.isFinite(el.duration) ? el.duration : 0;
+      },
+
+      play() {
+        el.loop = ctx.loop;
+        const p = el.play();
+        // iOS / Chrome 的自动播放策略会拒绝没有用户手势的播放，静默吞掉
+        if (p && typeof p.catch === 'function') {
+          p.catch(() => {});
+        }
+      },
+
+      pause() {
+        el.pause();
+      },
+
+      stop() {
+        el.pause();
+        try {
+          el.currentTime = 0;
+        } catch (e) {
+          // 忽略
+        }
+        emit('stop');
+      },
+
+      seek(position) {
+        try {
+          el.currentTime = position;
+        } catch (e) {
+          // 忽略
+        }
+      },
+
+      destroy() {
+        el.pause();
+        el.removeAttribute('src');
+        el.load();
+      },
+
+      onPlay(fn) { handlers.play.push(fn); },
+      onPause(fn) { handlers.pause.push(fn); },
+      onStop(fn) { handlers.stop.push(fn); },
+      onEnded(fn) { handlers.ended.push(fn); },
+      onError(fn) { handlers.error.push(fn); },
+      onCanplay(fn) { handlers.canplay.push(fn); },
+
+      offPlay() { handlers.play.length = 0; },
+      offPause() { handlers.pause.length = 0; },
+      offStop() { handlers.stop.length = 0; },
+      offEnded() { handlers.ended.length = 0; },
+      offError() { handlers.error.length = 0; },
+      offCanplay() { handlers.canplay.length = 0; }
     };
+
+    return ctx;
   },
   
   // 振动
@@ -350,12 +499,12 @@ const wxAPIs = {
   // 分享（模拟）
   shareAppMessage: (options) => {
     console.log('[Share] 分享到好友:', options);
-    alert('分享功能（模拟）: ' + (options.title || '企鹅滑冰'));
+    showPreviewTip(`分享（本地预览为模拟）：${options.title || '企鹅滑冰'}`);
   },
   
   shareAppMessageToGroup: (options) => {
     console.log('[Share] 分享到群:', options);
-    alert('分享到群功能（模拟）: ' + (options.title || '企鹅滑冰'));
+    showPreviewTip(`分享到群（本地预览为模拟）：${options.title || '企鹅滑冰'}`);
   },
   
   showShareMenu: (options = {}) => {
@@ -392,19 +541,40 @@ const wxAPIs = {
   },
   
   // 广告（模拟）
-  createRewardedVideoAd: () => {
+  // 注意：onClose 必须在 show() 之后才触发，否则真实 AdManager 的
+  // showRewardedVideoAd() Promise 永远等不到结果（B2 联调时踩过）
+  createRewardedVideoAd: (options) => {
+    console.log('[Ad] 创建激励视频实例:', options && options.adUnitId);
+
+    let loadCallback = null;
+    let closeCallback = null;
+    let errorCallback = null;
+    let timer = null;
+
     return {
-      load: () => Promise.resolve(),
+      load: () => {
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            loadCallback && loadCallback();
+            resolve();
+          }, 80);
+        });
+      },
       show: () => {
-        console.log('[Ad] 显示激励视频广告');
-        alert('广告观看（模拟）');
+        console.log('[Ad] 显示激励视频广告（模拟 2 秒后完整观看）');
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          closeCallback && closeCallback({ isEnded: true });
+        }, 2000);
         return Promise.resolve();
       },
-      onClose: (callback) => {
-        setTimeout(() => callback({ isEnded: true }), 1000);
-      },
-      onError: (callback) => {
-        // No-op
+      onLoad: (callback) => { loadCallback = callback; },
+      onClose: (callback) => { closeCallback = callback; },
+      onError: (callback) => { errorCallback = callback; },
+      offClose: () => { closeCallback = null; },
+      destroy: () => {
+        clearTimeout(timer);
+        loadCallback = closeCallback = errorCallback = null;
       }
     };
   },
@@ -417,6 +587,71 @@ const wxAPIs = {
       onError: (callback) => {},
       onResize: (callback) => {}
     };
+  },
+
+  // 全局错误兜底（D3）：把浏览器的错误转成小游戏的回调，
+  // 这样本地预览也能走到游戏自己的异常复位逻辑
+  onError: (callback) => {
+    window.__wxErrorCallback = callback;
+    if (window.__wxErrorBound) return;
+    window.__wxErrorBound = true;
+    window.addEventListener('error', (event) => {
+      if (!window.__wxErrorCallback) return;
+      window.__wxErrorCallback(
+        `${event.message}\n${event.filename}:${event.lineno}`
+      );
+    });
+  },
+  offError: () => {
+    window.__wxErrorCallback = null;
+  },
+
+  onUnhandledRejection: (callback) => {
+    window.__wxRejectionCallback = callback;
+    if (window.__wxRejectionBound) return;
+    window.__wxRejectionBound = true;
+    window.addEventListener('unhandledrejection', (event) => {
+      if (!window.__wxRejectionCallback) return;
+      const reason = event.reason;
+      window.__wxRejectionCallback(
+        reason && reason.stack ? reason.stack : String(reason)
+      );
+    });
+  },
+  offUnhandledRejection: () => {
+    window.__wxRejectionCallback = null;
+  },
+
+  // 热更新：本地预览没有发布流程，回调注册即可，永远不触发
+  getUpdateManager: () => ({
+    onCheckForUpdate: () => {},
+    onUpdateReady: () => {},
+    onUpdateFailed: () => {},
+    applyUpdate: () => console.log('[Update] 本地预览无热更新，忽略 applyUpdate')
+  }),
+
+  // 隐私授权（模拟）
+  // 本地预览不会自动触发，控制台执行 window.__triggerPrivacy() 可手动验证弹窗
+  onNeedPrivacyAuthorization: (callback) => {
+    console.log('[Privacy] 已注册隐私授权回调');
+    window.__privacyCallback = callback;
+    window.__triggerPrivacy = () => {
+      if (!window.__privacyCallback) return;
+      window.__privacyCallback(
+        (res) => console.log('[Privacy] 用户选择:', res),
+        { referrer: 'local-preview' }
+      );
+    };
+  },
+
+  openPrivacyContract: (options = {}) => {
+    console.log('[Privacy] 打开隐私指引（本地预览不可用）');
+    options.fail && options.fail({ errMsg: 'local preview' });
+  },
+
+  requirePrivacyAuthorize: (options = {}) => {
+    console.log('[Privacy] requirePrivacyAuthorize（本地预览直接通过）');
+    options.success && options.success({});
   },
   
   // 登录（模拟）

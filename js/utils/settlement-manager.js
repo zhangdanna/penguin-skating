@@ -15,8 +15,7 @@ export default class SettlementManager {
       totalTime: 0,         // 总用时（秒）
       totalStars: 0,        // 总星星数
       perfectGames: 0,      // 完美通关次数（3星）
-      revives: 0,           // 复活次数
-      shares: 0             // 分享次数
+      revives: 0            // 复活次数
     }
 
     // 最佳记录
@@ -50,7 +49,9 @@ export default class SettlementManager {
       time: 0,
       won: false,
       revived: false,
-      par: 0
+      par: 0,
+      settled: false,     // 本关是否已计入统计，避免复活/重复结算导致重复累加
+      isNewRecord: false
     }
   }
 
@@ -76,21 +77,38 @@ export default class SettlementManager {
 
   /**
    * 完成关卡（胜利）
+   * 统一使用对象参数，避免与"位置参数"混用导致星级/步数错位
+   * @param {Object} result - { moves, time, par, stars }
+   * @returns {Object|null} 结算摘要
    */
-  completeLevel(stars, par) {
-    if (!this.currentSettlement) return null
+  completeLevel(result = {}) {
+    const settlement = this.currentSettlement
+    if (!settlement) return null
+    if (settlement.settled) return this.getSettlementSummary()
 
-    const time = Math.floor((Date.now() - this.currentSettlement.startTime) / 1000)
+    const time = Number.isFinite(result.time)
+      ? result.time
+      : Math.floor((Date.now() - settlement.startTime) / 1000)
+    const moves = Number.isFinite(result.moves) ? result.moves : settlement.moves
+    const par = Number.isFinite(result.par) ? result.par : 0
+    const stars = Number.isFinite(result.stars) ? result.stars : 0
 
-    this.currentSettlement.won = true
-    this.currentSettlement.stars = stars
-    this.currentSettlement.time = time
-    this.currentSettlement.par = par
+    settlement.won = true
+    settlement.moves = moves
+    settlement.stars = stars
+    settlement.time = time
+    settlement.par = par
+    settlement.settled = true
+
+    // 先判定是否破纪录，再更新纪录
+    const isNewFastest = this.bestRecords.fastestTime === 0 || time < this.bestRecords.fastestTime
+    const isNewFewest = this.bestRecords.fewestMoves === 0 || moves < this.bestRecords.fewestMoves
+    settlement.isNewRecord = isNewFastest || isNewFewest
 
     // 更新累计统计
     this.totalStats.totalGames++
     this.totalStats.totalWins++
-    this.totalStats.totalMoves += this.currentSettlement.moves
+    this.totalStats.totalMoves += moves
     this.totalStats.totalTime += time
     this.totalStats.totalStars += stars
 
@@ -99,12 +117,11 @@ export default class SettlementManager {
     }
 
     // 更新最佳记录
-    if (this.bestRecords.fastestTime === 0 || time < this.bestRecords.fastestTime) {
+    if (isNewFastest) {
       this.bestRecords.fastestTime = time
     }
-
-    if (this.bestRecords.fewestMoves === 0 || this.currentSettlement.moves < this.bestRecords.fewestMoves) {
-      this.bestRecords.fewestMoves = this.currentSettlement.moves
+    if (isNewFewest) {
+      this.bestRecords.fewestMoves = moves
     }
 
     this.saveTotalStats()
@@ -117,16 +134,19 @@ export default class SettlementManager {
    * 失败关卡
    */
   failLevel() {
-    if (!this.currentSettlement) return null
+    const settlement = this.currentSettlement
+    if (!settlement) return null
+    if (settlement.settled) return this.getSettlementSummary()
 
-    const time = Math.floor((Date.now() - this.currentSettlement.startTime) / 1000)
+    const time = Math.floor((Date.now() - settlement.startTime) / 1000)
 
-    this.currentSettlement.won = false
-    this.currentSettlement.time = time
+    settlement.won = false
+    settlement.time = time
+    settlement.settled = true
 
     // 更新累计统计
     this.totalStats.totalGames++
-    this.totalStats.totalMoves += this.currentSettlement.moves
+    this.totalStats.totalMoves += settlement.moves
     this.totalStats.totalTime += time
 
     this.saveTotalStats()
@@ -135,32 +155,25 @@ export default class SettlementManager {
   }
 
   /**
-   * 记录分享
-   */
-  recordShare() {
-    this.totalStats.shares++
-    this.saveTotalStats()
-  }
-
-  /**
    * 获取结算摘要
    */
   getSettlementSummary() {
     if (!this.currentSettlement) return null
 
-    const efficiency = this.currentSettlement.par > 0
-      ? Math.floor((this.currentSettlement.par / this.currentSettlement.moves) * 100)
+    const settlement = this.currentSettlement
+    const efficiency = settlement.par > 0 && settlement.moves > 0
+      ? Math.floor((settlement.par / settlement.moves) * 100)
       : 0
 
     return {
-      level: this.currentSettlement.level,
-      difficulty: this.currentSettlement.difficulty,
-      won: this.currentSettlement.won,
-      moves: this.currentSettlement.moves,
-      par: this.currentSettlement.par,
-      stars: this.currentSettlement.stars,
-      time: this.currentSettlement.time,
-      revived: this.currentSettlement.revived,
+      level: settlement.level,
+      difficulty: settlement.difficulty,
+      won: settlement.won,
+      moves: settlement.moves,
+      par: settlement.par,
+      stars: settlement.stars,
+      time: settlement.time,
+      revived: settlement.revived,
       efficiency: efficiency,
       isNewRecord: this.checkNewRecord()
     }
@@ -171,9 +184,7 @@ export default class SettlementManager {
    */
   checkNewRecord() {
     if (!this.currentSettlement || !this.currentSettlement.won) return false
-
-    return this.currentSettlement.time === this.bestRecords.fastestTime ||
-           this.currentSettlement.moves === this.bestRecords.fewestMoves
+    return !!this.currentSettlement.isNewRecord
   }
 
   /**
@@ -271,8 +282,7 @@ export default class SettlementManager {
       totalTime: 0,
       totalStars: 0,
       perfectGames: 0,
-      revives: 0,
-      shares: 0
+      revives: 0
     }
 
     this.bestRecords = {

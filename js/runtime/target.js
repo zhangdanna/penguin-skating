@@ -88,14 +88,17 @@ export default class Target extends Sprite {
     ctx.fill()
 
     // 发光边缘：颜色与冰块描边一致
-    ctx.save()
-    ctx.shadowColor = `rgba(${ICE_GLOW}, 0.85)`
-    ctx.shadowBlur = 6 + pulse * 8
+    // D7：原来用 shadowBlur = 6 + pulse*8 做辉光，每个目标格每帧一次模糊，
+    // 现在改成「外层半透明粗描边 + 内层实色描边」，视觉接近但不需要模糊
+    roundRectPath(ctx, centerX - 21 * sizeScale, centerY - 21 * sizeScale, 42 * sizeScale, 42 * sizeScale, 13 * sizeScale)
+    ctx.strokeStyle = `rgba(${ICE_GLOW}, ${0.22 + pulse * 0.18})`
+    ctx.lineWidth = 8
+    ctx.stroke()
+
     roundRectPath(ctx, centerX - 21 * sizeScale, centerY - 21 * sizeScale, 42 * sizeScale, 42 * sizeScale, 13 * sizeScale)
     ctx.strokeStyle = ICE_EDGE
     ctx.lineWidth = 2.4
     ctx.stroke()
-    ctx.restore()
 
     // 内侧细白线，增加冰面质感
     roundRectPath(ctx, centerX - 17 * sizeScale, centerY - 17 * sizeScale, 34 * sizeScale, 34 * sizeScale, 10 * sizeScale)

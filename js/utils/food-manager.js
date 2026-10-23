@@ -2,6 +2,8 @@
  * 食物管理器
  * 管理游戏中的食物（体力）系统
  */
+import { calcStars } from './score'
+
 export default class FoodManager {
   constructor() {
     // 食物类型及价值
@@ -212,10 +214,8 @@ export default class FoodManager {
       details: []
     }
 
-    // 计算星级
-    let stars = 1
-    if (moves <= par) stars = 3
-    else if (moves <= par * 1.5) stars = 2
+    // 计算星级（口径见 js/utils/score.js，D2 统一）
+    const stars = calcStars(moves, par)
 
     // 通关基础奖励
     const baseReward = stars
@@ -224,34 +224,10 @@ export default class FoodManager {
 
     // 连续通关奖励
     this.updateConsecutiveWins()
-    const consecutiveBonus = this.getConsecutiveBonus()
-    if (consecutiveBonus > 0) {
-      if (consecutiveBonus >= 10) {
-        rewards.squid += 1
-        rewards.details.push(`连续通关${this.consecutiveWins}次: 1🦑`)
-      } else if (consecutiveBonus >= 3) {
-        rewards.shrimp += 1
-        rewards.details.push(`连续通关${this.consecutiveWins}次: 1🦐`)
-      } else {
-        rewards.fish += consecutiveBonus
-        rewards.details.push(`连续通关${this.consecutiveWins}次: ${consecutiveBonus}🐟`)
-      }
-    }
+    this.applyBonus(rewards, this.getConsecutiveBonus(), `连续通关${this.consecutiveWins}次`)
 
     // 时间挑战奖励（根据难度调整）
-    const timeBonus = this.getTimeBonus(time, level)
-    if (timeBonus > 0) {
-      if (timeBonus >= 10) {
-        rewards.squid += 1
-        rewards.details.push(`时间奖励(${time}秒): 1🦑`)
-      } else if (timeBonus >= 3) {
-        rewards.shrimp += 1
-        rewards.details.push(`时间奖励(${time}秒): 1🦐`)
-      } else {
-        rewards.fish += timeBonus
-        rewards.details.push(`时间奖励(${time}秒): ${timeBonus}🐟`)
-      }
-    }
+    this.applyBonus(rewards, this.getTimeBonus(time, level), `时间奖励(${time}秒)`)
 
     // 计算总价值
     rewards.total = rewards.fish +
@@ -260,6 +236,35 @@ export default class FoodManager {
                     rewards.goldfish * this.foodTypes.goldfish.value
 
     return rewards
+  }
+
+  /**
+   * 把"奖励价值"换算成具体食物并累加
+   *
+   * C3：原实现把 50（金鱼档）也判进了 `>= 10` 分支，导致
+   * `getTimeBonus` / `getConsecutiveBonus` 返回 50 时只发 1 只鱿鱼，
+   * 金鱼分支永远不可达。这里按 50 → 金鱼、10 → 鱿鱼、3 → 虾、1 → 鱼 统一换算。
+   *
+   * @param {Object} rewards - 奖励累加器
+   * @param {number} value - 奖励价值
+   * @param {string} label - 明细文案前缀
+   */
+  applyBonus(rewards, value, label) {
+    if (!(value > 0)) return
+
+    if (value >= 50) {
+      rewards.goldfish += 1
+      rewards.details.push(`${label}: 1🐠`)
+    } else if (value >= 10) {
+      rewards.squid += 1
+      rewards.details.push(`${label}: 1🦑`)
+    } else if (value >= 3) {
+      rewards.shrimp += 1
+      rewards.details.push(`${label}: 1🦐`)
+    } else {
+      rewards.fish += value
+      rewards.details.push(`${label}: ${value}🐟`)
+    }
   }
 
   /**
@@ -339,20 +344,32 @@ export default class FoodManager {
    */
   checkRecovery() {
     const now = Date.now()
-    const timeSinceLastRecovery = now - this.lastRecoveryTime
+    const intervalMs = this.recoveryInterval * 60 * 1000
+    const elapsed = now - this.lastRecoveryTime
 
-    if (timeSinceLastRecovery >= this.recoveryInterval * 60 * 1000) {
-      // 计算可恢复次数
-      const recoveries = Math.floor(timeSinceLastRecovery / (this.recoveryInterval * 60 * 1000))
-      const maxRecoveries = Math.floor((this.maxFood - this.getTotalFood()) / this.recoveryRate)
-      const actualRecoveries = Math.min(recoveries, maxRecoveries)
+    if (elapsed < intervalMs) return 0
 
-      if (actualRecoveries > 0) {
-        this.addFish(actualRecoveries * this.recoveryRate)
-        this.lastRecoveryTime = now
-        console.log(`自然恢复: +${actualRecoveries * this.recoveryRate}🐟`)
-      }
+    const pending = Math.floor(elapsed / intervalMs)
+    const capacity = Math.max(0, this.maxFood - this.getTotalFood())
+    const affordable = Math.floor(capacity / this.recoveryRate)
+    const actual = Math.min(pending, affordable)
+
+    if (actual <= 0) {
+      // 体力已满：把计时基准推到当前，等消耗后再重新累计，避免"欠着"一堆周期
+      this.lastRecoveryTime = now
+      this.saveRecoveryTime()
+      return 0
     }
+
+    this.addFish(actual * this.recoveryRate)
+
+    // 只前进已消费的整周期，余数保留。
+    // 原实现直接 `lastRecoveryTime = now`，会白丢最多一个恢复周期的进度。
+    this.lastRecoveryTime += actual * intervalMs
+    this.saveRecoveryTime()
+
+    console.log(`自然恢复: +${actual * this.recoveryRate}🐟`)
+    return actual * this.recoveryRate
   }
 
   /**
@@ -412,7 +429,7 @@ export default class FoodManager {
   loadRecoveryTime() {
     try {
       const saved = wx.getStorageSync('lastRecoveryTime')
-      this.lastRecoveryTime = saved || Date.now()
+      this.lastRecoveryTime = Number(saved) > 0 ? Number(saved) : Date.now()
     } catch (e) {
       console.error('加载恢复时间失败:', e)
       this.lastRecoveryTime = Date.now()

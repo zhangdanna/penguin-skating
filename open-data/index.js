@@ -118,7 +118,7 @@ function renderRankList() {
   clearCanvas()
 
   if (!rankList.length) {
-    drawMessage('暂无排行数据', '邀请好友一起挑战吧')
+    drawMessage('还没有好友上榜', '通关后成绩会自动同步，快邀请好友一起挑战')
     return
   }
 

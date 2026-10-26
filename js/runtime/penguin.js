@@ -76,6 +76,17 @@ export default class Penguin extends Sprite {
   }
 
   /**
+   * 清空滑动状态（撤销 / 瞬移后调用，避免残留方向被下一帧当成新滑动）
+   */
+  resetSwipe() {
+    this.touchStartX = null
+    this.touchStartY = null
+    this.swiped = false
+    this.swipeDirection = null
+    this.isMoving = false
+  }
+
+  /**
    * 根据角度获取方向
    * @param {number} angle - 弧度角度
    * @returns {string} 方向

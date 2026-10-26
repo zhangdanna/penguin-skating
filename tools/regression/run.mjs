@@ -231,6 +231,8 @@ const game = context.__game
 if (!game) throw new Error('游戏实例未创建')
 
 console.log('\n[1] 布局自适应（A5）')
+// 底部按钮高度从 HUD 实例读，避免和 game-hud.js 里的常量各写一份（F4：40 → 76）
+const HUD_BUTTON_HEIGHT = game.gameHUD.actionButtons[0].height
 const sizes = [
   [320, 568, 'iPhone SE'],
   [375, 667, 'iPhone 8'],
@@ -251,23 +253,41 @@ for (const [w, h, label] of sizes) {
     `[fitsX=${fitsX} bottom=${bottom} h=${h}]`
   )
 
-  // 新布局：HUD / 棋盘 / 按钮三者紧贴，多余空间只留在屏幕最上最下
+  // 间距随屏幕高度伸缩：小屏取最小值，长屏把富余空间拿来拉开间距，
+  // 而不是全部堆成屏幕上下的大片留白
   const gapTop = game.boardOffsetY - (game.hudPanelY + 82)
   const gapBottom = game.actionBarY - bottom
   check(
-    `${label}: HUD↔棋盘 ${gapTop}px，棋盘↔按钮 ${gapBottom}px（应 ≤ 16）`,
-    gapTop === 12 && gapBottom === 16,
+    `${label}: HUD↔棋盘 ${gapTop}px，棋盘↔按钮 ${gapBottom}px（应在 12~40 / 16~52）`,
+    gapTop >= 12 && gapTop <= 40 && gapBottom >= 16 && gapBottom <= 52,
     `[gapTop=${gapTop} gapBottom=${gapBottom}]`
   )
 
   // 整块内容垂直居中：上下留白差值不超过 1px 的取整误差
   const topMargin = game.contentTopY
-  const bottomMargin = h - (game.actionBarY + 40 + 10) // 按钮高 40 + 底部内边距 10
+  const bottomMargin = h - (game.actionBarY + HUD_BUTTON_HEIGHT + 10) // 按钮高 76（F4）+ 底部内边距 10
   check(
     `${label}: 内容垂直居中（上 ${topMargin} / 下 ${bottomMargin}）`,
     Math.abs(topMargin - bottomMargin) <= 1,
     `[top=${topMargin} bottom=${bottomMargin}]`
   )
+
+  // 上下留白不能超过屏幕高度的 10%，否则又回到"中间挤、上下空"
+  check(
+    `${label}: 顶部留白 ${topMargin}px ≤ 屏高 10%`,
+    topMargin <= Math.round(h * 0.1) + 1,
+    `[top=${topMargin} limit=${Math.round(h * 0.1)}]`
+  )
+
+  // 排行榜顶部留白与对局界面保持一致
+  if (game.rankScene) {
+    game.rankScene.relayout()
+    check(
+      `${label}: 排行榜顶部 ${game.rankScene.topY} 对齐对局 HUD ${game.hudPanelY}`,
+      game.rankScene.topY === game.hudPanelY,
+      `[rank=${game.rankScene.topY} hud=${game.hudPanelY}]`
+    )
+  }
 }
 
 console.log('\n[2] 关卡坐标 → 棋盘映射（A5）')
@@ -449,8 +469,11 @@ check('切换排行榜后下发了 SHOW_RANK',
   openDataMessages.some(m => m.type === 'SHOW_RANK'),
   JSON.stringify(openDataMessages.map(m => m.type)))
 const showMsg = openDataMessages.find(m => m.type === 'SHOW_RANK')
+const rankTitle = game.rankScene.titlePanel
 check('SHOW_RANK 携带内容区域（避开标题与返回按钮）',
-  showMsg && showMsg.layout && showMsg.layout.y >= 96 && showMsg.layout.height > 0,
+  showMsg && showMsg.layout &&
+  showMsg.layout.y >= rankTitle.y + rankTitle.height &&
+  showMsg.layout.height > 0,
   JSON.stringify(showMsg && showMsg.layout))
 game.sceneManager.switchTo('menu')
 check('离开排行榜后下发了 HIDE_RANK',
@@ -1152,6 +1175,255 @@ check('game.js 的裸 canvas 读写仅限 resize / ratio',
 const openDataSrc = fs.readFileSync(path.join(ROOT, 'open-data/index.js'), 'utf8')
 check('开放数据域共享画布同样按 dpr 放大',
   /pixelRatio/.test(openDataSrc) && /ctx\.scale\(dpr,\s*dpr\)/.test(openDataSrc))
+
+// ---------- F 批次：奖励瘦身 / 成就门槛 / 退一步 / 底部按钮 ----------
+console.log('\n[22] 奖励与成就重做（F1 / F2）')
+
+check('基础奖励按难度：medium=1 / hard=2 / expert=3',
+  fm.getBaseReward('medium') === 1 && fm.getBaseReward('hard') === 2 && fm.getBaseReward('expert') === 3,
+  `${fm.getBaseReward('medium')}/${fm.getBaseReward('hard')}/${fm.getBaseReward('expert')}`)
+
+check('速度奖励只给 0 或 1（不再有金鱼 / 鱿鱼档）',
+  fm.getTimeBonus(10, 40) === 1 &&
+  fm.getTimeBonus(40 * 2.2, 40) === 1 &&
+  fm.getTimeBonus(40 * 2.2 + 1, 40) === 0 &&
+  fm.getTimeBonus(9999, 40) === 0,
+  `边界=${fm.getTimeBonus(88, 40)}/${fm.getTimeBonus(89, 40)}`)
+
+fm.consecutiveWins = 50
+check('连击 50 次也只给 3（1🦐），不再发金鱼', fm.getConsecutiveBonus() === 3, `${fm.getConsecutiveBonus()}`)
+fm.consecutiveWins = 0
+
+const fmRepeat = new FoodMod.namespace.default()
+fmRepeat.food = { fish: 0, shrimp: 0, squid: 0, goldfish: 0 }
+const repeatReward = fmRepeat.calculateRewards(10, 30, 40, 999, {
+  difficulty: 'hard', firstClear: false, firstThreeStar: false
+})
+check('重刷一关（无首通 / 无速度 / 无连击）只给基础 2🐟',
+  repeatReward.fish === 2 && repeatReward.total === 2, JSON.stringify(repeatReward.details))
+
+const firstReward = fmRepeat.calculateRewards(10, 40, 40, 88, {
+  difficulty: 'hard', firstClear: true, firstThreeStar: true
+})
+check('首通 + 三星首通 + 速度 = 5🐟 + 1🦐（价值 8）',
+  firstReward.fish === 5 && firstReward.shrimp === 1 && firstReward.total === 8,
+  JSON.stringify(firstReward.details))
+
+const fmCap = new FoodMod.namespace.default()
+fmCap.food = { fish: 0, shrimp: 0, squid: 0, goldfish: 0 }
+fmCap.maxFood = 30
+fmCap.addFish(100)
+const capHit = fmCap.getTotalFood()
+fmCap.addFish(1)
+check('addFood 受 maxFood 上限约束（满仓后不再入账）',
+  capHit === 30 && fmCap.getTotalFood() === 30, `${capHit} → ${fmCap.getTotalFood()}`)
+
+const AchMod = await loadModule(path.join(ROOT, 'js/utils/achievement-manager.js'))
+const am = new AchMod.namespace.default()
+am.resetData()
+am.recordWin({ level: 1, stars: 3, moves: 13, par: 16, time: 40, firstClear: true })
+check('通关 1 关不会解锁「首通全部 60 关」', !am.unlockedAchievements.includes('win_100'),
+  am.unlockedAchievements.join(','))
+
+am.recordWin({ level: 1, stars: 3, moves: 13, par: 16, time: 40, firstClear: false })
+check('重刷同一关不增加首通数', am.stats.uniqueWins === 1, `${am.stats.uniqueWins}`)
+check('重刷同一关不重复累加星星', am.stats.totalStars === 3, `${am.stats.totalStars}`)
+
+am.recordWin({ level: 2, stars: 3, moves: 10, par: 16, time: 40, firstClear: true })
+check('3 星但步数 < par 不算「精准操作」', !am.unlockedAchievements.includes('perfect_moves'),
+  am.unlockedAchievements.join(','))
+
+am.recordWin({ level: 3, stars: 3, moves: 16, par: 16, time: 40, firstClear: true })
+check('步数正好等于 par 才解锁「精准操作」', am.unlockedAchievements.includes('perfect_moves'),
+  am.unlockedAchievements.join(','))
+
+check('通关 3 关不会解锁「完美主义」（需 60 关全 3 星）',
+  !am.unlockedAchievements.includes('all_3star'), am.unlockedAchievements.join(','))
+
+am.recordWin({ level: 4, stars: 3, moves: 20, par: 16, time: 40, firstClear: true, undoUsed: true })
+check('用过「退一步」的关卡不计入精准步数',
+  am.stats.perfectMoves === 1, `${am.stats.perfectMoves}`)
+
+// ---------- 退一步 ----------
+console.log('\n[23] 退一步（F3）')
+await game.loadLevel(1)
+check('进入关卡后撤销栈为空', game.history.length === 0, `${game.history.length}`)
+const undoBtn = game.gameHUD.actionButtons.find(item => item.id === 'undo')
+check('步数为 0 时撤销按钮置灰', undoBtn && undoBtn.disabled === true, `${undoBtn && undoBtn.disabled}`)
+
+const foodBeforeUndo = game.foodManager.getTotalFood()
+const startCell = game.getCell(game.penguin)
+swipe('right')
+check('移动一步后撤销栈 +1', game.history.length === 1, `${game.history.length}`)
+check('撤销按钮点亮', undoBtn.disabled === false, `${undoBtn.disabled}`)
+
+const movesBeforeUndo = game.moves
+const undoOk = game.undoMove()
+const backCell = game.getCell(game.penguin)
+check('退一步返回 true', undoOk === true, `${undoOk}`)
+check('步数一并回退', game.moves === movesBeforeUndo - 1, `${movesBeforeUndo} → ${game.moves}`)
+check('企鹅回到上一格', backCell.col === startCell.col && backCell.row === startCell.row,
+  `(${backCell.col},${backCell.row}) vs (${startCell.col},${startCell.row})`)
+check(`消耗 ${game.undoCost}🐟`, game.foodManager.getTotalFood() === foodBeforeUndo - game.undoCost,
+  `${foodBeforeUndo} → ${game.foodManager.getTotalFood()}`)
+check('撤销后历史清空、按钮重新置灰',
+  game.history.length === 0 && undoBtn.disabled === true, `${game.history.length}/${undoBtn.disabled}`)
+
+// 食物不足时不允许撤销
+const foodBackup = { ...game.foodManager.food }
+game.foodManager.food = { fish: 0, shrimp: 0, squid: 0, goldfish: 0 }
+game.history.push(game.captureSnapshot())
+const noFoodUndo = game.undoMove()
+check('食物不足时退一步失败且不消耗历史',
+  noFoodUndo === false && game.history.length === 1, `${noFoodUndo}/${game.history.length}`)
+game.foodManager.food = foodBackup
+game.history = []
+
+// ---------- 底部按钮 ----------
+console.log('\n[24] 底部按钮改版（F4）')
+const hudButtons = game.gameHUD.actionButtons
+check('三个按钮：暂停 / 退一步 / 重玩',
+  hudButtons.map(b => b.label).join(',') === '暂停,退一步,重玩',
+  hudButtons.map(b => b.label).join(','))
+check('按钮为 76×76 大图标卡片',
+  hudButtons.every(b => b.width === 76 && b.height === 76),
+  hudButtons.map(b => `${b.width}x${b.height}`).join(' '))
+check('退一步带消耗角标', hudButtons[1].badge === '-2🐟', hudButtons[1].badge)
+check('三个按钮水平居中且互不重叠', (() => {
+  const first = hudButtons[0]
+  const last = hudButtons[2]
+  const left = first.x
+  const right = canvas.width - (last.x + last.width)
+  return Math.abs(left - right) <= 1 && hudButtons[1].x >= first.x + first.width
+})(), `${hudButtons[0].x}/${hudButtons[2].x}`)
+check('HUD 不再暴露「返回」回调（退出统一走暂停面板）',
+  typeof game.gameHUD.onBackClick === 'undefined' && typeof game.gameHUD.onUndoClick === 'function')
+
+// ---------- 食物经济与重玩（G 批次） ----------
+console.log('\n[25] 食物上限 / 免费补给 / 重玩扣费')
+
+const foodMgr = game.foodManager
+const foodMgrBackup = { ...foodMgr.food }
+
+// addFood 必须严格按剩余容量截断：原实现用 Math.max(1, …) 兜底，
+// 剩 1 点容量也能硬塞进一只金鱼（价值 50），总数直接顶到 51
+foodMgr.food = { fish: 29, shrimp: 0, squid: 0, goldfish: 0 }
+const overCap = foodMgr.addFood('goldfish', 1)
+check('剩余容量不足时高价值食物不再硬塞', overCap === 0, `${overCap}`)
+check('总食物不突破 maxFood', foodMgr.getTotalFood() <= foodMgr.maxFood,
+  `${foodMgr.getTotalFood()}/${foodMgr.maxFood}`)
+
+foodMgr.food = { fish: 0, shrimp: 0, squid: 0, goldfish: 0 }
+check('容量充足时正常入账', foodMgr.addFood('fish', 5) === 5, `${foodMgr.getTotalFood()}`)
+
+// 免费补给：广告不可用时的兜底，防止食物耗尽后彻底开不了局
+foodMgr.food = { fish: 0, shrimp: 0, squid: 0, goldfish: 0 }
+const refillLimit = foodMgr.freeRefillPerDay
+check(`今日免费补给上限 ${refillLimit} 次`, foodMgr.getFreeRefillLeft() === refillLimit,
+  `${foodMgr.getFreeRefillLeft()}`)
+
+const refilled = foodMgr.grantFreeRefill(2)
+check('免费补给成功发放 2🐟', refilled === 2, `${refilled}`)
+check('免费补给次数 -1', foodMgr.getFreeRefillLeft() === refillLimit - 1,
+  `${foodMgr.getFreeRefillLeft()}`)
+
+while (foodMgr.getFreeRefillLeft() > 0) foodMgr.grantFreeRefill(1)
+foodMgr.food = { fish: 0, shrimp: 0, squid: 0, goldfish: 0 }
+check('免费次数用完后拒绝发放', foodMgr.grantFreeRefill(5) === 0, `${foodMgr.grantFreeRefill(5)}`)
+
+// 结算口径：显示实际入账而不是理论值
+foodMgr.food = { fish: 28, shrimp: 0, squid: 0, goldfish: 0 }
+const theoryRewards = { fish: 5, shrimp: 0, squid: 0, goldfish: 0, total: 5, details: [] }
+const actualGiven = foodMgr.giveRewards(theoryRewards)
+check('接近上限时实际入账少于理论值', actualGiven.fish < theoryRewards.fish,
+  `${actualGiven.fish} vs ${theoryRewards.fish}`)
+
+game.resultScene.setRewards(actualGiven, { requested: theoryRewards })
+check('结算页拿到的是实际入账', game.resultScene.rewards === actualGiven)
+const lost = game.resultScene.getLostRewards()
+check(`能算出未入账部分（${lost.join('')}）`, lost.length === 1, JSON.stringify(lost))
+
+foodMgr.food = foodMgrBackup
+
+// 重玩：第一步时不该重开（原实现会重新 loadLevel，白扣一次入场食物）
+const originalLoadLevel = game.loadLevel
+let loadLevelCalls = 0
+game.loadLevel = function (...args) {
+  loadLevelCalls++
+  return originalLoadLevel.apply(this, args)
+}
+
+const restartBtn = game.gameHUD.actionButtons.find(item => item.id === 'restart')
+game.gameHUD.setMoves(0)
+check('未移动时「重玩」按钮置灰', restartBtn.disabled === true, `${restartBtn.disabled}`)
+game.restartLevel({ confirm: false })
+check('未移动时点重玩不重新加载关卡', loadLevelCalls === 0, `${loadLevelCalls}`)
+
+game.gameHUD.setMoves(2)
+check('移动后「重玩」按钮点亮', restartBtn.disabled === false, `${restartBtn.disabled}`)
+
+// moves > 0 时默认先弹确认框（确认后才扣费重开）。
+// 注意：教程关入场费是 0，不会弹确认，所以按实际入场费分支断言。
+const curLevelData = game.levelManager.getLevel(game.currentLevel)
+const entryCost = foodMgr.getLevelCost(curLevelData ? curLevelData.difficulty : 'easy')
+game.moves = 2
+if (entryCost > 0) {
+  game.restartLevel()
+  check(`重玩（入场费 ${entryCost}🐟）前先弹确认框，未确认不重开`,
+    loadLevelCalls === 0, `${loadLevelCalls}`)
+} else {
+  check('免费关卡重玩不需要确认，直接重开', entryCost === 0, `cost=${entryCost}`)
+}
+
+game.loadLevel = originalLoadLevel
+game.moves = 0
+
+// 排行榜补同步：没有通关记录时不该发上报
+check('syncLocalRecord 返回布尔值且不抛异常',
+  typeof game.wechatService.syncLocalRecord() === 'boolean')
+
+// ---------- 自然恢复口径（G2） ----------
+console.log('\n[26] 体力自然恢复：只算前台时间')
+check('免费补给每天 1 次', foodMgr.freeRefillPerDay === 1, `${foodMgr.freeRefillPerDay}`)
+
+const clearFood = () => {
+  foodMgr.food = { fish: 0, shrimp: 0, squid: 0, goldfish: 0 }
+}
+
+// 前台连续运行满一个周期 → 恢复 1 条
+clearFood()
+foodMgr.lastRecoveryTime = clock
+clock += 5 * 60 * 1000
+const oneCycle = foodMgr.checkRecovery()
+check('前台运行满 5 分钟恢复 1🐟', oneCycle === 1, `${oneCycle}`)
+
+// 挂机很久：单次最多补 3 条，不会一次补满
+clearFood()
+foodMgr.lastRecoveryTime = clock
+clock += 60 * 60 * 1000 // 1 小时 = 12 个周期
+const burst = foodMgr.checkRecovery()
+check('单次最多补 3 条，不会一次补满', burst === 3, `${burst}`)
+
+const afterBurst = foodMgr.checkRecovery()
+check('被丢弃的周期不会重复发放', afterBurst === 0, `${afterBurst}`)
+
+// 离线（重新启动）：计时基准重置，历史时间不算
+clearFood()
+foodMgr.lastRecoveryTime = clock - 24 * 60 * 60 * 1000
+foodMgr.loadRecoveryTime()
+const afterRestart = foodMgr.checkRecovery()
+check('重新启动后离线时间不计入恢复', afterRestart === 0, `${afterRestart}`)
+
+// 切后台：这段时间被 skipRecoveryTime 剔除
+clearFood()
+foodMgr.lastRecoveryTime = clock
+const hidden = 30 * 60 * 1000
+clock += hidden
+foodMgr.skipRecoveryTime(hidden)
+const afterBackground = foodMgr.checkRecovery()
+check('切后台的时长不计入恢复', afterBackground === 0, `${afterBackground}`)
+
+foodMgr.food = foodMgrBackup
 
 Date.now = realNow
 console.log(`\n===== 结果：${passed} 通过 / ${failed} 失败 =====`)

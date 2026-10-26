@@ -294,6 +294,14 @@ export default class AchievementScene {
       ctx.textAlign = 'right'
       ctx.fillText('🔒', x + width - 14, y + height / 2)
     }
+
+    // 进度（F2：让玩家看得到离解锁还有多远）
+    if (!achievement.unlocked && achievement.progressText) {
+      ctx.fillStyle = COLORS.waterDeep
+      ctx.font = font(12)
+      ctx.textAlign = 'right'
+      ctx.fillText(achievement.progressText, x + width - 14, y + height / 2 + 20)
+    }
   }
 
   /**

@@ -29,25 +29,20 @@ import AchievementScene from './js/ui/achievement-scene'
 import AchievementNotification from './js/ui/achievement-notification'
 import ReviveScene from './js/ui/revive-scene'
 import PrivacyScene from './js/ui/privacy-scene'
-import GameHUD, { HUD_PANEL_HEIGHT, HUD_BUTTON_HEIGHT } from './js/ui/game-hud'
+import GameHUD, { UNDO_FOOD_COST } from './js/ui/game-hud'
+import {
+  computeBoardLayout,
+  GRID_COLS,
+  GRID_ROWS
+} from './js/ui/layout'
 import FoodDisplay from './js/ui/food-display'
 import GameScene from './js/ui/game-scene'
 
 // 关卡数据使用的网格单位：levels/*.json 里的坐标按 50px 一格书写
 const LEVEL_CELL = 50
-const GRID_COLS = 7
-const GRID_ROWS = 9
 
-// 棋盘自适应参数
-// 顶部 HUD 面板、棋盘、底部操作条作为一个整体垂直居中，
-// 三者之间只留很小的呼吸位，多出来的空间全部让给屏幕上下边缘。
-const LAYOUT_MARGIN_X = 10
-const HUD_TOP_PAD = 6            // HUD 面板距内容区顶部的内边距
-const GAP_HUD_BOARD = 12         // HUD 面板 ↔ 棋盘
-const GAP_BOARD_BUTTONS = 16     // 棋盘 ↔ 底部按钮
-const BOTTOM_PAD = 10            // 底部按钮距内容区底部
-const MIN_CELL_SIZE = 28
-const MAX_CELL_SIZE = 72         // 大屏（平板 / 折叠屏）允许更大的格子
+// 撤销栈上限：只保留最近 N 步，防止一路退回开局
+const MAX_UNDO_STEPS = 30
 
 // 滑动方向对应的一格位移
 const DIRECTION_STEP = {
@@ -125,6 +120,11 @@ export default class Main {
     this.startTime = 0
     this.isPaused = false
 
+    // 撤销栈（F3）：「退一步」用格子坐标快照回滚，避开动画中间态
+    this.history = []
+    this.undoUsed = false
+    this.undoCost = UNDO_FOOD_COST
+
     // 计时补偿（C2）：切后台、手动暂停都不应计入关卡用时
     this.pausedAccum = 0        // 已累计的暂停时长（毫秒）
     this.pauseStartedAt = 0     // 本次暂停开始的时间戳，0 表示当前未暂停计时
@@ -155,41 +155,31 @@ export default class Main {
    * 计算棋盘布局
    *
    * 顶部 HUD、棋盘、底部按钮当成一个整体垂直居中：
-   *   - 三者间距固定（12 / 16），不会因为屏幕变长而被拉开
-   *   - 多余的高度全部留在屏幕最上/最下，视觉上就是"整体往中间靠拢"
+   *   - 三者间距在 GAP_*_MIN ~ GAP_*_MAX 之间随屏幕高度伸缩，
+   *     长屏上会把多余空间先用来拉开间距，不再全部堆在屏幕上下边缘
+   *   - 小屏纵向没有富余，间距退回最小值，优先保证棋盘塞得下
+   *
+   * 具体公式在 js/ui/layout.js 的 computeBoardLayout()，那里是对局与排行榜共用的
+   * 唯一数据源，改数字请改那边。
    */
   computeLayout() {
     const vp = viewport()
+    const layout = computeBoardLayout(vp)
 
-    // HUD + 按钮 + 各种间距占掉的固定高度
-    const chromeHeight =
-      HUD_TOP_PAD + HUD_PANEL_HEIGHT + GAP_HUD_BOARD +
-      GAP_BOARD_BUTTONS + HUD_BUTTON_HEIGHT + BOTTOM_PAD
-
-    const availWidth = vp.width - LAYOUT_MARGIN_X * 2
-    const availHeight = vp.height - chromeHeight
-
-    const byWidth = Math.floor(availWidth / GRID_COLS)
-    const byHeight = Math.floor(availHeight / GRID_ROWS)
-    const cell = Math.max(MIN_CELL_SIZE, Math.min(byWidth, byHeight, MAX_CELL_SIZE))
-
-    this.cellSize = cell
-    this.boardWidth = cell * GRID_COLS
-    this.boardHeight = cell * GRID_ROWS
-
-    // 整块内容的起始 y，居中后上下留白相等
-    const contentHeight = chromeHeight + this.boardHeight
-    const contentTopY = Math.max(0, Math.round((vp.height - contentHeight) / 2))
-
-    this.contentTopY = contentTopY
-    this.hudPanelY = contentTopY + HUD_TOP_PAD
-    this.boardOffsetX = Math.round((vp.width - this.boardWidth) / 2)
-    this.boardOffsetY = Math.round(this.hudPanelY + HUD_PANEL_HEIGHT + GAP_HUD_BOARD)
-    this.actionBarY = Math.round(this.boardOffsetY + this.boardHeight + GAP_BOARD_BUTTONS)
+    this.cellSize = layout.cellSize
+    this.boardWidth = layout.boardWidth
+    this.boardHeight = layout.boardHeight
+    this.contentTopY = layout.contentTopY
+    this.hudPanelY = layout.hudPanelY
+    this.boardOffsetX = layout.boardOffsetX
+    this.boardOffsetY = layout.boardOffsetY
+    this.actionBarY = layout.actionBarY
 
     console.log(
-      `[Layout] 视口 ${vp.width}x${vp.height}@${vp.dpr}x → 格子 ${cell}px，` +
-      `HUD y=${this.hudPanelY}，棋盘原点 (${this.boardOffsetX}, ${this.boardOffsetY})，按钮 y=${this.actionBarY}`
+      `[Layout] 视口 ${vp.width}x${vp.height}@${vp.dpr}x → 格子 ${this.cellSize}px，` +
+      `HUD y=${this.hudPanelY}（间距 ${layout.gapHudBoard}），` +
+      `棋盘原点 (${this.boardOffsetX}, ${this.boardOffsetY})，` +
+      `按钮 y=${this.actionBarY}（间距 ${layout.gapBoardButtons}）`
     )
 
     this.syncHudLayout()
@@ -296,6 +286,12 @@ export default class Main {
 
     if (hiddenMs > 0) {
       console.log(`[Lifecycle] 回到前台，后台时长 ${Math.round(hiddenMs / 1000)}s`)
+    }
+
+    // 后台这段时间不计入体力恢复：否则玩家挂着不管 / 睡一觉回来
+    // 就会白拿一堆鱼，等于靠时间无限获取食物
+    if (hiddenMs > 0 && this.foodManager) {
+      this.foodManager.skipRecoveryTime(hiddenMs)
     }
 
     if (this.audioManager) {
@@ -658,10 +654,12 @@ export default class Main {
     this.resultScene.onReplay = () => this.restartLevel()
 
     // 创建游戏HUD
+    // F3/F4：底部第三个按钮从「返回」改成「退一步」，
+    // 退出对局的入口统一走暂停面板里的「返回菜单」，避免误触浪费本关入场费
     this.gameHUD = new GameHUD()
     this.gameHUD.onPauseClick = () => this.pauseGame()
     this.gameHUD.onRestartClick = () => this.restartLevel()
-    this.gameHUD.onBackClick = () => this.backToMenu()
+    this.gameHUD.onUndoClick = () => this.undoMove()
 
     // 用棋盘布局算出的锚点摆好 HUD（此时 HUD 才刚创建）
     this.syncHudLayout()
@@ -702,16 +700,7 @@ export default class Main {
       const cost = this.foodManager.getLevelCost(difficulty)
 
       if (cost > 0 && !this.foodManager.hasEnoughFood(cost)) {
-        wx.showModal({
-          title: '食物不足',
-          content: `需要 ${cost}🐟 才能开始关卡，是否观看广告获取食物？`,
-          confirmText: '看广告',
-          cancelText: '取消',
-          success: (res) => {
-            if (!res.confirm) return
-            this.watchAdForFood(cost, levelNum)
-          }
-        })
+        this.promptInsufficientFood(cost, { levelNum })
         // 无法开战时回到菜单，避免停留在空白的游戏场景
         this.backToMenu()
         return
@@ -755,6 +744,8 @@ export default class Main {
 
       // 重置状态
       this.moves = 0
+      this.history = []
+      this.undoUsed = false
       this.startTime = Date.now()
       this.pausedAccum = 0
       this.pauseStartedAt = 0
@@ -764,6 +755,7 @@ export default class Main {
       // 更新HUD
       this.gameHUD.setLevelInfo(levelNum, levelData.par)
       this.gameHUD.setMoves(0)
+      this.syncUndoButton()
 
       // 通知结算管理器开始关卡
       if (this.settlementManager) {
@@ -777,14 +769,115 @@ export default class Main {
   }
 
   /**
+   * 食物不足时的统一入口
+   *
+   * 三条路按优先级走：
+   *   1. 激励视频可用 → 看广告换食物（看完直接续上这一关）
+   *   2. 广告不可用   → 免费补给（每日限量），保证「没开通流量主」时也能继续玩
+   *   3. 免费次数用完 → 告诉玩家自然恢复还要等多久
+   *
+   * 原实现只有第 1 条，广告位没开通时确认框点下去只弹一句「广告暂不可用」，
+   * 玩家就彻底卡住了 —— 既没有广告也没有别的补给来源。
+   *
+   * @param {number} cost - 本次需要的食物
+   * @param {Object} [options]
+   * @param {number} [options.levelNum] - 补足后要续上的关卡编号
+   * @param {boolean} [options.restart=true] - 补足后是否重新进入该关
+   *        局内操作（如退一步）传 false，只补食物不重开棋局
+   * @param {string} [options.action='开始关卡'] - 弹窗里的动作描述
+   */
+  promptInsufficientFood(cost, options = {}) {
+    const { levelNum, restart = true, action = '开始关卡' } = options
+
+    if (this.adAvailable) {
+      wx.showModal({
+        title: '食物不足',
+        content: `${action}需要 ${cost}🐟，是否观看广告获取食物？`,
+        confirmText: '看广告',
+        cancelText: '取消',
+        success: (res) => {
+          if (!res.confirm) return
+          this.watchAdForFood(cost, { levelNum, restart })
+        }
+      })
+      return
+    }
+
+    const left = this.foodManager.getFreeRefillLeft()
+    if (left > 0) {
+      const amount = this.getFreeRefillAmount(cost)
+      wx.showModal({
+        title: '食物不足',
+        content: `${action}需要 ${cost}🐟。广告暂不可用，是否免费领取 ${amount}🐟？` +
+          `\n（今日还可领取 ${left} 次）`,
+        confirmText: '免费领取',
+        cancelText: '取消',
+        success: (res) => {
+          if (!res.confirm) return
+          this.grantFreeFood(cost, { levelNum, restart })
+        }
+      })
+      return
+    }
+
+    const waitSeconds = this.foodManager.getNextRecoveryTime()
+    const waitText = waitSeconds > 0
+      ? `${Math.ceil(waitSeconds / 60)} 分钟后自然恢复 1🐟`
+      : '稍后会自动恢复'
+    wx.showModal({
+      title: '食物不足',
+      content: `${action}需要 ${cost}🐟。\n今日免费领取次数已用完，${waitText}。\n` +
+        `（需保持游戏在前台运行才会恢复）`,
+      showCancel: false,
+      confirmText: '知道了'
+    })
+  }
+
+  /**
+   * 免费补给量：要盖过本关入场费还有富余，
+   * 否则「领完立刻被扣光」，玩家每次进关都得再领一次，5 次用完照样卡住
+   * @param {number} cost - 本关所需食物
+   * @returns {number}
+   */
+  getFreeRefillAmount(cost) {
+    return Math.max(cost + 3, 5)
+  }
+
+  /**
+   * 免费补给并续上刚才那一关（广告不可用时的兜底）
+   * @param {number} cost - 本关所需食物
+   * @param {Object} [options] - { levelNum, restart }
+   */
+  grantFreeFood(cost, options = {}) {
+    const { levelNum, restart = true } = options
+
+    const amount = this.getFreeRefillAmount(cost)
+    const given = this.foodManager.grantFreeRefill(amount)
+    if (given <= 0) {
+      wx.showToast({ title: '今日免费次数已用完', icon: 'none' })
+      return
+    }
+
+    wx.showToast({ title: `获得 ${given}🐟`, icon: 'none' })
+    console.log(`[Food] 免费补给 ${given}🐟，今日剩余 ${this.foodManager.getFreeRefillLeft()} 次`)
+
+    if (restart && typeof levelNum === 'number') {
+      this.sceneManager.switchTo('game', { level: levelNum })
+    }
+  }
+
+  /**
    * 观看激励视频换食物（食物不足时的兜底入口）
    * 看完后直接续上刚才那一关，避免玩家还要回菜单再点一次
    * @param {number} cost - 本关所需食物
-   * @param {number} levelNum - 关卡编号
+   * @param {Object} [options] - { levelNum, restart }
    */
-  watchAdForFood(cost, levelNum) {
-    if (!this.adAvailable) {
-      wx.showToast({ title: '广告暂不可用', icon: 'none' })
+  watchAdForFood(cost, options = {}) {
+    const { levelNum, restart = true } = options
+
+    // 广告中途失效（后台被回收 / 拉取失败）时不能让玩家无路可走
+    if (!this.adAvailable || !this.adManager) {
+      this.promptInsufficientFood(cost, { levelNum, restart })
       return
     }
 
@@ -801,7 +894,9 @@ export default class Main {
       console.log(`[Ad] 看完激励视频，获得 ${reward} 食物`)
 
       // 食物已补足，重新进入该关（食物检查会通过）
-      this.sceneManager.switchTo('game', { level: levelNum })
+      if (restart && typeof levelNum === 'number') {
+        this.sceneManager.switchTo('game', { level: levelNum })
+      }
     })
   }
 
@@ -975,13 +1070,161 @@ export default class Main {
 
   /**
    * 重新开始关卡
+   *
+   * 两点约束：
+   *   1. 还没走过第一步时点「重玩」没有任何意义（画面跟刚进来时一模一样），
+   *      直接拦掉 —— 原实现会重新 loadLevel，白扣一次入场食物。
+   *   2. 真的重玩要重新付入场费（否则重玩一关「不扣费 + 拿通关奖励」就变成刷鱼漏洞），
+   *      所以必须先弹确认框把消耗说清楚，不能点了就默默扣。
+   *
+   * @param {Object} [options]
+   * @param {boolean} [options.confirm=true] - 是否先弹确认框
+   *        游戏结束 / 放弃复活这类「玩家已经明确表态要重开」的入口传 false
+   * @param {boolean} [options.force=false] - 跳过「还没移动」的拦截
+   *        游戏结束面板必须保证一定能重开，不能被这个拦截卡住
    */
-  restartLevel() {
+  restartLevel(options = {}) {
+    const { confirm = true, force = false } = options
+
+    if (!force && this.moves === 0) {
+      wx.showToast({ title: '还没移动，无需重玩', icon: 'none' })
+      return
+    }
+
+    const levelData = this.levelManager.getLevel(this.currentLevel)
+    const cost = levelData
+      ? this.foodManager.getLevelCost(levelData.difficulty || 'easy')
+      : 0
+
+    if (confirm && cost > 0) {
+      wx.showModal({
+        title: '重新开始',
+        content: `重玩本关会重新消耗 ${cost}🐟，确定吗？`,
+        confirmText: '重玩',
+        cancelText: '取消',
+        success: (res) => {
+          if (!res.confirm) return
+          this.restartLevel({ confirm: false })
+        }
+      })
+      return
+    }
+
     // 重置复活状态
     if (this.reviveManager) {
       this.reviveManager.resetLevelRevive()
     }
     this.loadLevel(this.currentLevel)
+  }
+
+  /**
+   * 拍一张当前局面快照（F3）
+   * 存格子坐标而不是像素，避免把移动动画的中间态写进历史
+   * @returns {Object|null}
+   */
+  captureSnapshot() {
+    if (!this.penguin) return null
+    return {
+      penguin: this.getCell(this.penguin),
+      stones: this.stones.map(stone => this.getCell(stone)),
+      moves: this.moves
+    }
+  }
+
+  /**
+   * 入栈，最多保留最近 MAX_UNDO_STEPS 步
+   * @param {Object|null} snapshot
+   */
+  pushHistory(snapshot) {
+    if (!snapshot) return
+    this.history.push(snapshot)
+    if (this.history.length > MAX_UNDO_STEPS) {
+      this.history.shift()
+    }
+  }
+
+  /**
+   * 把「退一步」的可用状态同步给 HUD
+   */
+  syncUndoButton() {
+    if (!this.gameHUD || typeof this.gameHUD.setUndoState !== 'function') return
+    this.gameHUD.setUndoState({
+      steps: this.history.length,
+      food: this.foodManager ? this.foodManager.getTotalFood() : 0
+    })
+  }
+
+  /**
+   * 退一步（F3）
+   *
+   * 花 2🐟 撤销最近一次移动，企鹅与冰块一起回到上一步的位置。
+   * 步数一并回退，所以本关会被标记 undoUsed —— 使用过撤销的关卡
+   * 不计入「精准操作」成就，避免用食物刷成就。
+   *
+   * @returns {boolean} 是否撤销成功
+   */
+  undoMove() {
+    if (this.gameState !== 'playing') return false
+
+    if (this.penguin && (this.penguin.isMoving || this.stones.some(stone => stone.isMoving))) {
+      return false
+    }
+
+    if (this.history.length === 0) {
+      wx.showToast({ title: '已经是第一步了', icon: 'none' })
+      return false
+    }
+
+    if (!this.foodManager.hasEnoughFood(this.undoCost)) {
+      // 局内操作：只补食物，不重开棋局（否则退一步会变成整关重来）
+      this.promptInsufficientFood(this.undoCost, {
+        restart: false,
+        action: '退一步'
+      })
+      return false
+    }
+
+    const snapshot = this.history.pop()
+    this.foodManager.consumeFood(this.undoCost)
+
+    // 企鹅回到上一步
+    const penguinPixel = this.cellToPixel(snapshot.penguin.col, snapshot.penguin.row)
+    this.penguin.x = penguinPixel.x
+    this.penguin.y = penguinPixel.y
+    this.penguin.isMoving = false
+    this.penguin.resetSwipe()
+
+    // 冰块回到上一步
+    if (snapshot.stones.length === this.stones.length) {
+      snapshot.stones.forEach((cell, index) => {
+        const pixel = this.cellToPixel(cell.col, cell.row)
+        this.stones[index].x = pixel.x
+        this.stones[index].y = pixel.y
+        this.stones[index].isMoving = false
+      })
+    }
+
+    // 步数一并回退
+    this.moves = snapshot.moves
+    this.gameHUD.setMoves(this.moves)
+    if (this.settlementManager && this.settlementManager.currentSettlement) {
+      this.settlementManager.currentSettlement.moves = this.moves
+    }
+
+    this.undoUsed = true
+
+    // 反向音效 + 轻振动
+    this.audioManager.playSlideSound()
+    if (typeof wx !== 'undefined') {
+      wx.vibrateShort({ type: 'light' })
+    }
+
+    // 消耗提示：按钮上的角标只在卡片右上角，实际操作后给一次明确反馈
+    wx.showToast({ title: `退一步 -${this.undoCost}🐟`, icon: 'none', duration: 1200 })
+
+    this.syncUndoButton()
+    console.log(`[Undo] 撤销一步，剩余历史 ${this.history.length}，消耗 ${this.undoCost}🐟`)
+    return true
   }
 
   /**
@@ -1174,10 +1417,13 @@ export default class Main {
 
       // 只有企鹅停止时才响应新的滑动
       if (direction && !this.penguin.isMoving) {
+        // 先拍快照再移动：撤销要回到"这一步之前"
+        const snapshot = this.captureSnapshot()
         const moved = this.tryMove(direction)
 
         // 撞墙、推不动、掉入冰窟窿都不计入步数
         if (moved) {
+          this.pushHistory(snapshot)
           this.moves++
           this.gameHUD.setMoves(this.moves)
 
@@ -1188,6 +1434,7 @@ export default class Main {
 
           // 播放滑动音效
           this.audioManager.playSlideSound()
+          this.syncUndoButton()
         }
       }
     }
@@ -1322,7 +1569,8 @@ export default class Main {
    */
   onReviveGiveUp() {
     console.log('放弃复活')
-    this.restartLevel()
+    // 玩家已经在复活面板上明确选择了「放弃」，不必再弹一次确认
+    this.restartLevel({ confirm: false, force: true })
   }
 
   /**
@@ -1331,7 +1579,7 @@ export default class Main {
   onGameOverRestart() {
     console.log('游戏结束-重新开始')
     this.gameOverScene.hide()
-    this.restartLevel()
+    this.restartLevel({ confirm: false, force: true })
   }
 
   /**
@@ -1434,27 +1682,84 @@ export default class Main {
     // 上报分数到排行榜
     this.reportScore()
 
+    // 首通 / 三星首通判定（F1：一次性收益，重刷不再发放）
+    const rewardState = this.readLevelReward(this.currentLevel)
+    const firstClear = !rewardState.first
+    const firstThreeStar = stars === 3 && !rewardState.three
+
     // 计算并发放食物奖励
-    const rewards = this.foodManager.calculateRewards(this.currentLevel, this.moves, par, time)
-    this.foodManager.giveRewards(rewards)
+    const rewards = this.foodManager.calculateRewards(this.currentLevel, this.moves, par, time, {
+      difficulty: levelData ? levelData.difficulty : 'hard',
+      firstClear,
+      firstThreeStar
+    })
+    const given = this.foodManager.giveRewards(rewards)
+    this.markLevelRewarded(this.currentLevel, { first: firstClear, three: stars === 3 })
     console.log('获得食物奖励:', rewards.details)
+    console.log('实际入账:', given)
 
-    // 显示奖励动画
-    this.foodDisplay.showRewardAnimation(rewards)
+    // 显示奖励动画（用实际入账，避免飘字写着 +5🐟 而背包没变）
+    this.foodDisplay.showRewardAnimation(given)
 
-    // 记录成就：多个维度依次记录，最后统一取"新解锁"列表，避免互相覆盖
-    this.achievementManager.recordWin(this.currentLevel, stars, this.moves, par, time)
+    // 记录成就：一次调用更新通关数 / 星级 / 精准步数 / 速度 / 时长
+    this.achievementManager.recordWin({
+      level: this.currentLevel,
+      stars,
+      moves: this.moves,
+      par,
+      time,
+      firstClear,
+      undoUsed: this.undoUsed
+    })
     this.achievementManager.recordStreak(this.foodManager.consecutiveWins)
-    this.achievementManager.recordFoodCollection(this.foodManager.food)
-    this.achievementManager.recordPlayTime(time)
-    this.achievementManager.recordAllThreeStars(this.isAllThreeStars())
+    this.achievementManager.recordFoodEarned(given)
 
     this.flushAchievementRewards()
 
     // 显示结算界面
     this.resultScene.setResult(this.currentLevel, this.moves, par, time)
-    this.resultScene.setRewards(rewards)
+    // 传实际入账（given），并把理论值一并带上，食物满了才能在结算页说清楚
+    this.resultScene.setRewards(given, {
+      firstClear,
+      firstThreeStar,
+      requested: rewards
+    })
     this.resultScene.show()
+  }
+
+  /**
+   * 读取某关的奖励发放记录（F1）
+   * @param {number} level
+   * @returns {{first:boolean, three:boolean}}
+   */
+  readLevelReward(level) {
+    try {
+      const saved = wx.getStorageSync(`levelReward_${level}`)
+      return {
+        first: !!(saved && saved.first),
+        three: !!(saved && saved.three)
+      }
+    } catch (e) {
+      return { first: false, three: false }
+    }
+  }
+
+  /**
+   * 记录某关已发放过的奖励
+   * @param {number} level
+   * @param {{first?:boolean, three?:boolean}} patch
+   */
+  markLevelRewarded(level, patch = {}) {
+    try {
+      const current = this.readLevelReward(level)
+      const next = {
+        first: current.first || !!patch.first,
+        three: current.three || !!patch.three
+      }
+      wx.setStorageSync(`levelReward_${level}`, next)
+    } catch (e) {
+      console.error('保存奖励记录失败:', e)
+    }
   }
 
   /**
@@ -1474,26 +1779,6 @@ export default class Main {
       }
     })
     return newAchievements
-  }
-
-  /**
-   * 是否所有已通关关卡都拿到了 3 星（至少通关 3 关后才有意义）
-   */
-  isAllThreeStars() {
-    try {
-      const progress = wx.getStorageSync('gameProgress') || {}
-      const cleared = Math.max(0, (parseInt(progress.unlockedLevel, 10) || 1) - 1)
-      if (cleared < 3) return false
-
-      for (let i = 1; i <= cleared; i++) {
-        const record = wx.getStorageSync(`level_${i}`)
-        if (!record || record.stars !== 3) return false
-      }
-      return true
-    } catch (e) {
-      console.error('统计三星进度失败:', e)
-      return false
-    }
   }
 
   /**

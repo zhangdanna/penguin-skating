@@ -53,6 +53,8 @@ export default class FoodDisplay {
     if (rewards.goldfish > 0) parts.push(`+${rewards.goldfish}🐠`)
 
     this.rewardText = parts.join(' ')
+    // 食物已满时可能一个都没发出去，别弹一条空飘字
+    if (!this.rewardText) return
     this.showReward = true
     this.rewardAlpha = 1
     this.animationTimer = 0

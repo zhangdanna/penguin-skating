@@ -31,6 +31,7 @@ export default class ResultScene {
 
     // 奖励数据
     this.rewards = null
+    this.rewardMeta = {}
 
     // 动画参数
     this.titleScale = 0
@@ -109,9 +110,18 @@ export default class ResultScene {
 
   /**
    * 设置奖励数据
+   *
+   * 注意：`rewards` 必须是**实际入账**的数量（FoodManager.giveRewards 的返回值），
+   * 不是 calculateRewards 算出来的理论值。食物接近上限时两者会不一样，
+   * 拿理论值渲染会出现"结算页写 +5🐟、HUD 只多了 1🐟"的对不上问题。
+   *
+   * @param {Object} rewards - 实际入账 { fish, shrimp, squid, goldfish }
+   * @param {Object} [meta] - { firstClear, firstThreeStar, requested }
+   *        requested 是理论奖励，用于判断是否有奖励因食物已满被丢弃
    */
-  setRewards(rewards) {
+  setRewards(rewards, meta = {}) {
     this.rewards = rewards
+    this.rewardMeta = meta || {}
   }
 
   /**
@@ -234,21 +244,28 @@ export default class ResultScene {
    */
   renderRewards(ctx) {
     const centerX = CENTER_X
-    const labelY = 394
-    const pillY = 420
-
-    ctx.font = font(13)
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillStyle = COLORS.yellowDeep
-    ctx.fillText('获得奖励', centerX, labelY)
+    const labelY = 392
+    const pillY = 416
 
     const items = []
     if (this.rewards.fish > 0) items.push(`🐟×${this.rewards.fish}`)
     if (this.rewards.shrimp > 0) items.push(`🦐×${this.rewards.shrimp}`)
     if (this.rewards.squid > 0) items.push(`🦑×${this.rewards.squid}`)
     if (this.rewards.goldfish > 0) items.push(`🐠×${this.rewards.goldfish}`)
-    if (items.length === 0) return
+
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+
+    if (items.length === 0) {
+      ctx.font = font(13)
+      ctx.fillStyle = COLORS.navySoft
+      ctx.fillText('食物已满，本次奖励未入账', centerX, pillY)
+      return
+    }
+
+    ctx.font = font(13)
+    ctx.fillStyle = COLORS.yellowDeep
+    ctx.fillText('获得奖励', centerX, labelY)
 
     const text = items.join('   ')
     ctx.font = font(15)
@@ -256,6 +273,41 @@ export default class ResultScene {
     fillRoundRect(ctx, centerX - textWidth / 2 - 16, pillY - 14, textWidth + 32, 28, 14, 'rgba(47, 191, 155, 0.16)')
     ctx.fillStyle = COLORS.mintDeep
     ctx.fillText(text, centerX, pillY)
+
+    // 首通 / 三星首通是一次性收益，单独标出来，避免玩家以为每次都能拿
+    const meta = this.rewardMeta || {}
+    const tags = []
+    if (meta.firstClear) tags.push('首次通关')
+    if (meta.firstThreeStar) tags.push('首次三星')
+
+    // 食物接近上限时，奖励会被截断，必须明说，否则玩家会以为少给了
+    const lost = this.getLostRewards()
+    if (lost.length > 0) {
+      tags.push(`食物已满，${lost.join('')} 未入账`)
+    }
+
+    if (tags.length === 0) return
+
+    ctx.font = font(11)
+    ctx.fillStyle = COLORS.navySoft
+    ctx.fillText(tags.join(' · '), centerX, 440)
+  }
+
+  /**
+   * 计算因食物上限被丢弃的奖励（理论值 - 实际入账）
+   * @returns {string[]} 形如 ['🐟×2']
+   */
+  getLostRewards() {
+    const requested = this.rewardMeta && this.rewardMeta.requested
+    if (!requested || !this.rewards) return []
+
+    const lost = []
+    const icons = { fish: '🐟', shrimp: '🦐', squid: '🦑', goldfish: '🐠' }
+    Object.keys(icons).forEach(key => {
+      const diff = (requested[key] || 0) - (this.rewards[key] || 0)
+      if (diff > 0) lost.push(`${icons[key]}×${diff}`)
+    })
+    return lost
   }
 
   renderStars(ctx) {

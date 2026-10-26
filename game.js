@@ -1,3 +1,7 @@
+// 环境引导必须排在所有 import 之前：
+// 微信小游戏没有全局 canvas，这里用 wx.createCanvas() 创建上屏画布并挂到全局，
+// 否则 game.js 一执行就会抛 ReferenceError: Can't find variable: canvas（详见 js/env.js）
+import screenCanvas from './js/env'
 import Background from './js/runtime/background'
 import Penguin from './js/runtime/penguin'
 import Stone from './js/runtime/stone'
@@ -56,7 +60,14 @@ const DIRECTION_STEP = {
 export default class Main {
   constructor() {
     this.aniId = 0
-    this.ctx = canvas.getContext('2d')
+
+    // 上屏画布由 js/env.js 创建（小游戏走 wx.createCanvas，H5 复用适配层画布）
+    if (!screenCanvas) {
+      console.error('[Boot] 上屏画布缺失，游戏无法启动。请检查 js/env.js 是否被正确导入。')
+      this.bootFailed = true
+      return
+    }
+    this.ctx = screenCanvas.getContext('2d')
 
     // 游戏对象
     this.background = null

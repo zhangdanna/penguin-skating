@@ -4,6 +4,8 @@
   "description": "一企推推乐 - 微信小游戏",
   "private": true,
   "scripts": {
+    "test": "node --experimental-vm-modules tools/regression/run.mjs",
+    "verify:env": "node tools/verify-env.mjs",
     "build:h5": "node tools/build-h5.mjs",
     "build:weapp": "node tools/build-weapp.mjs",
     "upload": "node tools/upload-weapp.mjs",

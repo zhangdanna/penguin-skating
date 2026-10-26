@@ -1041,6 +1041,54 @@ check('音频实例统一关闭 iOS 静音键影响（obeyMuteSwitch）',
   // 两处创建都应走 createAudio，不允许再裸调 createInnerAudioContext
   (audioSrc.src.match(/wx\.createInnerAudioContext\(\)/g) || []).length === 1)
 
+// ---------- 真机启动引导（E1：小游戏没有全局 canvas） ----------
+console.log('\n[20] 真机启动引导（小游戏上屏画布）')
+
+const envPath = path.join(ROOT, 'js/env.js')
+const envExists = fs.existsSync(envPath)
+check('js/env.js 存在（负责创建上屏画布）', envExists)
+
+const envSrc = envExists ? fs.readFileSync(envPath, 'utf8') : ''
+
+check('env.js 调用 wx.createCanvas() 创建上屏画布',
+  !!envSrc && /wx\.createCanvas\s*\(/.test(envSrc))
+
+check('env.js 优先复用已有画布（避免 H5 画到离屏画布上）',
+  !!envSrc && /isCanvasLike\(globalObjects\[i\]\.canvas\)/.test(envSrc))
+
+check('env.js 把画布挂回全局对象（裸 canvas 才能被 js/ui/* 读到）',
+  !!envSrc && /\.canvas\s*=\s*screenCanvas/.test(envSrc))
+
+const gameSource = fs.readFileSync(path.join(ROOT, 'game.js'), 'utf8')
+const importSpecs = [...gameSource.matchAll(
+  /^import\s+(?:[^'"\n]*?\s+from\s+)?['"]([^'"]+)['"]/gm)].map(m => m[1])
+
+check('game.js 的第一个 import 就是环境引导（保证最先执行）',
+  importSpecs[0] === './js/env', `实际：${importSpecs[0] || '(空)'}`)
+
+check('game.js 的绘图上下文取自 screenCanvas，不再裸读全局 canvas',
+  /this\.ctx\s*=\s*screenCanvas\.getContext\('2d'\)/.test(gameSource))
+
+check('game.js 对画布缺失有显式兜底（不再直接抛 ReferenceError）',
+  /if\s*\(!screenCanvas\)/.test(gameSource))
+
+// 统计仍依赖全局 canvas 的模块，确认它们都在 env.js 之后才会执行
+const bareCanvasFiles = allSources
+  .filter(({ src }) => /(^|[^.\w'"\/])canvas\.(width|height)\b/m.test(src))
+  .map(({ file }) => path.relative(ROOT, file).replace(/\\/g, '/'))
+
+check('存在依赖全局 canvas 的模块时，入口必须先建立全局画布',
+  bareCanvasFiles.length === 0 || (envExists && importSpecs[0] === './js/env'),
+  bareCanvasFiles.join(','))
+
+// 关键回归：env.js 必须复用传入的画布，而不是自己另建一张
+// （否则 H5 里会把游戏画到一张不在页面上的离屏画布上，同样是黑屏）
+check('全局 canvas 仍是原画布（env.js 没有另建离屏画布）',
+  context.canvas === canvas)
+
+check('游戏实例拿到了可用的 2D 上下文',
+  !!game && !!game.ctx)
+
 Date.now = realNow
 console.log(`\n===== 结果：${passed} 通过 / ${failed} 失败 =====`)
 process.exit(failed === 0 ? 0 : 1)

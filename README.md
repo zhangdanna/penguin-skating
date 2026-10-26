@@ -51,7 +51,8 @@ npm install
 | 上传小游戏 | `npm run upload -- 1.0.1 "版本说明"` |
 | 构建并上传 | `npm run release -- 1.0.1 "版本说明"` |
 | 生成预览二维码 | `npm run preview -- 1.0.0 "预览说明"` |
-| 回归测试 | `node --experimental-vm-modules tools/regression/run.mjs .` |
+| 回归测试 | `npm test` |
+| 验证画布环境 | `npm run verify:env` |
 
 完整发布步骤见 [docs/PUBLISH.md](./docs/PUBLISH.md)。
 
@@ -85,6 +86,7 @@ penguin-skating-game/
 ├── game.json                # 小游戏配置（竖屏、开放数据域）
 ├── project.config.json      # 开发者工具配置 + 包体排除项
 ├── js/
+│   ├── env.js               # 环境引导：创建上屏画布（必须最先 import）
 │   ├── config.js            # 广告位、版本号
 │   ├── base/                # 精灵基类
 │   ├── runtime/             # 棋盘实体与背景
@@ -105,6 +107,26 @@ penguin-skating-game/
 
 ---
 
+## 常见问题
+
+### 真机黑屏 / `ReferenceError: Can't find variable: canvas`
+
+**微信小游戏没有全局 `canvas`**，上屏画布必须用 `wx.createCanvas()` 创建，且整个生命周期里
+**第一次调用**返回的才是屏幕上的那张，之后都是离屏画布。
+
+`js/env.js` 负责这件事，并且必须是 `game.js` 的第一个 import。`js/ui/*`、`js/runtime/*`
+里所有 `canvas.width` / `canvas.height` 都依赖它建立的全局变量。
+
+浏览器预览之所以"看起来正常"，是因为 `local-preview/wechat-adapter.js` 补了
+`window.canvas`。**改完代码务必真机预览一次**（开发者工具 → 预览 → 手机扫码），
+模拟器会提供浏览器式的全局对象，很多"只在真机崩"的问题在模拟器里看不出来。
+
+### 未找到 `app.json`
+
+导入项目时选成了「小程序」。删掉项目引用（不要删文件）后重新导入，类型选 **小游戏**。
+
+---
+
 ## 配置
 
 - AppID：`project.config.json` → `appid`
@@ -120,6 +142,7 @@ penguin-skating-game/
 |---|---|
 | [game.md](./game.md) | 玩法、障碍、关卡、食物、成就、复活、已知限制 |
 | [docs/PUBLISH.md](./docs/PUBLISH.md) | H5 与微信小游戏发布步骤、常见错误 |
+| [docs/review/E5-weapp-black-screen-fix.md](./docs/review/E5-weapp-black-screen-fix.md) | 审核驳回「黑屏卡死」问题分析与修复 |
 
 ## License
 

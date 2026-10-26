@@ -27,12 +27,20 @@ export default class AudioManager {
       star: 'audio/star.wav'
     }
 
-    // 背景音乐候选源：优先 mp3（体积小，正式素材），回落 wav（仓库内置占位曲）
-    this.bgmSources = ['audio/bgm.mp3', 'audio/bgm.wav']
+    // 背景音乐候选源：仓库里只有 bgm.wav。
+    // 原来第一位放的是 audio/bgm.mp3，但该文件从没提交过，每次启动必然 404 一条，
+    // 真机调试台上一片红。要换成 mp3 素材时把路径补进这个数组即可。
+    this.bgmSources = ['audio/bgm.wav']
     this.bgmSourceIndex = 0
 
     // 是否"希望"播放背景音乐（用于换源后自动续播）
     this.bgmWanted = false
+
+    // 是否处于后台挂起状态。
+    // 平台在 onAppEnterBackground 之后会接管音频能力，此时对 InnerAudioContext
+    // 调 play/pause/stop 一律返回 operateAudio:fail:access denied（异步回调，
+    // try/catch 抓不到，只能靠不调用规避）。所以后台期间只记录意图，不碰实例。
+    this.suspended = false
 
     // 初始化
     this.init()
@@ -117,7 +125,18 @@ export default class AudioManager {
     audio.volume = this.musicVolume
 
     audio.onError((err) => {
-      console.warn(`[Audio] 背景音乐加载失败: ${src}`, err && err.errMsg)
+      const msg = (err && err.errMsg) || ''
+
+      // 关键：切后台时音频实例的一切操作都会被平台拒绝，onError 也会收到
+      // operateAudio:fail:access denied。这跟资源本身没关系，如果按"加载失败"
+      // 处理去换源，候选源会被后台状态挨个耗尽，最后 bgm 变成 null ——
+      // 回前台后 playBGM() 直接 return，BGM 就再也响不了了。
+      if (msg.indexOf('access denied') >= 0) {
+        console.log('[Audio] 后台状态下音频被拒绝，忽略:', msg)
+        return
+      }
+
+      console.warn(`[Audio] 背景音乐加载失败: ${src}`, msg)
 
       try {
         audio.destroy()
@@ -150,7 +169,7 @@ export default class AudioManager {
   playBGM() {
     this.bgmWanted = true
 
-    if (!this.musicEnabled || !this.bgm) return
+    if (this.suspended || !this.musicEnabled || !this.bgm) return
 
     try {
       this.bgm.play()
@@ -165,7 +184,7 @@ export default class AudioManager {
   pauseBGM() {
     this.bgmWanted = false
 
-    if (!this.bgm) return
+    if (this.suspended || !this.bgm) return
 
     try {
       this.bgm.pause()
@@ -180,13 +199,32 @@ export default class AudioManager {
   stopBGM() {
     this.bgmWanted = false
 
-    if (!this.bgm) return
+    if (this.suspended || !this.bgm) return
 
     try {
       this.bgm.stop()
     } catch (e) {
       console.warn('背景音乐停止失败:', e)
     }
+  }
+
+  /**
+   * 切到后台：只记录意图，不动音频实例
+   *
+   * 平台进入后台后已经统一接管了音频，此处再调 pause() 只会换来一条
+   * `operateAudio:fail:access denied` 红字（真机调试台可见），功能上毫无收益。
+   */
+  suspend() {
+    this.suspended = true
+    this.bgmWanted = false
+  }
+
+  /**
+   * 回到前台：解除挂起并恢复播放
+   */
+  resume() {
+    this.suspended = false
+    this.playBGM()
   }
 
   /**

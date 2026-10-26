@@ -266,9 +266,11 @@ export default class Main {
     this.hiddenAt = Date.now()
     console.log('[Lifecycle] 切到后台')
 
-    // 后台不播 BGM，避免回到前台后出现叠音
+    // 后台不播 BGM，避免回到前台后出现叠音。
+    // 只标记挂起、不调 pause()：平台此刻已接管音频，pause() 必然返回
+    // operateAudio:fail:access denied，真机调试台会刷一条红字。
     if (this.audioManager) {
-      this.audioManager.pauseBGM()
+      this.audioManager.suspend()
     }
 
     // 对局中自动暂停：否则玩家回来时企鹅的补间动画已经按真实时间跑完
@@ -295,7 +297,7 @@ export default class Main {
     }
 
     if (this.audioManager) {
-      this.audioManager.playBGM()
+      this.audioManager.resume()
     }
 
     // 广告实例可能在后台被回收，回前台重新探测

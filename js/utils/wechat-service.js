@@ -14,6 +14,18 @@ export default class WechatService {
     this.shareReady = false
     // 右上角菜单的「转发」是否真的挂上了（showShareMenu 可能被平台拒绝）
     this.shareMenuAvailable = false
+
+    // 主动分享是否已被平台封禁。
+    //
+    // 真机实测（2026-10-26）：
+    //   wx.showShareMenu → { errMsg: 'showShareMenu:ok' }   ← 菜单可用
+    //   wx.shareAppMessage → 「小程序违规，不能使用分享功能」 ← 直连被拒
+    // 说明右上角「···」→「转发」那条路是通的，只有主域直连这一路被封。
+    //
+    // 那条违规提示是微信自己弹的系统 toast，开发者拦不住，只能在失败后记住状态，
+    // 同一会话内直接走引导，别让玩家每点一次分享就吃一遍负面提示。
+    // 故意只存内存：重启游戏会重新尝试一次，账号恢复后自动回到直连。
+    this.shareBlocked = false
   }
 
   /**
@@ -90,6 +102,12 @@ export default class WechatService {
   share() {
     if (typeof wx === 'undefined') return
 
+    // 已确认被平台限制：直接引导走右上角菜单，不再去撞那条系统提示
+    if (this.shareBlocked) {
+      this.showShareGuide()
+      return
+    }
+
     if (typeof wx.shareAppMessage !== 'function') {
       this.showShareGuide()
       return
@@ -98,7 +116,13 @@ export default class WechatService {
     wx.shareAppMessage({
       ...this.getShareConfig(),
       fail: (err) => {
-        console.warn('[Share] 主动分享失败:', err && err.errMsg)
+        const msg = (err && err.errMsg) || ''
+        console.warn('[Share] 主动分享失败:', msg)
+
+        // 「小程序违规，不能使用分享功能」属于账号侧封禁，重试不会有结果
+        if (msg.indexOf('违规') >= 0 || msg.indexOf('不能使用') >= 0) {
+          this.shareBlocked = true
+        }
         this.showShareGuide()
       }
     })
@@ -107,17 +131,26 @@ export default class WechatService {
   /**
    * 分享兜底引导
    *
-   * 右上角菜单能用 → 教玩家点「···」转发；
+   * 右上角菜单能用 → 教玩家点「···」转发（实测 showShareMenu 返回 ok，
+   * 即使 shareAppMessage 被拒，这条路仍然可用）；
    * 连菜单都被拒 → 说明是账号侧限制（未发布 / 未认证 / 违规），
    * 直接把原因说清楚，别让玩家以为按钮坏了。
    */
   showShareGuide() {
     const menuOk = this.shareMenuAvailable
+    let content
+
+    if (menuOk && this.shareBlocked) {
+      content = '微信暂时限制了游戏内的直接分享，但右上角「···」→「转发」仍然可以分享给好友～'
+    } else if (menuOk) {
+      content = '点击右上角「···」按钮，选择「转发」即可把游戏分享给好友～'
+    } else {
+      content = '当前小游戏的分享能力暂不可用。\n通常是以下原因：小游戏尚未发布上线、主体未完成微信认证，或账号存在违规记录。请在微信公众平台后台确认后重试。'
+    }
+
     wx.showModal({
       title: '分享给好友',
-      content: menuOk
-        ? '点击右上角「···」按钮，选择「转发」即可把游戏分享给好友～'
-        : '当前小游戏的分享能力暂不可用。\n通常是以下原因：小游戏尚未发布上线、主体未完成微信认证，或账号存在违规记录。请在微信公众平台后台确认后重试。',
+      content,
       showCancel: false,
       confirmText: '知道了'
     })

@@ -579,10 +579,13 @@ if (fs.existsSync(bgmFile)) {
   check(`bgm.wav 体积合理（${Math.round(size / 1024)}KB）`,
     size > 100 * 1024 && size < 1024 * 1024, `${size}`)
 }
-check('BGM 候选源优先 mp3、回落 wav',
-  game.audioManager.bgmSources[0] === 'audio/bgm.mp3' &&
-  game.audioManager.bgmSources[1] === 'audio/bgm.wav',
-  game.audioManager.bgmSources.join(' > '))
+// BGM 候选源必须真实存在。
+// 曾经把从没提交过的 audio/bgm.mp3 排在首位，结果每次冷启动都固定刷一条
+// 「背景音乐加载失败」红字，真机上看着像 bug。
+const missingBgm = game.audioManager.bgmSources.filter(
+  src => !fs.existsSync(path.join(ROOT, src))
+)
+check('BGM 候选源全部存在于仓库', missingBgm.length === 0, missingBgm.join(', '))
 
 console.log('\n[16] B4 隐私授权')
 check('隐私弹窗已创建', !!game.privacyScene)
@@ -724,10 +727,18 @@ check('恢复后 15s 处的用时仍为 5s', game.getElapsedSeconds() === 5, `${
 // 切后台 30s
 game.handleHide()
 check('切后台自动暂停对局', game.gameState === 'paused', game.gameState)
+// 切后台时平台已接管音频，此时再调 pause() 只会拿到
+// operateAudio:fail:access denied（真机调试台一条红字）。只允许改状态。
+check('切后台进入音频挂起状态（不操作 InnerAudioContext）',
+  game.audioManager.suspended === true, `${game.audioManager.suspended}`)
+check('切后台置 bgmWanted=false 供回前台判断', game.audioManager.bgmWanted === false)
 clock = T0 + 45000
 check('后台 30s 期间用时仍为 5s（不跳变）',
   game.getElapsedSeconds() === 5, `${game.getElapsedSeconds()}`)
 game.handleShow()
+check('回到前台解除音频挂起并恢复播放意图',
+  game.audioManager.suspended === false && game.audioManager.bgmWanted === true,
+  `suspended=${game.audioManager.suspended} wanted=${game.audioManager.bgmWanted}`)
 check('回到前台后用时仍为 5s', game.getElapsedSeconds() === 5, `${game.getElapsedSeconds()}`)
 check('回到前台不自动续玩（等玩家点继续）', game.gameState === 'paused', game.gameState)
 
@@ -899,6 +910,56 @@ check('音效开启后按钮文案变为「音效 开」',
   game.menuScene.soundButton && game.menuScene.soundButton.text)
 check('主菜单挂载了分享入口（原「个人中心」位）',
   typeof game.menuScene.onShare === 'function')
+
+// 分享降级策略。
+// 真机实测：showShareMenu 返回 ok（右上角「···」→「转发」可用），
+// 但 wx.shareAppMessage 返回「小程序违规，不能使用分享功能」。
+// 那条系统提示拦不住，所以只能在失败后记住状态，同会话内直接走引导。
+{
+  const ws = game.wechatService
+  const modalCalls = []
+  const origShowModal = wx.showModal
+  const origShareApi = wx.shareAppMessage
+  wx.showModal = (opts) => { modalCalls.push(opts) }
+
+  ws.shareBlocked = false
+  ws.shareMenuAvailable = true
+
+  wx.shareAppMessage = (opts) => {
+    if (opts && typeof opts.fail === 'function') {
+      opts.fail({ errMsg: 'shareAppMessage:fail 小程序违规，不能使用分享功能' })
+    }
+  }
+  ws.share()
+  check('直连分享被拒后置 shareBlocked 并弹引导',
+    ws.shareBlocked === true && modalCalls.length === 1,
+    `blocked=${ws.shareBlocked} modal=${modalCalls.length}`)
+  check('引导文案指出右上角「转发」仍可用',
+    !!modalCalls[0] && modalCalls[0].content.indexOf('转发') >= 0,
+    modalCalls[0] && modalCalls[0].content)
+
+  // 第二次点分享：不该再去撞那条系统提示
+  let apiCalls = 0
+  wx.shareAppMessage = () => { apiCalls++ }
+  modalCalls.length = 0
+  ws.share()
+  check('封禁后不再重复调用 shareAppMessage（避免反复弹违规提示）',
+    apiCalls === 0 && modalCalls.length === 1,
+    `api=${apiCalls} modal=${modalCalls.length}`)
+
+  // 菜单也不可用时，文案要落到「账号侧限制」
+  ws.shareMenuAvailable = false
+  modalCalls.length = 0
+  ws.share()
+  check('菜单不可用时引导说明账号侧限制',
+    !!modalCalls[0] && modalCalls[0].content.indexOf('认证') >= 0,
+    modalCalls[0] && modalCalls[0].content)
+
+  wx.showModal = origShowModal
+  wx.shareAppMessage = origShareApi
+  ws.shareBlocked = false
+  ws.shareMenuAvailable = false
+}
 
 console.log('\n[19] D 批次：工程化清理')
 

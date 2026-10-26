@@ -14,8 +14,14 @@ const systemInfo = wx.getSystemInfoSync()
 const screenWidth = systemInfo.windowWidth
 const screenHeight = systemInfo.windowHeight
 
-sharedCanvas.width = screenWidth
-sharedCanvas.height = screenHeight
+// 共享画布同样要按设备像素比放大，否则合成到主域后排行榜文字会发虚
+const dpr = Math.min(systemInfo.pixelRatio > 0 ? systemInfo.pixelRatio : 1, 3)
+
+sharedCanvas.width = Math.round(screenWidth * dpr)
+sharedCanvas.height = Math.round(screenHeight * dpr)
+
+// 之后一律用逻辑坐标绘制
+ctx.scale(dpr, dpr)
 
 // 主域通过 postMessage 下发的内容区域（含默认值兜底）
 let layout = {
@@ -130,7 +136,7 @@ function renderRankList() {
  * 清空整块画布（含内容区外的透明区域）
  */
 function clearCanvas() {
-  ctx.clearRect(0, 0, sharedCanvas.width, sharedCanvas.height)
+  ctx.clearRect(0, 0, screenWidth, screenHeight)
 }
 
 /**

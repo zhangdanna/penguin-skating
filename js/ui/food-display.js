@@ -3,6 +3,7 @@
  * 显示在关卡页顶部，一行展示所有食物类型
  */
 import { COLORS, font } from './theme'
+import { viewport } from '../env'
 
 export default class FoodDisplay {
   constructor(foodManager) {
@@ -10,7 +11,7 @@ export default class FoodDisplay {
     this.isVisible = true
     this.x = 8
     this.y = 6
-    this.width = canvas.width - 16
+    this.width = viewport().width - 16
 
     // 动画
     this.animationTimer = 0
@@ -139,8 +140,9 @@ export default class FoodDisplay {
   renderRewardAnimation(ctx) {
     ctx.save()
 
-    const centerX = canvas.width / 2
-    const centerY = 210 - this.animationTimer * 0.5
+    const centerX = viewport().width / 2
+    // 奖励飘字原来固定在第 210 行，面板下移后跟着一起下移
+    const centerY = 210 + (this.y - 6) - this.animationTimer * 0.5
 
     ctx.globalAlpha = this.rewardAlpha
     ctx.fillStyle = '#f1c40f'

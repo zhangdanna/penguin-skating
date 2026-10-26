@@ -26,9 +26,10 @@
  *   }
  */
 
+import { viewport } from '../env'
+
 export const DESIGN_WIDTH = 375
 export const DESIGN_HEIGHT = 667
-
 /** 设计稿水平中心线 */
 export const CENTER_X = DESIGN_WIDTH / 2
 
@@ -45,8 +46,7 @@ export const DESIGN = {
  * @returns {{scale:number, offsetX:number, offsetY:number, apply:Function, unproject:Function, project:Function}}
  */
 export function stage() {
-  const width = canvas.width
-  const height = canvas.height
+  const { width, height } = viewport()
   const scale = Math.min(width / DESIGN_WIDTH, height / DESIGN_HEIGHT)
   const offsetX = (width - DESIGN_WIDTH * scale) / 2
   const offsetY = (height - DESIGN_HEIGHT * scale) / 2

@@ -8,6 +8,7 @@ import {
   drawStar,
   font
 } from './theme'
+import { viewport } from '../env'
 
 export default class AchievementNotification {
   constructor() {
@@ -64,7 +65,7 @@ export default class AchievementNotification {
    */
   renderNotification(ctx, notification, index) {
     const achievement = notification.achievement
-    const x = canvas.width / 2
+    const x = viewport().width / 2
     const y = notification.y + index * 80
 
     ctx.save()

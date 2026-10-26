@@ -6,9 +6,13 @@
  * 把它们画进一张离屏 canvas，之后每帧只 drawImage 一次。
  *
  * 布局变化（窗口 resize、换关卡）时用 key 触发重建。
+ *
+ * 离屏画布按**设备像素**分配（逻辑尺寸 × dpr），绘制前先把上下文缩放 dpr，
+ * 否则整张背景会被放大 dpr 倍拉伸 —— 这也是画面发虚的来源之一。
  */
-export default class LayerCache {
-  /**
+import { DPR } from '../env'
+
+export default class LayerCache {  /**
    * @param {string} name - 调试用名称，会出现在日志里
    */
   constructor(name = 'layer') {
@@ -54,16 +58,23 @@ export default class LayerCache {
   render(ctx, key, width, height, draw) {
     if (!this.isReady()) return false
 
+    const dpr = DPR > 0 ? DPR : 1
+    const pixelWidth = Math.max(1, Math.round(width * dpr))
+    const pixelHeight = Math.max(1, Math.round(height * dpr))
+
     const needsRebuild =
       this.key !== key ||
-      this.canvas.width !== width ||
-      this.canvas.height !== height
+      this.canvas.width !== pixelWidth ||
+      this.canvas.height !== pixelHeight
 
     if (needsRebuild) {
       // 改尺寸会重置上下文状态，必须整层重画
-      this.canvas.width = width
-      this.canvas.height = height
+      this.canvas.width = pixelWidth
+      this.canvas.height = pixelHeight
       this.key = key
+
+      // 按设备像素分配后，绘制仍用逻辑坐标
+      this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       this.ctx.clearRect(0, 0, width, height)
       draw(this.ctx)
     }

@@ -57,7 +57,9 @@ const wxBase = {
   getSystemInfoSync: () => ({
     windowWidth: canvas.width,
     windowHeight: canvas.height,
-    pixelRatio: 2,
+    // 回归只验证布局数学，固定 1 让 canvas.width 直接等于逻辑尺寸。
+    // DPR 放大逻辑由 tools/verify-env.mjs 单独模拟验证。
+    pixelRatio: 1,
     platform: 'devtools'
   }),
   createInnerAudioContext: audioStub,
@@ -245,8 +247,26 @@ for (const [w, h, label] of sizes) {
   const bottom = game.boardOffsetY + game.boardHeight
   check(
     `${label} ${w}x${h}: 格子 ${game.cellSize}px，原点 (${game.boardOffsetX},${game.boardOffsetY})，底边 ${bottom}`,
-    fitsX && game.cellSize >= 28 && game.cellSize <= 56 && bottom <= h - 40,
+    fitsX && game.cellSize >= 28 && game.cellSize <= 72 && bottom <= h - 40,
     `[fitsX=${fitsX} bottom=${bottom} h=${h}]`
+  )
+
+  // 新布局：HUD / 棋盘 / 按钮三者紧贴，多余空间只留在屏幕最上最下
+  const gapTop = game.boardOffsetY - (game.hudPanelY + 82)
+  const gapBottom = game.actionBarY - bottom
+  check(
+    `${label}: HUD↔棋盘 ${gapTop}px，棋盘↔按钮 ${gapBottom}px（应 ≤ 16）`,
+    gapTop === 12 && gapBottom === 16,
+    `[gapTop=${gapTop} gapBottom=${gapBottom}]`
+  )
+
+  // 整块内容垂直居中：上下留白差值不超过 1px 的取整误差
+  const topMargin = game.contentTopY
+  const bottomMargin = h - (game.actionBarY + 40 + 10) // 按钮高 40 + 底部内边距 10
+  check(
+    `${label}: 内容垂直居中（上 ${topMargin} / 下 ${bottomMargin}）`,
+    Math.abs(topMargin - bottomMargin) <= 1,
+    `[top=${topMargin} bottom=${bottomMargin}]`
   )
 }
 
@@ -1088,6 +1108,50 @@ check('全局 canvas 仍是原画布（env.js 没有另建离屏画布）',
 
 check('游戏实例拿到了可用的 2D 上下文',
   !!game && !!game.ctx)
+
+// ---------- 高清渲染（E2：设备像素比） ----------
+console.log('\n[21] 高清渲染（设备像素比）')
+
+check('env.js 读取 pixelRatio 并限制上限',
+  /pixelRatio/.test(envSrc) && /MAX_DPR/.test(envSrc))
+
+check('env.js 按 dpr 放大上屏画布后备缓冲',
+  /Math\.round\(metrics\.width \* DPR\)/.test(envSrc) &&
+  /Math\.round\(metrics\.height \* DPR\)/.test(envSrc))
+
+check('env.js 导出 viewport()（逻辑尺寸，与旧 canvas.width 等价）',
+  /export function viewport/.test(envSrc) && /screenCanvas\.width \/ dpr/.test(envSrc))
+
+check('game.js 每帧重置基准变换为 dpr（逻辑坐标 → 设备像素）',
+  /setTransform\(DPR,\s*0,\s*0,\s*DPR,\s*0,\s*0\)/.test(gameSource))
+
+const layerSrc = allSources.find(({ file }) => file.endsWith('layer-cache.js'))
+check('离屏层按设备像素分配（否则背景被拉伸 dpr 倍）',
+  !!layerSrc &&
+  /Math\.round\(width \* dpr\)/.test(layerSrc.src) &&
+  /setTransform\(dpr,\s*0,\s*0,\s*dpr,\s*0,\s*0\)/.test(layerSrc.src))
+
+// UI / 运行时模块一律用 viewport() 的逻辑尺寸做布局。
+// game.js 例外：getCanvasRatio / handleResize 本来就要按物理像素算。
+const bareCanvasReaders = allSources
+  .filter(({ file }) => /[\\/]js[\\/](ui|runtime)[\\/]/.test(file))
+  .filter(({ src }) => /(^|[^.\w])canvas\.(width|height)/m.test(src))
+  .map(({ file }) => path.relative(ROOT, file).replace(/\\/g, '/'))
+
+check('js/ui 与 js/runtime 没有裸 canvas.width / canvas.height',
+  bareCanvasReaders.length === 0, bareCanvasReaders.join(','))
+
+// game.js 里只允许 getCanvasRatio（1 处读）与 handleResize（1 处比较 + 2 处赋值）
+const gameNoComments = gameSource
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/^\s*\/\/.*$/gm, '')
+const gameBareCanvas = (gameNoComments.match(/(^|[^.\w])canvas\.(width|height)/g) || []).length
+check('game.js 的裸 canvas 读写仅限 resize / ratio',
+  gameBareCanvas <= 5, `实际 ${gameBareCanvas} 处`)
+
+const openDataSrc = fs.readFileSync(path.join(ROOT, 'open-data/index.js'), 'utf8')
+check('开放数据域共享画布同样按 dpr 放大',
+  /pixelRatio/.test(openDataSrc) && /ctx\.scale\(dpr,\s*dpr\)/.test(openDataSrc))
 
 Date.now = realNow
 console.log(`\n===== 结果：${passed} 通过 / ${failed} 失败 =====`)

@@ -9,9 +9,14 @@ console.log('🔧 wechat-adapter.js 开始加载...');
 const gameCanvas = document.getElementById('gameCanvas');
 const gameCtx = gameCanvas.getContext('2d');
 
-// 设置Canvas为全屏（相对于游戏逻辑）
-gameCanvas.width = 375;
-gameCanvas.height = 667;
+// 预览画布尺寸：默认 375×667（设计稿）。
+// 想模拟别的机型直接加查询参数，例如 index.html?w=390&h=844
+const previewParams = new URLSearchParams(window.location.search);
+const previewWidth = parseInt(previewParams.get('w'), 10) || 375;
+const previewHeight = parseInt(previewParams.get('h'), 10) || 667;
+
+gameCanvas.width = previewWidth;
+gameCanvas.height = previewHeight;
 
 // 全局变量 - 游戏代码会访问这些全局变量
 window.canvas = gameCanvas;

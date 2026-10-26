@@ -4,6 +4,7 @@
  */
 
 import LayerCache from '../utils/layer-cache'
+import { viewport } from '../env'
 
 /**
  * 菜单 / 排行榜 / 对局三个界面用的是同一张海洋背景，
@@ -205,8 +206,9 @@ export function drawGlassPanel(ctx, x, y, width, height, radius = 20, options = 
  * 深蓝半透明遮罩（用于弹层）
  */
 export function drawOverlay(ctx, alpha = 0.55) {
+  const vp = viewport()
   ctx.fillStyle = `rgba(9, 45, 72, ${alpha})`
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  ctx.fillRect(0, 0, vp.width, vp.height)
 }
 
 /**
@@ -243,8 +245,7 @@ export function drawCandyButton(ctx, x, y, width, height, options = {}) {
  * 避免每个场景各占一张全屏离屏画布。
  */
 export function drawOceanCached(ctx) {
-  const width = canvas.width
-  const height = canvas.height
+  const { width, height } = viewport()
   const cached = oceanLayer.render(
     ctx, `ocean@${width}x${height}`, width, height,
     (layerCtx) => drawOceanBase(layerCtx)
@@ -257,8 +258,7 @@ export function drawOceanCached(ctx) {
  * 与时间无关，可以一次性画进离屏 canvas
  */
 export function drawOceanBase(ctx) {
-  const width = canvas.width
-  const height = canvas.height
+  const { width, height } = viewport()
 
   // 水体渐变
   const water = ctx.createLinearGradient(0, 0, 0, height)
@@ -282,8 +282,7 @@ export function drawOceanBase(ctx) {
  * 动态层：光束 + 气泡 + 鱼群 + 海草摇摆
  */
 export function drawOceanMotion(ctx, time) {
-  const width = canvas.width
-  const height = canvas.height
+  const { width, height } = viewport()
 
   // 光束
   ctx.save()

@@ -6,10 +6,19 @@ import {
   fillRoundRect,
   font
 } from './theme'
+import { viewport } from '../env'
+
+/** 顶部信息面板高度（食物行 + 关卡/步数/计时行） */
+export const HUD_PANEL_HEIGHT = 82
+/** 底部操作按钮高度 */
+export const HUD_BUTTON_HEIGHT = 40
 
 /**
  * 游戏内HUD
  * 顶部：食物与关卡信息；底部：暂停/重玩/返回操作按钮
+ *
+ * 面板与按钮的纵向位置不再钉死在屏幕上下边缘，而是由 game.js 根据棋盘位置
+ * 算好后传进来（bounds），这样顶部/底部就能贴着棋盘，不再留大片空白。
  */
 export default class GameHUD {
   constructor() {
@@ -24,27 +33,40 @@ export default class GameHUD {
     this.onRestartClick = null
     this.onBackClick = null
 
+    // 纵向锚点，未传入时退回默认（贴屏幕边缘）
+    this.panelY = 6
+    this.buttonY = null
+
     this.computeLayout()
   }
 
   /**
    * 按当前画布尺寸计算面板与操作按钮位置
-   * 窗口尺寸变化时由 relayout() 重新调用
+   * @param {{panelY?:number, buttonY?:number}} [bounds] - 由棋盘布局推出的纵向锚点
    */
-  computeLayout() {
+  computeLayout(bounds) {
+    if (bounds) {
+      if (typeof bounds.panelY === 'number') this.panelY = bounds.panelY
+      if (typeof bounds.buttonY === 'number') this.buttonY = bounds.buttonY
+    }
+
+    const vp = viewport()
+
     // 顶部信息面板（食物行由 FoodDisplay 绘制在同一面板内）
     this.panel = {
       x: 8,
-      y: 6,
-      width: canvas.width - 16,
-      height: 82
+      y: this.panelY,
+      width: vp.width - 16,
+      height: HUD_PANEL_HEIGHT
     }
 
     // 底部操作按钮（图标 + 文案，一行展示）
     const marginX = 12
     const gap = 8
-    const buttonWidth = (canvas.width - marginX * 2 - gap * 2) / 3
-    const buttonY = canvas.height - 52
+    const buttonWidth = (vp.width - marginX * 2 - gap * 2) / 3
+    const buttonY = typeof this.buttonY === 'number'
+      ? this.buttonY
+      : vp.height - 52
 
     const buttonConfigs = [
       {
@@ -78,16 +100,17 @@ export default class GameHUD {
       x: marginX + index * (buttonWidth + gap),
       y: buttonY,
       width: buttonWidth,
-      height: 40,
+      height: HUD_BUTTON_HEIGHT,
       hovered: false
     }))
   }
 
   /**
    * 窗口尺寸变化后重建布局
+   * @param {{panelY?:number, buttonY?:number}} [bounds]
    */
-  relayout() {
-    this.computeLayout()
+  relayout(bounds) {
+    this.computeLayout(bounds)
   }
 
   /**
@@ -156,7 +179,7 @@ export default class GameHUD {
     ctx.font = font(14)
     ctx.textAlign = 'center'
     ctx.fillStyle = this.moves <= this.par ? COLORS.mintDeep : COLORS.coral
-    ctx.fillText(`步数 ${this.moves} · 标准 ${this.par}`, canvas.width / 2, infoY)
+    ctx.fillText(`步数 ${this.moves} · 标准 ${this.par}`, viewport().width / 2, infoY)
 
     // 计时
     ctx.font = font(16)

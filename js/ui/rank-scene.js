@@ -7,6 +7,7 @@ import {
   drawStickerText,
   font
 } from './theme'
+import { viewport } from '../env'
 
 /**
  * 排行榜场景
@@ -74,14 +75,16 @@ export default class RankScene {
   requestRank() {
     if (!this.openDataContext) return
 
+    const vp = viewport()
+
     this.openDataContext.postMessage({
       type: 'SHOW_RANK',
       // 把主域可用的内容区域一并告知，开放数据域只在这个矩形内绘制
       layout: {
         x: 16,
         y: 96,
-        width: canvas.width - 32,
-        height: canvas.height - 96 - 88
+        width: vp.width - 32,
+        height: vp.height - 96 - 88
       }
     })
   }
@@ -139,7 +142,8 @@ export default class RankScene {
     }
 
     try {
-      ctx.drawImage(this.sharedCanvas, 0, 0, canvas.width, canvas.height)
+      const vp = viewport()
+      ctx.drawImage(this.sharedCanvas, 0, 0, vp.width, vp.height)
     } catch (e) {
       console.warn('绘制开放数据域画布失败:', e)
       this.renderFallback(ctx)
@@ -147,7 +151,9 @@ export default class RankScene {
   }
 
   renderFallback(ctx) {
-    drawGlassPanel(ctx, 40, 210, canvas.width - 80, 150, 24, {
+    const vp = viewport()
+
+    drawGlassPanel(ctx, 40, 210, vp.width - 80, 150, 24, {
       fill: 'rgba(255, 249, 238, 0.95)'
     })
 
@@ -155,18 +161,20 @@ export default class RankScene {
     ctx.font = font(16)
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText('排行榜暂不可用', canvas.width / 2, 268)
+    ctx.fillText('排行榜暂不可用', vp.width / 2, 268)
 
     ctx.fillStyle = COLORS.navySoft
     ctx.font = font(12, 'normal')
-    ctx.fillText('请在微信小游戏中打开', canvas.width / 2, 300)
+    ctx.fillText('请在微信小游戏中打开', vp.width / 2, 300)
   }
 
   renderTitle(ctx) {
-    drawGlassPanel(ctx, canvas.width / 2 - 90, 22, 180, 46, 23, {
+    const vp = viewport()
+
+    drawGlassPanel(ctx, vp.width / 2 - 90, 22, 180, 46, 23, {
       fill: 'rgba(255, 255, 255, 0.86)'
     })
-    drawStickerText(ctx, '好友排行榜', canvas.width / 2, 46, {
+    drawStickerText(ctx, '好友排行榜', vp.width / 2, 46, {
       size: 21,
       color: COLORS.navy,
       strokeWidth: 0

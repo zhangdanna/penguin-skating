@@ -12,6 +12,7 @@ import {
   font,
   roundRectPath
 } from './theme'
+import { viewport } from '../env'
 
 export default class AchievementScene {
   constructor(achievementManager, onClose) {
@@ -36,7 +37,7 @@ export default class AchievementScene {
    */
   relayout() {
     if (this.closeButton) {
-      this.closeButton.x = canvas.width - 60
+      this.closeButton.x = viewport().width - 60
     }
   }
 
@@ -47,7 +48,7 @@ export default class AchievementScene {
 
     // 关闭按钮
     this.closeButton = new Button({
-      x: canvas.width - 60,
+      x: viewport().width - 60,
       y: 20,
       width: 40,
       height: 40,
@@ -144,8 +145,9 @@ export default class AchievementScene {
     if (!this.isVisible) return
 
     // 遮罩 + 奶油面板
+    const vp = viewport()
     drawOverlay(ctx, 0.55)
-    drawGlassPanel(ctx, 16, 10, canvas.width - 32, canvas.height - 20, 28, {
+    drawGlassPanel(ctx, 16, 10, vp.width - 32, vp.height - 20, 28, {
       fill: 'rgba(255, 252, 246, 0.96)'
     })
 
@@ -166,7 +168,7 @@ export default class AchievementScene {
    * 渲染标题
    */
   renderTitle(ctx) {
-    drawStickerText(ctx, '成就系统', canvas.width / 2, 46, {
+    drawStickerText(ctx, '成就系统', viewport().width / 2, 46, {
       size: 26,
       color: COLORS.lavenderDeep,
       stroke: COLORS.white,
@@ -183,7 +185,7 @@ export default class AchievementScene {
     // 进度条背景
     const barX = 30
     const barY = 66
-    const barWidth = canvas.width - 60
+    const barWidth = viewport().width - 60
     const barHeight = 18
 
     fillRoundRect(ctx, barX, barY, barWidth, barHeight, 9, 'rgba(31, 58, 95, 0.1)')
@@ -201,7 +203,7 @@ export default class AchievementScene {
     ctx.textBaseline = 'middle'
     ctx.fillText(
       `${progress.unlocked} / ${progress.total} (${Math.floor(progress.percentage)}%)`,
-      canvas.width / 2,
+      viewport().width / 2,
       barY + 34
     )
   }
@@ -213,24 +215,25 @@ export default class AchievementScene {
     const allAchievements = this.achievementManager.getAllAchievements()
     const startY = 112
     const itemHeight = 90
+    const vp = viewport()
 
     // 计算最大滚动
-    this.maxScroll = Math.max(0, allAchievements.length * itemHeight - (canvas.height - startY - 50))
+    this.maxScroll = Math.max(0, allAchievements.length * itemHeight - (vp.height - startY - 50))
 
     ctx.save()
 
     // 裁剪区域
     ctx.beginPath()
-    ctx.rect(0, startY, canvas.width, canvas.height - startY - 24)
+    ctx.rect(0, startY, vp.width, vp.height - startY - 24)
     ctx.clip()
 
     allAchievements.forEach((achievement, index) => {
       const y = startY + index * itemHeight - this.scrollY
 
       // 只渲染可见区域
-      if (y + itemHeight < startY || y > canvas.height - 24) return
+      if (y + itemHeight < startY || y > vp.height - 24) return
 
-      this.renderAchievementItem(ctx, achievement, 26, y, canvas.width - 52, itemHeight - 10)
+      this.renderAchievementItem(ctx, achievement, 26, y, vp.width - 52, itemHeight - 10)
     })
 
     ctx.restore()

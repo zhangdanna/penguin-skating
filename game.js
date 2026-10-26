@@ -1,7 +1,7 @@
 // 环境引导必须排在所有 import 之前：
 // 微信小游戏没有全局 canvas，这里用 wx.createCanvas() 创建上屏画布并挂到全局，
 // 否则 game.js 一执行就会抛 ReferenceError: Can't find variable: canvas（详见 js/env.js）
-import screenCanvas from './js/env'
+import screenCanvas, { viewport, DPR } from './js/env'
 import Background from './js/runtime/background'
 import Penguin from './js/runtime/penguin'
 import Stone from './js/runtime/stone'
@@ -29,7 +29,7 @@ import AchievementScene from './js/ui/achievement-scene'
 import AchievementNotification from './js/ui/achievement-notification'
 import ReviveScene from './js/ui/revive-scene'
 import PrivacyScene from './js/ui/privacy-scene'
-import GameHUD from './js/ui/game-hud'
+import GameHUD, { HUD_PANEL_HEIGHT, HUD_BUTTON_HEIGHT } from './js/ui/game-hud'
 import FoodDisplay from './js/ui/food-display'
 import GameScene from './js/ui/game-scene'
 
@@ -38,12 +38,16 @@ const LEVEL_CELL = 50
 const GRID_COLS = 7
 const GRID_ROWS = 9
 
-// 棋盘自适应参数：顶部 HUD 面板 + 底部操作条之间为可用区域
+// 棋盘自适应参数
+// 顶部 HUD 面板、棋盘、底部操作条作为一个整体垂直居中，
+// 三者之间只留很小的呼吸位，多出来的空间全部让给屏幕上下边缘。
 const LAYOUT_MARGIN_X = 10
-const LAYOUT_TOP = 96
-const LAYOUT_BOTTOM = 64
+const HUD_TOP_PAD = 6            // HUD 面板距内容区顶部的内边距
+const GAP_HUD_BOARD = 12         // HUD 面板 ↔ 棋盘
+const GAP_BOARD_BUTTONS = 16     // 棋盘 ↔ 底部按钮
+const BOTTOM_PAD = 10            // 底部按钮距内容区底部
 const MIN_CELL_SIZE = 28
-const MAX_CELL_SIZE = 56
+const MAX_CELL_SIZE = 72         // 大屏（平板 / 折叠屏）允许更大的格子
 
 // 滑动方向对应的一格位移
 const DIRECTION_STEP = {
@@ -148,11 +152,22 @@ export default class Main {
   }
 
   /**
-   * 计算棋盘布局：在顶部 HUD 与底部操作条之间的安全区里取最大可用格子
+   * 计算棋盘布局
+   *
+   * 顶部 HUD、棋盘、底部按钮当成一个整体垂直居中：
+   *   - 三者间距固定（12 / 16），不会因为屏幕变长而被拉开
+   *   - 多余的高度全部留在屏幕最上/最下，视觉上就是"整体往中间靠拢"
    */
   computeLayout() {
-    const availWidth = canvas.width - LAYOUT_MARGIN_X * 2
-    const availHeight = canvas.height - LAYOUT_TOP - LAYOUT_BOTTOM
+    const vp = viewport()
+
+    // HUD + 按钮 + 各种间距占掉的固定高度
+    const chromeHeight =
+      HUD_TOP_PAD + HUD_PANEL_HEIGHT + GAP_HUD_BOARD +
+      GAP_BOARD_BUTTONS + HUD_BUTTON_HEIGHT + BOTTOM_PAD
+
+    const availWidth = vp.width - LAYOUT_MARGIN_X * 2
+    const availHeight = vp.height - chromeHeight
 
     const byWidth = Math.floor(availWidth / GRID_COLS)
     const byHeight = Math.floor(availHeight / GRID_ROWS)
@@ -161,10 +176,45 @@ export default class Main {
     this.cellSize = cell
     this.boardWidth = cell * GRID_COLS
     this.boardHeight = cell * GRID_ROWS
-    this.boardOffsetX = Math.round((canvas.width - this.boardWidth) / 2)
-    this.boardOffsetY = Math.round(LAYOUT_TOP + (availHeight - this.boardHeight) / 2)
 
-    console.log(`[Layout] 画布 ${canvas.width}x${canvas.height} → 格子 ${cell}px，棋盘原点 (${this.boardOffsetX}, ${this.boardOffsetY})`)
+    // 整块内容的起始 y，居中后上下留白相等
+    const contentHeight = chromeHeight + this.boardHeight
+    const contentTopY = Math.max(0, Math.round((vp.height - contentHeight) / 2))
+
+    this.contentTopY = contentTopY
+    this.hudPanelY = contentTopY + HUD_TOP_PAD
+    this.boardOffsetX = Math.round((vp.width - this.boardWidth) / 2)
+    this.boardOffsetY = Math.round(this.hudPanelY + HUD_PANEL_HEIGHT + GAP_HUD_BOARD)
+    this.actionBarY = Math.round(this.boardOffsetY + this.boardHeight + GAP_BOARD_BUTTONS)
+
+    console.log(
+      `[Layout] 视口 ${vp.width}x${vp.height}@${vp.dpr}x → 格子 ${cell}px，` +
+      `HUD y=${this.hudPanelY}，棋盘原点 (${this.boardOffsetX}, ${this.boardOffsetY})，按钮 y=${this.actionBarY}`
+    )
+
+    this.syncHudLayout()
+  }
+
+  /**
+   * 把棋盘布局算出的纵向锚点同步给 HUD 与食物条
+   * HUD / 食物条可能在 computeLayout 之后才创建，所以两处都要调用
+   */
+  syncHudLayout() {
+    if (typeof this.hudPanelY !== 'number' || typeof this.actionBarY !== 'number') return
+
+    const vp = viewport()
+
+    if (this.gameHUD) {
+      this.gameHUD.computeLayout({
+        panelY: this.hudPanelY,
+        buttonY: this.actionBarY
+      })
+    }
+
+    if (this.foodDisplay) {
+      this.foodDisplay.setPosition(8, this.hudPanelY)
+      this.foodDisplay.setSize(vp.width - 16)
+    }
   }
 
   /**
@@ -198,7 +248,8 @@ export default class Main {
       const ratio = canvas.width / info.windowWidth
       if (ratio > 0 && isFinite(ratio)) return ratio
     }
-    return 1
+    // 读不到窗口信息时退回设备像素比，至少不会在 resize 后变模糊
+    return DPR > 0 ? DPR : 1
   }
 
   /**
@@ -358,14 +409,8 @@ export default class Main {
       }
     })
 
-    if (this.gameHUD && typeof this.gameHUD.relayout === 'function') {
-      this.gameHUD.relayout()
-    }
-
-    if (this.foodDisplay) {
-      this.foodDisplay.setPosition(8, 6)
-      this.foodDisplay.setSize(canvas.width - 16)
-    }
+    // HUD 与食物条跟着棋盘走，位置由 computeLayout 算好
+    this.syncHudLayout()
   }
 
   /**
@@ -541,9 +586,8 @@ export default class Main {
   initFood() {
     this.foodManager = new FoodManager()
     this.foodDisplay = new FoodDisplay(this.foodManager)
-    // 顶部信息面板内，与关卡信息上下排列
-    this.foodDisplay.setPosition(8, 6)
-    this.foodDisplay.setSize(canvas.width - 16)
+    // 顶部信息面板内，与关卡信息上下排列（位置由 syncHudLayout 统一校准）
+    this.syncHudLayout()
   }
 
   /**
@@ -618,6 +662,9 @@ export default class Main {
     this.gameHUD.onPauseClick = () => this.pauseGame()
     this.gameHUD.onRestartClick = () => this.restartLevel()
     this.gameHUD.onBackClick = () => this.backToMenu()
+
+    // 用棋盘布局算出的锚点摆好 HUD（此时 HUD 才刚创建）
+    this.syncHudLayout()
     
     // 注册游戏主场景
     this.gameScene = new GameScene(this)
@@ -1522,8 +1569,15 @@ export default class Main {
    * 渲染游戏
    */
   render() {
-    // 清屏
-    this.ctx.clearRect(0, 0, canvas.width, canvas.height)
+    const vp = viewport()
+
+    // 每帧把基准变换重置为「逻辑坐标 → 设备像素」，
+    // 之后所有绘制（包括各场景内部的 save/scale）都用逻辑坐标书写。
+    // 少了这一步，画布会被放大 dpr 倍，只有左上角 1/dpr 的内容可见。
+    this.ctx.setTransform(DPR, 0, 0, DPR, 0, 0)
+
+    // 清屏（此时已是缩放后的坐标系，按逻辑尺寸清就等于清满整块画布）
+    this.ctx.clearRect(0, 0, vp.width, vp.height)
 
     // 根据当前场景渲染
     const currentSceneName = this.sceneManager.getCurrentSceneName()

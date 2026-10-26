@@ -6,6 +6,7 @@ import {
   roundRectPath
 } from '../ui/theme'
 import LayerCache from '../utils/layer-cache'
+import { viewport } from '../env'
 
 /**
  * 背景类
@@ -21,8 +22,9 @@ export default class Background {
    */
   constructor(ctx, grid) {
     this.ctx = ctx
-    this.width = canvas.width
-    this.height = canvas.height
+    const vp = viewport()
+    this.width = vp.width
+    this.height = vp.height
     this.grid = grid
 
     // 棋盘静态层（展台底座 + 浮冰瓷砖 + 外框）
@@ -83,8 +85,7 @@ export default class Background {
   renderBoard(time) {
     const ctx = this.ctx
     const { cols, rows, cellSize, offsetX, offsetY } = this.grid
-    const width = canvas.width
-    const height = canvas.height
+    const { width, height } = viewport()
 
     // 底座 + 瓷砖 + 外框一次性画进离屏层
     const cached = this.boardLayer.render(

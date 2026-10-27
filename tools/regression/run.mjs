@@ -308,10 +308,37 @@ await game.loadLevel(1)
 check('penguin 尺寸 = 格子尺寸', game.penguin.width === game.cellSize, `${game.penguin.width} vs ${game.cellSize}`)
 check('stone 尺寸 = 格子尺寸', game.stones[0].width === game.cellSize, `${game.stones[0].width}`)
 check('target 宽度 = 1 格', game.target.width === game.cellSize, `${game.target.width}`)
-check('障碍物为空', game.obstacles.length === 0, `${game.obstacles.length}`)
+check('第 1 关是教学关：障碍不超过 4 个', game.obstacles.length <= 4, `${game.obstacles.length}`)
 check('gameState = playing', game.gameState === 'playing', game.gameState)
 
-console.log('\n[4] 按最优解 13 步通关（走真实触摸链路）')
+// ---------- 用求解器算真实最优解，按解回放 ----------
+// G1 之后关卡由生成器产出，步数不再固定，任何硬编码的解法都会失效。
+// 这里直接把关卡数据喂给 solveBoard，拿到方向序列后逐条滑动。
+const genMod = await loadModule(path.join(ROOT, 'js/levels/level-generator.js'))
+const solveBoard = genMod.namespace.solveBoard
+
+function levelToBoard(lv) {
+  const c = (v) => Math.round(v / 50)
+  return {
+    penguin: { col: c(lv.penguin.x), row: c(lv.penguin.y) },
+    stones: lv.stones.map(s => ({ col: c(s.x), row: c(s.y) })),
+    target: {
+      col: c(lv.target.x),
+      row: c(lv.target.y),
+      w: Math.round(lv.target.width / 50),
+      h: Math.round(lv.target.height / 50)
+    },
+    obstacles: lv.obstacles.map(o => ({ type: o.type, col: c(o.x), row: c(o.y) }))
+  }
+}
+
+const level1Data = game.levelManager.getLevel(1)
+const solved1 = solveBoard(levelToBoard(level1Data), { withSolution: true })
+check(`第 1 关可解，最优步数 ${solved1.optimal} = 关卡数据 ${level1Data.optimal}`,
+  solved1.solvable && solved1.optimal === level1Data.optimal,
+  `solvable=${solved1.solvable} optimal=${solved1.optimal} 数据=${level1Data.optimal}`)
+
+console.log(`\n[4] 按最优解 ${solved1.optimal} 步通关（走真实触摸链路）`)
 const DIR_DELTA = { right: [40, 0], left: [-40, 0], up: [0, -40], down: [0, 40] }
 function swipe(dir) {
   const [dx, dy] = DIR_DELTA[dir]
@@ -326,10 +353,11 @@ function swipe(dir) {
   game.update()
 }
 
-const plan = ['right', 'right', 'down', 'down', 'right', 'right', 'up', 'right', 'down', 'down', 'down', 'down', 'down']
+const plan = solved1.solution || []
 for (const dir of plan) swipe(dir)
 
-check(`步数 = 13（实际 ${game.moves}）`, game.moves === 13, `${game.moves}`)
+const optimalMoves = plan.length
+check(`步数 = ${optimalMoves}（实际 ${game.moves}）`, game.moves === optimalMoves, `${game.moves}`)
 check(`gameState = win（实际 ${game.gameState}）`, game.gameState === 'win', game.gameState)
 
 console.log('\n[5] 结算统计（A3）')
@@ -338,26 +366,55 @@ check(`totalStars = 3（实际 ${stats.totalStars}）`, stats.totalStars === 3, 
 check(`perfectGames = 1（实际 ${stats.perfectGames}）`, stats.perfectGames === 1, `${stats.perfectGames}`)
 check(`totalWins = 1（实际 ${stats.totalWins}）`, stats.totalWins === 1, `${stats.totalWins}`)
 const summary = game.settlementManager.getSettlementSummary()
-// C4 之后 par = ceil(optimal × 1.2)，不再是 optimal 本身，断言改为跟着关卡数据走
+// G1：par 直接等于最优步数，走出最优解就是三星
 const parOfLevel1 = game.levelManager.getLevel(1).par
-check(`summary.stars = 3 / par = ${parOfLevel1} / moves = 13`,
-  summary && summary.stars === 3 && summary.par === parOfLevel1 && summary.moves === 13,
+check(`summary.stars = 3 / par = ${parOfLevel1} / moves = ${optimalMoves}`,
+  summary && summary.stars === 3 && summary.par === parOfLevel1 && summary.moves === optimalMoves,
   JSON.stringify(summary))
-const expectEfficiency = Math.floor((parOfLevel1 / 13) * 100)
+const expectEfficiency = Math.floor((parOfLevel1 / optimalMoves) * 100)
 check(`efficiency = floor(par/moves×100) = ${expectEfficiency}（实际 ${summary && summary.efficiency}）`,
   summary && summary.efficiency === expectEfficiency, `${summary && summary.efficiency}`)
-check(`13 步低于 par(${parOfLevel1})，判定为完美通关`,
+check(`${optimalMoves} 步 = par(${parOfLevel1})，判定为完美通关`,
   summary && summary.moves <= summary.par)
 
-console.log('\n[6] 成就通知与奖励（A4）')
+console.log('\n[6] 成就解锁与展示（A4 / F3）')
 const unlocked = game.achievementManager.unlockedAchievements
 check(`解锁了 first_win（已解锁 ${unlocked.join(',')}）`, unlocked.includes('first_win'))
-check(`成就通知已入队（${game.achievementNotification.notifications.length} 条）`,
-  game.achievementNotification.notifications.length >= 1, `${game.achievementNotification.notifications.length}`)
+// F3：第 1 关只允许解锁「初出茅庐」一个。
+// 原来 par=16 的关卡 8 秒通关会同时命中 first_win / speed_demon / speed_master，
+// 结算页上叠出 3 张通知卡，糊住「通关成功」标题，底部还有多层阴影。
+check(`第 1 关只解锁 1 个成就（实际 ${unlocked.length}：${unlocked.join(',')}）`,
+  unlocked.length === 1, unlocked.join(','))
+check('通关不再往屏幕叠浮层通知',
+  game.achievementNotification.notifications.length === 0,
+  `${game.achievementNotification.notifications.length}`)
+check(`结算面板拿到成就条（${game.resultScene.achievements.length} 条）`,
+  game.resultScene.achievements.length === 1 &&
+  game.resultScene.achievements[0].id === 'first_win',
+  JSON.stringify(game.resultScene.achievements.map(a => a.id)))
 check('newUnlocked 已被消费清空', game.achievementManager.newUnlocked.length === 0,
   `${game.achievementManager.newUnlocked.length}`)
 check(`食物奖励到账（总 ${game.foodManager.getTotalFood()}）`, game.foodManager.getTotalFood() > 0,
   `${game.foodManager.getTotalFood()}`)
+
+// 通知组件必须串行：同一时刻只渲染队首一条，播完才轮到下一条
+const notificationMod = await loadModule(path.join(ROOT, 'js/ui/achievement-notification.js'))
+const NotificationClass = notificationMod.namespace.default
+const queue = new NotificationClass()
+queue.add({ id: 'a', name: '甲', icon: '🏆', reward: { fish: 1 } })
+queue.add({ id: 'b', name: '乙', icon: '🏆', reward: { fish: 1 } })
+queue.add({ id: 'a', name: '甲', icon: '🏆', reward: { fish: 1 } })  // 重复入队应被忽略
+check(`通知队列 2 条（去重后，实际 ${queue.notifications.length}）`, queue.notifications.length === 2,
+  `${queue.notifications.length}`)
+check('队首是第一条', queue.notifications[0].achievement.id === 'a')
+// 240 + 1500 + 260 = 2000ms ≈ 120 帧，取 125 帧保证第一条已经播完
+for (let i = 0; i < 125; i++) queue.update()
+check(`第一条播完后才轮到第二条（剩余 ${queue.notifications.length} 条）`,
+  queue.notifications.length === 1 && queue.notifications[0].achievement.id === 'b',
+  JSON.stringify(queue.notifications.map(n => n.achievement.id)))
+for (let i = 0; i < 125; i++) queue.update()
+check(`全部播完后队列清空（剩余 ${queue.notifications.length} 条）`,
+  queue.notifications.length === 0, `${queue.notifications.length}`)
 
 console.log('\n[7] 暂停/返回菜单状态复位（A1）')
 await game.loadLevel(2)
@@ -832,23 +889,27 @@ check('恢复 1 点并保留 30s 余数（不再白丢整周期进度）',
   recovered === 1 && Date.now() - fm.lastRecoveryTime === 30000,
   `recovered=${recovered} rest=${Date.now() - fm.lastRecoveryTime}ms`)
 
-// ---------- C4 / C5 关卡体系 ----------
+// ---------- G1 关卡体系 ----------
 const lm = game.levelManager
-check('战役共 60 关', lm.getCampaignSize() === 60, `${lm.getCampaignSize()}`)
+const baked = lm.getCampaignSize()
+check(`预烘焙关卡不少于 100 关（实际 ${baked}）`, baked >= 100, `${baked}`)
 
 let parOk = true
 let parDetail = ''
 let optimalMonotonic = true
 let prevOptimal = -1
-const boardKeys = new Set()
 let hasOptimal = true
-for (let i = 1; i <= 60; i++) {
+let stonesOk = true
+const boardKeys = new Set()
+
+for (let i = 1; i <= baked; i++) {
   const lv = lm.getLevel(i)
   if (!lv || typeof lv.optimal !== 'number') {
     hasOptimal = false
     break
   }
-  if (lv.par !== Math.ceil(lv.optimal * 1.2)) {
+  // G1：标准步数直接等于最优步数
+  if (lv.par !== lv.optimal) {
     parOk = false
     parDetail = `Lv.${i} par=${lv.par} optimal=${lv.optimal}`
   }
@@ -856,20 +917,40 @@ for (let i = 1; i <= 60; i++) {
     optimalMonotonic = false
     parDetail = parDetail || `Lv.${i} optimal=${lv.optimal} < ${prevOptimal}`
   }
+  if (!lv.stones.length || lv.stones.length > 3) stonesOk = false
   prevOptimal = lv.optimal
   boardKeys.add(JSON.stringify([lv.penguin, lv.stones, lv.target, lv.obstacles]))
 }
 check('每关都带 optimal 字段', hasOptimal)
-check('par = ceil(optimal × 1.2)（3 星不再要求零失误）', parOk, parDetail)
+check('par === optimal（3 星必须走出最优解）', parOk, parDetail)
 check('难度按 optimal 单调递增（无断崖）', optimalMonotonic, parDetail)
-check(`60 关盘面互不重复（实际 ${boardKeys.size} 个）`, boardKeys.size === 60, `${boardKeys.size}`)
+check('每关冰块数 1~3（BFS 编码上限）', stonesOk)
+check(`${baked} 关盘面互不重复（实际 ${boardKeys.size} 个）`, boardKeys.size === baked, `${boardKeys.size}`)
 
 const lv1 = lm.getLevel(1)
-const lv60 = lm.getLevel(60)
-check(`第 1 关 optimal=${lv1.optimal}、第 60 关 optimal=${lv60.optimal}（难度确实在涨）`,
-  lv60.optimal > lv1.optimal, `${lv1.optimal} → ${lv60.optimal}`)
-check('第 61 关起复用旧盘面（镜像或循环），不会报错',
-  !!lm.getLevel(61) && !!lm.getLevel(61).stones.length)
+const lvLast = lm.getLevel(baked)
+check(`第 1 关 optimal=${lv1.optimal}、第 ${baked} 关 optimal=${lvLast.optimal}（难度确实在涨）`,
+  lvLast.optimal > lv1.optimal * 3, `${lv1.optimal} → ${lvLast.optimal}`)
+
+// 第 61 关曾经是第 1 关的镜像翻版，这是用户明确要修的回归点
+const sigOf = (lv) => JSON.stringify([lv.penguin, lv.stones, lv.target, lv.obstacles])
+check('第 61 关不是第 1 关的翻版', sigOf(lm.getLevel(61)) !== sigOf(lv1))
+
+// 烘焙段之后：运行时确定性生成
+const beyondNum = baked + 1
+const beyond = lm.getLevel(beyondNum)
+check(`第 ${beyondNum} 关能运行时生成`, !!beyond && beyond.stones.length > 0)
+check(`第 ${beyondNum} 关 par === optimal`, beyond.par === beyond.optimal,
+  `${beyond.par} vs ${beyond.optimal}`)
+check(`第 ${beyondNum} 关难度不塌回新手区（optimal=${beyond.optimal}）`,
+  beyond.optimal >= 20, `${beyond.optimal}`)
+check('第 61 关之后仍能继续出关（无上限）', !!lm.getLevel(baked + 50))
+
+// seed 只由关卡号派生：换一个实例取同一关，盘面必须完全一致
+const LevelManagerClass = lm.constructor
+const freshManager = new LevelManagerClass()
+check('运行时生成是确定性的（换实例同一关盘面一致）',
+  JSON.stringify(freshManager.getLevel(beyondNum)) === JSON.stringify(beyond))
 
 // ---------- C6 排行榜上报口径 ----------
 const WechatMod = await loadModule(path.join(ROOT, 'js/utils/wechat-service.js'))
@@ -1211,7 +1292,7 @@ check('弹层打开时列表不渲染（背后不留被压暗的卡片）',
   !popupTexts.some(item => item.text === '小有所成'),
   popupTexts.map(item => item.text).join('|'))
 check('弹层打开时页面级元素（标题 / 关闭按钮）一起隐藏',
-  !popupTexts.some(item => item.text === '成就系统' || item.text === '✕'))
+  !popupTexts.some(item => item.text === '成就' || item.text === '✕'))
 
 const achievementSceneSrc = allSources.find(({ file }) => file.endsWith('achievement-scene.js'))
 
@@ -1270,6 +1351,23 @@ popupScene.cardRects.forEach((rect, index) => {
 })
 check('点卡片任意位置都命中它自己（四角 + 中心）', cardHitOk, cardHitDetail)
 
+// 每个姿态的企鹅都不能压到顶部色带或下面那句话。
+// peek 会把整体 drop +15 且冰台画到 y=40，3.5 倍缩放下底边到 penguinY+140 = 379，
+// 正好盖住 quoteY=362 的「掉下去一次，爬上来更稳。」（用户报的「企鹅遮住下面的字」）
+const ALL_POSES = ['stand', 'wave', 'cheer', 'slide', 'peek', 'hold', 'sleep']
+const bandBottomRef = Math.round(320 * 0.266)
+const QUOTE_Y_REF = 362
+let poseOk = true
+let poseDetail = ''
+ALL_POSES.forEach((pose) => {
+  const span = popupScene.getPenguinSpan(pose)
+  if (span.top < bandBottomRef + 8 || span.bottom > QUOTE_Y_REF - 12) {
+    poseOk = false
+    poseDetail += `${pose} ${span.top.toFixed(1)}~${span.bottom.toFixed(1)} | `
+  }
+})
+check(`所有姿态的企鹅都不压色带 / 不压一句话（${ALL_POSES.length} 种）`, poseOk, poseDetail)
+
 // 这个场景的 render() 不调用 stage().apply()，触摸就不能 unproject，
 // 否则高屏（offsetY ≠ 0）上会整体偏上、点第 3 项弹第 2 项。
 const sceneCode = achievementSceneSrc.src
@@ -1277,6 +1375,33 @@ const sceneCode = achievementSceneSrc.src
   .replace(/^\s*\/\/.*$/gm, '')
 check('成就场景的渲染与触摸坐标系成对（不能一边 stage 一边不 stage）',
   /stage\(\)\.apply\(/.test(sceneCode) === /stage\(\)\.unproject\(/.test(sceneCode))
+check('peek 姿态在卡片里单独上移（冰台会压到一句话）',
+  /POSE_FIT\[pose\]/.test(sceneCode) && /peek:\s*\{\s*offsetY/.test(sceneCode))
+
+// F4：成就页背景换成首页那套海洋 + 海草，不再铺一整块奶油白面板
+check('成就页不再铺奶油白大底，改用共享海洋背景',
+  /drawOceanCached\s*\(/.test(sceneCode) && !/rgba\(255, 252, 246/.test(sceneCode))
+check('成就页顶部标题是「成就」（不是「成就系统」）',
+  listRecorder.calls.some(item => item.text === '成就'),
+  listRecorder.calls.map(item => item.text).join('|'))
+
+// 顶部留白必须和对局 HUD / 排行榜同一口径，否则两个二级页面切来切去会上下跳
+canvas.width = 375
+canvas.height = 667
+game.computeLayout()
+popupScene.relayout()
+check(`成就页标题胶囊对齐对局 HUD 顶部（${popupScene.titlePanel.y} / ${game.hudPanelY}）`,
+  popupScene.titlePanel.y === game.hudPanelY,
+  `${popupScene.titlePanel.y} vs ${game.hudPanelY}`)
+check('成就页列表起点在进度条下方，不会压住标题',
+  popupScene.listTop > popupScene.barY + 18,
+  `listTop=${popupScene.listTop} barY=${popupScene.barY}`)
+
+// 结算页标题去掉感叹号
+const resultSrc = allSources.find(({ file }) => file.endsWith('result-scene.js'))
+check('结算标题是「通关成功」，不带感叹号',
+  !!resultSrc && /drawStickerText\(ctx, '通关成功'/.test(resultSrc.src) &&
+  resultSrc.src.indexOf("'通关成功！'") === -1)
 
 // ---------- D7 静态层缓存与 shadowBlur ----------
 const shadowBlurHits = allSources.filter(({ src }) => /\.shadowBlur\s*=/.test(src))
@@ -1295,9 +1420,9 @@ check('海洋静态层由 theme.js 统一缓存（三个界面共用一张离屏
   /export function drawOceanCached/.test(themeCacheSrc.src) &&
   /const oceanLayer = new LayerCache/.test(themeCacheSrc.src))
 
-const oceanConsumers = ['menu-scene.js', 'rank-scene.js', 'background.js']
+const oceanConsumers = ['menu-scene.js', 'rank-scene.js', 'achievement-scene.js', 'background.js']
   .map((name) => allSources.find(({ file }) => file.endsWith(name)))
-check('菜单 / 排行榜 / 对局都走共享海洋缓存，且不再各建一张',
+check('菜单 / 排行榜 / 成就 / 对局都走共享海洋缓存，且不再各建一张',
   oceanConsumers.every((item) => item &&
     /drawOceanCached\s*\(/.test(item.src) &&
     !/new LayerCache\('(menu|rank)?-?ocean'\)/.test(item.src)))

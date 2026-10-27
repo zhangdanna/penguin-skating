@@ -758,6 +758,8 @@ export function drawPenguin(ctx, cx, cy, scale = 1, options = {}) {
 
   // ---- 姿态：以脚底为支点整体倾斜 / 压扁 ----
   const groundY = 22
+  /** peek 的整体下沉量：身体要沉到冰堆后面，只露出上半身 */
+  const PEEK_DROP = 15
   let poseAngle = 0
   let squashY = 1
   let drop = 0
@@ -768,7 +770,7 @@ export function drawPenguin(ctx, cx, cy, scale = 1, options = {}) {
     poseAngle = 0.1
     squashY = 0.9
   } else if (pose === 'peek') {
-    drop = 15
+    drop = PEEK_DROP
   }
   ctx.translate(0, groundY)
   ctx.rotate(poseAngle)
@@ -886,8 +888,14 @@ export function drawPenguin(ctx, cx, cy, scale = 1, options = {}) {
     ctx.translate(cx, cy)
     ctx.rotate(angle)
     ctx.scale(scale, scale)
-    if (pose === 'peek') drawPenguinPeekDecor(ctx)
-    else drawPenguinSlideDecor(ctx)
+    if (pose === 'peek') {
+      // 冰堆必须跟着身体一起下沉，否则它停在原来的 y=12~25，
+      // 正好横在下沉后的身体中部，看着像套了个游泳圈（而不是「躲在冰堆后面」）
+      ctx.translate(0, PEEK_DROP)
+      drawPenguinPeekDecor(ctx)
+    } else {
+      drawPenguinSlideDecor(ctx)
+    }
     ctx.restore()
   }
 }
@@ -1249,13 +1257,23 @@ function drawPenguinProp(ctx, prop) {
   }
 }
 
-/** peek：冰台挡住下半身，只露头和一只挥手的翅膀 */
+/** peek：冰堆挡住下半身，只露头和一只扶着冰堆的翅膀 */
 function drawPenguinPeekDecor(ctx) {
-  fillRoundRect(ctx, -31, 12, 62, 13, 6, '#CFEFFF')
-  roundRectPath(ctx, -31, 12, 62, 13, 6)
+  // 冰堆：宽 50（身体最宽 35），比原来的 62 收窄一圈。
+  // 62 宽在卡片里左右各比身体多出 40+ px，看着像端了个大盘子
+  fillRoundRect(ctx, -25, 10, 50, 15, 7, '#CFEFFF')
+  roundRectPath(ctx, -25, 10, 50, 15, 7)
   ctx.strokeStyle = '#9FD9F5'
   ctx.lineWidth = 1.2
   ctx.stroke()
+
+  // 顶上一撮积雪，避免整块看着像一根直条
+  ;[[-8, 10, 9, 3], [9, 10.5, 7, 2.6]].forEach(([x, y, rx, ry]) => {
+    ctx.beginPath()
+    ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2)
+    ctx.fillStyle = '#E8F8FF'
+    ctx.fill()
+  })
 
   ctx.save()
   ctx.translate(14, 7)

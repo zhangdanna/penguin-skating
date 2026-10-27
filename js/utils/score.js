@@ -17,8 +17,12 @@ export const TWO_STAR_RATIO = 1.5
 
 /**
  * 计算星级
+ *
+ * G1 之后 par **就是**最优步数（不再是 optimal × 1.2），所以三星线等于
+ * 「走出最优解」——一步都不许浪费。二星线仍是 par × 1.5。
+ *
  * @param {number} moves - 实际步数
- * @param {number} par - 标准步数（= ceil(最优步数 × 1.2)，见 C4）
+ * @param {number} par - 标准步数（= 最优步数，见 level-manager 的 calcPar）
  * @returns {1|2|3} 星级
  */
 export function calcStars(moves, par) {

@@ -33,6 +33,10 @@ export default class ResultScene {
     this.rewards = null
     this.rewardMeta = {}
 
+    // 本次通关新解锁的成就（画在按钮下方的空白区，不再叠浮层通知）
+    this.achievements = []
+    this.achievementOverflow = 0
+
     // 动画参数
     this.titleScale = 0
     this.starScales = [0, 0, 0]
@@ -125,6 +129,22 @@ export default class ResultScene {
   }
 
   /**
+   * 设置本次通关新解锁的成就
+   *
+   * 通关时不再往屏幕上叠成就浮层（3 条一起弹会糊住标题、底部还叠出多层阴影），
+   * 改成画在结算面板按钮下方的空白区，玩家一眼看完，也不影响按钮点击。
+   *
+   * @param {Array} list - AchievementManager.getNewUnlocked() 的结果
+   */
+  setAchievements(list) {
+    const source = Array.isArray(list) ? list : []
+    this.achievements = source
+    // 面板底部最多排 3 行。超过 3 个时改排「2 条具体 + 1 行汇总」，
+    // 不再往第 4 行塞 —— 那会顶穿面板底边（见 design-preview/result-achievements-3.png）
+    this.achievementOverflow = Math.max(0, source.length - 3)
+  }
+
+  /**
    * 计算星级（口径见 js/utils/score.js，D2 统一）
    */
   calculateStars() {
@@ -194,7 +214,7 @@ export default class ResultScene {
     ctx.save()
     ctx.translate(centerX, 150)
     ctx.scale(this.titleScale, this.titleScale)
-    drawStickerText(ctx, '通关成功！', 0, 0, {
+    drawStickerText(ctx, '通关成功', 0, 0, {
       size: 38,
       color: COLORS.mint,
       stroke: COLORS.navyDeep,
@@ -233,10 +253,96 @@ export default class ResultScene {
       this.renderRewards(ctx)
     }
 
+    // 渲染新解锁成就（按钮下方）
+    this.renderAchievements(ctx)
+
     // 绘制按钮
     this.buttons.forEach(btn => btn.render(ctx))
 
     ctx.restore()
+  }
+
+  /**
+   * 渲染本次通关新解锁的成就
+   *
+   * 位置在「下一关 / 重玩」按钮下方那块空白（设计稿 y 502~628），
+   * 之前这块一直是空的，现在正好把成就收进来，不用再飘一层浮层。
+   * 整组在空白区里垂直居中：只有 1 条时不会顶在按钮下沿、下面空一大片。
+   */
+  renderAchievements(ctx) {
+    if (!this.achievements || this.achievements.length === 0) return
+
+    const centerX = CENTER_X
+    const width = 265
+    const x = centerX - width / 2
+    const itemHeight = 30
+    const gap = 6
+
+    // 超过 3 个时只排前 2 条，第 3 行换成汇总文案，保证总行数不超过 3
+    const hasOverflow = this.achievementOverflow > 0
+    const items = hasOverflow ? this.achievements.slice(0, 2) : this.achievements
+    const rows = items.length + (hasOverflow ? 1 : 0)
+
+    // 可用纵向区间：按钮底 502 往下留 4px，面板底 628 往上留 6px
+    const areaTop = 506
+    const areaBottom = 622
+    const blockHeight = rows * itemHeight + (rows - 1) * gap
+    const startY = Math.round(areaTop + Math.max(0, (areaBottom - areaTop - blockHeight) / 2))
+
+    items.forEach((achievement, index) => {
+      const y = startY + index * (itemHeight + gap)
+
+      // 浅黄胶囊底：浅色半透明底配深色字，对比度才够
+      fillRoundRect(ctx, x, y, width, itemHeight, itemHeight / 2, 'rgba(255, 201, 74, 0.18)')
+
+      // 图标
+      ctx.textAlign = 'left'
+      ctx.textBaseline = 'middle'
+      ctx.font = '14px Arial'
+      ctx.fillStyle = COLORS.navy
+      ctx.fillText(achievement.icon || '🏆', x + 12, y + itemHeight / 2)
+
+      // 名称
+      ctx.fillStyle = COLORS.navy
+      ctx.font = font(13)
+      ctx.fillText(`成就解锁 · ${achievement.name}`, x + 34, y + itemHeight / 2)
+
+      // 奖励
+      const rewardText = this.formatAchievementReward(achievement.reward)
+      if (rewardText) {
+        ctx.textAlign = 'right'
+        ctx.fillStyle = COLORS.yellowInk
+        ctx.font = font(11)
+        ctx.fillText(rewardText, x + width - 12, y + itemHeight / 2)
+      }
+    })
+
+    // 汇总行：告诉玩家还有几个，否则会以为只解锁了这两条
+    if (hasOverflow) {
+      const y = startY + items.length * (itemHeight + gap)
+      const restCount = this.achievements.length - items.length
+      fillRoundRect(ctx, x, y, width, itemHeight, itemHeight / 2, 'rgba(31, 58, 95, 0.06)')
+
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillStyle = COLORS.navySoft
+      ctx.font = font(12, 'normal')
+      ctx.fillText(`另有 ${restCount} 个成就已解锁，可在成就页查看`, centerX, y + itemHeight / 2)
+    }
+  }
+
+  /**
+   * 成就奖励文案，如「+3🐟」
+   * @param {Object} reward
+   * @returns {string}
+   */
+  formatAchievementReward(reward) {
+    if (!reward) return ''
+    const icons = { fish: '🐟', shrimp: '🦐', squid: '🦑', goldfish: '🐠' }
+    return Object.keys(icons)
+      .filter(key => reward[key] > 0)
+      .map(key => `+${reward[key]}${icons[key]}`)
+      .join(' ')
   }
 
   /**

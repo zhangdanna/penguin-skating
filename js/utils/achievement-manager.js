@@ -4,7 +4,12 @@
  */
 import { calcStars } from './score'
 
-/** 战役关卡总数（与 level-manager 的 CAMPAIGN_SIZE 保持一致） */
+/**
+ * 里程碑关数：成就口径里的「全部关卡」
+ *
+ * G1 之后关卡无上限（1~200 烘焙 + 之后运行时生成），所以这里不再等于
+ * 关卡总数，只是一个成就阈值 —— 「首通全部关卡」实际指首通前 60 关。
+ */
 export const CAMPAIGN_SIZE = 60
 
 /** 速度成就的判定口径：用时 / par 的比值 */
@@ -14,12 +19,21 @@ const SPEED_RATIO_BLUR = 1.0
 /**
  * 成就管理器
  *
+ * F3 重做要点（成就弹窗刷屏）：
+ *  - 新增 `minWins` 前置门槛：首通关卡数不足时**不允许解锁**，只是条件满足也不行。
+ *    原来第 1 关 par=16、玩家 8 秒通关 → bestSpeedRatio=0.5，一次同时命中
+ *    first_win / speed_demon / speed_master，结算页上叠了 3 张通知卡，糊住标题。
+ *    现在 speed 类成就要求先首通若干关，第 1 关只会解锁「初出茅庐」。
+ *  - 门槛也顺带修了另一个隐性问题：`bestSpeedRatio` 取的是历史最优值，
+ *    只要在某个简单关卡刷出 0.5 就永久满足，「光速传说」会毫无预兆地弹出来。
+ *
  * F2 重做要点：
  *  - `totalWins` 统计的是"通关次数"，重刷第 1 关也会涨，导致"通关 50 关"类成就可被农场化。
- *    改为 `uniqueWins`（首通关卡数），且上限就是 60 关。
+ *    改为 `uniqueWins`（首通关卡数）。G1 之后关卡无上限，这个计数也不再封顶。
  *  - `totalStars` 每次通关都累加，重玩同一关会重复计星。改为"各关历史最高星之和"。
  *  - 「精准操作」原来按 3 星判定（步数 ≤ par），而 par = 最优步数 × 1.2，几乎每次三星都算。
- *    改为"步数 == par"精确命中。
+ *    改为"步数 == par"精确命中。G1 之后 par 就等于最优步数，这个成就正式变成
+ *    「走出最优解」，是货真价实的硬核成就。
  *  - 「10 秒内通关」「5 秒内通关」在 par 16~47 步的关卡上物理不可达（死成就）。
  *    改为按 `用时 / par` 的比值判定。
  *  - 「通关 100 次」在只有 60 关的前提下永远无法达成，改为"首通全部 60 关"。
@@ -88,6 +102,8 @@ export default class AchievementManager {
         prop: 'target',
         quote: '一步不多，一步不少。',
         reward: { fish: 5 },
+        // 第 1 关只留「初出茅庐」一个成就，避免开局就叠好几张卡片
+        minWins: 2,
         condition: (stats) => stats.perfectMoves >= 1,
         progress: (stats) => ({ current: Math.min(stats.perfectMoves, 1), target: 1 })
       },
@@ -114,6 +130,7 @@ export default class AchievementManager {
         prop: 'lightning',
         quote: '还没看清，我已经到了。',
         reward: { fish: 5 },
+        minWins: 3,
         condition: (stats) => stats.bestSpeedRatio > 0 && stats.bestSpeedRatio <= SPEED_RATIO_FAST
       },
       {
@@ -125,6 +142,8 @@ export default class AchievementManager {
         prop: 'lightning',
         quote: '光都追不上这一趟。',
         reward: { squid: 1 },
+        // 与「闪电企鹅」错开档位：否则简单关卡一局就能把两个一起点亮
+        minWins: 8,
         condition: (stats) => stats.bestSpeedRatio > 0 && stats.bestSpeedRatio <= SPEED_RATIO_BLUR
       },
 
@@ -241,7 +260,7 @@ export default class AchievementManager {
    */
   createEmptyStats() {
     return {
-      uniqueWins: 0,        // 首通关卡数（上限 60）
+      uniqueWins: 0,        // 首通关卡数（关卡无上限，不封顶）
       totalWins: 0,         // 通关次数（仅展示用，不参与成就判定）
       totalStars: 0,        // 各关历史最高星之和
       threeStarLevels: 0,   // 3 星的关卡数
@@ -299,9 +318,10 @@ export default class AchievementManager {
 
     this.stats.totalWins++
 
-    // 首通关卡数（重刷不重复计数，上限就是战役总关数）
+    // 首通关卡数（重刷不重复计数）。关卡无上限，这里不再截断到 CAMPAIGN_SIZE，
+    // 否则玩家玩到 200 关后计数还停在 60，成就进度条会看起来卡住
     if (firstClear && level > 0) {
-      this.stats.uniqueWins = Math.min(this.stats.uniqueWins + 1, CAMPAIGN_SIZE)
+      this.stats.uniqueWins += 1
     }
 
     // 各关历史最高星：重玩拿低星不会把记录打下来，也不会重复累加
@@ -397,6 +417,20 @@ export default class AchievementManager {
   }
 
   /**
+   * 成就的前置门槛是否已满足
+   *
+   * `minWins` 是「至少首通 N 个关卡」的门槛，只拦解锁、不改判定条件本身。
+   * 用首通数而不是通关次数，是为了避免重刷第 1 关把门槛刷过去。
+   *
+   * @param {Object} achievement
+   * @returns {boolean}
+   */
+  meetsPrerequisite(achievement) {
+    const need = achievement.minWins || 0
+    return need <= 0 || this.stats.uniqueWins >= need
+  }
+
+  /**
    * 检查成就解锁
    * 注意：这里只追加，不清空 newUnlocked。
    * 一次通关会连续触发 recordWin / recordStreak / recordFoodCollection / recordPlayTime 等多个记录，
@@ -406,6 +440,7 @@ export default class AchievementManager {
   checkAchievements() {
     this.achievements.forEach(achievement => {
       if (!this.unlockedAchievements.includes(achievement.id)) {
+        if (!this.meetsPrerequisite(achievement)) return
         if (achievement.condition(this.stats)) {
           this.unlockAchievement(achievement)
         }
@@ -446,20 +481,25 @@ export default class AchievementManager {
 
   /**
    * 获取所有成就
-   * 附带 progressText（如「12/30」），未解锁时显示离目标还有多远
+   * 附带 progressText（如「12/30」），未解锁时显示离目标还有多远。
+   * 被 `minWins` 门槛挡住时改为显示门槛，否则会出现「5/5 却没解锁」的困惑。
    */
   getAllAchievements() {
     return this.achievements.map(a => {
       const unlocked = this.unlockedAchievements.includes(a.id)
       let progressText = ''
-      if (!unlocked && typeof a.progress === 'function') {
-        try {
-          const p = a.progress(this.stats)
-          if (p && Number.isFinite(p.current) && Number.isFinite(p.target)) {
-            progressText = `${Math.min(p.current, p.target)}/${p.target}`
+      if (!unlocked) {
+        if (!this.meetsPrerequisite(a)) {
+          progressText = `首通 ${a.minWins} 关后开启`
+        } else if (typeof a.progress === 'function') {
+          try {
+            const p = a.progress(this.stats)
+            if (p && Number.isFinite(p.current) && Number.isFinite(p.target)) {
+              progressText = `${Math.min(p.current, p.target)}/${p.target}`
+            }
+          } catch (e) {
+            progressText = ''
           }
-        } catch (e) {
-          progressText = ''
         }
       }
       return { ...a, unlocked, progressText }

@@ -1736,7 +1736,9 @@ export default class Main {
     this.achievementManager.recordStreak(this.foodManager.consecutiveWins)
     this.achievementManager.recordFoodEarned(given)
 
-    this.flushAchievementRewards()
+    // 通关解锁的成就不走浮层通知，直接画进结算面板（见 ResultScene.renderAchievements）：
+    // 一次通关可能解锁好几个，浮层同时弹会糊住标题，底部还会叠出多层阴影
+    const newAchievements = this.flushAchievementRewards({ notify: false })
 
     // 显示结算界面
     this.resultScene.setResult(this.currentLevel, this.moves, par, time)
@@ -1746,7 +1748,34 @@ export default class Main {
       firstThreeStar,
       requested: rewards
     })
+    this.resultScene.setAchievements(newAchievements)
     this.resultScene.show()
+
+    this.prefetchNextLevel()
+  }
+
+  /**
+   * 预热下一关（G1）
+   *
+   * 第 200 关之后的关卡是运行时生成的，单关要跑十几次 BFS（手机上
+   * 100~300ms）。玩家点「下一关」时再算就会卡一下，所以趁结算页正在展示
+   * 的空档先生成好，点下去直接命中缓存。
+   *
+   * 用 setTimeout 而不是立刻执行：结算页刚 show()，同步跑生成会把
+   * 出场动画卡住。
+   */
+  prefetchNextLevel() {
+    if (typeof setTimeout !== 'function') return
+
+    const next = this.currentLevel + 1
+    setTimeout(() => {
+      try {
+        this.levelManager.getLevel(next)
+      } catch (e) {
+        // 预热失败无所谓，真正加载时会再算一次
+        console.warn('预生成下一关失败:', e && e.message)
+      }
+    }, 400)
   }
 
   /**
@@ -1785,15 +1814,20 @@ export default class Main {
   }
 
   /**
-   * 取出新解锁的成就：弹通知 + 发放奖励
+   * 取出新解锁的成就：发放奖励 +（可选）弹通知
+   *
+   * @param {Object} [options]
+   * @param {boolean} [options.notify=true] - 是否走浮层通知
+   *        通关场景传 false：结算面板自己会显示成就条，再叠一层浮层就是重复且会糊住标题
    * @returns {Array} 本次新解锁的成就
    */
-  flushAchievementRewards() {
+  flushAchievementRewards(options = {}) {
     if (!this.achievementManager) return []
 
+    const { notify = true } = options
     const newAchievements = this.achievementManager.getNewUnlocked()
     newAchievements.forEach(achievement => {
-      if (this.achievementNotification) {
+      if (notify && this.achievementNotification) {
         this.achievementNotification.add(achievement)
       }
       if (achievement.reward) {

@@ -1,161 +1,56 @@
 /**
  * 关卡管理器
  *
- * 关卡设计原则（C4 / C5 之后）：
- * 1. 共 60 关，全部唯一，全部经过 BFS 求解器验证可解；
- * 2. 每关都带 `optimal`（真实最优步数）与 `par = ceil(optimal × 1.2)`；
- * 3. 手工关与生成关统一按 optimal 升序重新编号，保证难度单调递增；
- * 4. 单一数据源：关卡数据只存在于本文件与 generated-levels.js，
- *    不再有"打包的 levels/*.json 从未被读取"这种双份维护。
+ * 设计原则（G1 难度重做）：
+ * 1. 标准步数 par **等于**最优步数 optimal —— 3 星必须走出最优解，
+ *    不再有 20% 的容错。奖励公式不变，只是 par 这个输入变严了。
+ * 2. 关卡无上限：1~BAKED_SIZE 由 tools/gen-levels.mjs 烘焙进
+ *    generated-levels.js；之后的关卡在运行时按 levelNum 确定性生成，
+ *    同一关永远同一个盘面（seed 只由关卡号派生）。
+ * 3. 难度严格单调：烘焙时按 optimal 全局排序，运行时按难度档递进，
+ *    不再出现「第 61 关镜像回第 1 关」这种循环。
  *
- * 手工关（1~7 的原始设计，optimal 13→39）见 HANDCRAFTED_LEVELS；
- * 生成关（第 8~60 位）由 tools/gen-levels.mjs 逆向构造 + 求解器校验后产出。
+ * 生成器的实现在 js/levels/level-generator.js，离线烘焙与运行时共用同一份。
  */
 
 import { GENERATED_LEVELS } from './generated-levels'
+import {
+  COLS,
+  ROWS,
+  CELL_SIZE,
+  generateLevelBoard,
+  boardToLevelData,
+  levelDataSignature,
+  getBandForLevel
+} from './level-generator'
 
-const GRID_COLS = 7
-const GRID_ROWS = 9
-const CELL_SIZE = 50
+const GRID_COLS = COLS
+const GRID_ROWS = ROWS
 
-/** 总关卡数：1~60 为编排好的固定关卡，之后按镜像循环 */
-const CAMPAIGN_SIZE = 60
-
-/**
- * 手工关卡（按 originalId 索引，最终关卡号由编排决定）
- * optimal 由 tools/gen-levels.mjs 的 BFS 求解器实测得出
- */
-const HANDCRAFTED_LEVELS = {
-  1: {
-    originalId: 1,
-    name: '初学滑冰',
-    difficulty: 'tutorial',
-    optimal: 13,
-    penguin: { x: 50, y: 50 },
-    stones: [{ x: 200, y: 150, size: 40 }],
-    target: { x: 300, y: 400, width: 50, height: 50 },
-    obstacles: []
-  },
-  2: {
-    originalId: 2,
-    name: '双石挑战',
-    difficulty: 'easy',
-    optimal: 17,
-    penguin: { x: 50, y: 50 },
-    stones: [
-      { x: 250, y: 250, size: 40 },
-      { x: 300, y: 250, size: 40 }
-    ],
-    target: { x: 250, y: 400, width: 100, height: 50 },
-    obstacles: []
-  },
-  3: {
-    originalId: 3,
-    name: '精准推送',
-    difficulty: 'easy',
-    optimal: 23,
-    penguin: { x: 50, y: 50 },
-    stones: [
-      { x: 200, y: 200, size: 40 },
-      { x: 300, y: 200, size: 40 }
-    ],
-    target: { x: 200, y: 400, width: 150, height: 50 },
-    obstacles: [
-      { type: 'wall', x: 250, y: 150, size: 50 },
-      { type: 'wall', x: 250, y: 100, size: 50 }
-    ]
-  },
-  4: {
-    originalId: 4,
-    name: '冰墙迷宫',
-    difficulty: 'medium',
-    optimal: 27,
-    penguin: { x: 50, y: 50 },
-    stones: [
-      { x: 200, y: 200, size: 40 },
-      { x: 300, y: 200, size: 40 }
-    ],
-    target: { x: 200, y: 400, width: 150, height: 50 },
-    obstacles: [
-      { type: 'wall', x: 200, y: 150, size: 50 },
-      { type: 'wall', x: 200, y: 100, size: 50 }
-    ]
-  },
-  5: {
-    originalId: 5,
-    name: '危险冰窟',
-    difficulty: 'medium',
-    optimal: 29,
-    penguin: { x: 50, y: 50 },
-    stones: [
-      { x: 200, y: 200, size: 40 },
-      { x: 300, y: 200, size: 40 }
-    ],
-    target: { x: 200, y: 400, width: 150, height: 50 },
-    obstacles: [
-      { type: 'hole', x: 200, y: 150, size: 50 },
-      { type: 'hole', x: 200, y: 100, size: 50 },
-      { type: 'hole', x: 250, y: 50, size: 50 }
-    ]
-  },
-  6: {
-    originalId: 6,
-    name: '雪地减速',
-    difficulty: 'hard',
-    optimal: 31,
-    penguin: { x: 50, y: 50 },
-    stones: [
-      { x: 200, y: 200, size: 40 },
-      { x: 300, y: 200, size: 40 }
-    ],
-    target: { x: 200, y: 400, width: 150, height: 50 },
-    obstacles: [
-      { type: 'snow', x: 200, y: 250, size: 50 },
-      { type: 'snow', x: 250, y: 200, size: 50 },
-      { type: 'snow', x: 150, y: 200, size: 50 }
-    ]
-  },
-  7: {
-    originalId: 7,
-    name: '综合挑战',
-    difficulty: 'hard',
-    optimal: 39,
-    penguin: { x: 50, y: 50 },
-    stones: [
-      { x: 200, y: 200, size: 40 },
-      { x: 250, y: 200, size: 40 },
-      { x: 300, y: 200, size: 40 }
-    ],
-    target: { x: 200, y: 400, width: 150, height: 50 },
-    obstacles: [
-      { type: 'wall', x: 250, y: 250, size: 50 },
-      { type: 'hole', x: 250, y: 150, size: 50 },
-      { type: 'snow', x: 150, y: 200, size: 50 }
-    ]
-  }
-}
+/** 预烘焙的关卡数量（= generated-levels.js 里的条目数），之后的关卡运行时生成 */
+const BAKED_SIZE = Object.keys(GENERATED_LEVELS).length
 
 /**
- * 标准步数：最优步数的 1.2 倍向上取整
- * 3 星不再要求"零失误"，而是"接近最优"
- * @param {number} optimal
- * @returns {number}
+ * 标准步数
+ *
+ * G1 之前是 ceil(optimal × 1.2)：3 星只要"接近最优"，随手走也能拿三星，
+ * 关卡设计得再难也没有意义。现在直接取最优步数。
  */
 function calcPar(optimal) {
-  return Math.ceil(optimal * 1.2)
+  return Math.max(1, Math.round(optimal) || 1)
 }
 
 /**
  * 补全一个关卡的公共字段
  */
 function normalize(raw, levelNum) {
-  const optimal = Math.max(1, raw.optimal || 1)
+  const optimal = Math.max(1, Math.round(raw.optimal) || 1)
   return {
     id: levelNum,
-    name: raw.name || raw.baseName || `关卡 ${levelNum}`,
-    difficulty: raw.difficulty || 'hard',
+    name: raw.name || `关卡 ${levelNum}`,
+    difficulty: raw.difficulty || getBandForLevel(levelNum).difficulty,
     optimal,
-    par: raw.par || calcPar(optimal),
+    par: calcPar(optimal),
     grid: { width: GRID_COLS, height: GRID_ROWS, cellSize: CELL_SIZE },
     penguin: { ...raw.penguin },
     stones: raw.stones.map(s => ({ ...s })),
@@ -165,33 +60,35 @@ function normalize(raw, levelNum) {
 }
 
 /**
- * 编排：把手工关与生成关放在一起按 optimal 升序排列，再重新编号 1..60
- * 这样难度是单调递增的，不会出现"第 7 关 39 步、第 8 关 18 步"的断崖
+ * 烘焙关卡（已按 optimal 升序编号）
  */
-const CAMPAIGN = (() => {
-  const pool = []
+const CAMPAIGN = Object.keys(GENERATED_LEVELS)
+  .map(Number)
+  .sort((a, b) => a - b)
+  .map(id => normalize(GENERATED_LEVELS[id], id))
 
-  Object.values(HANDCRAFTED_LEVELS).forEach(raw => {
-    pool.push({ ...raw, _source: 'hand', _key: raw.originalId })
-  })
+/** 烘焙关卡里的最高最优步数，作为无尽关卡的难度起点 */
+const BAKED_MAX_OPTIMAL = CAMPAIGN.length > 0
+  ? CAMPAIGN[CAMPAIGN.length - 1].optimal
+  : 20
 
-  Object.values(GENERATED_LEVELS).forEach(raw => {
-    pool.push({ ...raw, _source: 'gen', _key: raw.id })
-  })
-
-  pool.sort((a, b) => {
-    if (a.optimal !== b.optimal) return a.optimal - b.optimal
-    // 同分时手工关优先，其次按原始编号
-    if (a._source !== b._source) return a._source === 'hand' ? -1 : 1
-    return a._key - b._key
-  })
-
-  return pool.slice(0, CAMPAIGN_SIZE).map((raw, index) => {
-    const levelNum = index + 1
-    const name = raw._source === 'hand' ? raw.name : `${raw.baseName} ${levelNum}`
-    return normalize({ ...raw, name }, levelNum)
-  })
-})()
+/**
+ * 生成彻底失败时的兜底盘面
+ *
+ * 三步就能通关，但至少让玩家能玩、能过，绝不允许卡在空关卡上。
+ * 正常流程里不应该走到这里 —— generateLevelBoard 内部会试十几个候选。
+ */
+function buildFallbackLevel(levelNum) {
+  return normalize({
+    name: '冰面尽头',
+    difficulty: getBandForLevel(levelNum).difficulty,
+    optimal: 3,
+    penguin: { x: 150, y: 400 },
+    stones: [{ x: 150, y: 300, size: 40 }],
+    target: { x: 150, y: 200, width: 50, height: 50 },
+    obstacles: []
+  }, levelNum)
+}
 
 export default class LevelManager {
   constructor() {
@@ -199,7 +96,11 @@ export default class LevelManager {
     this.currentLevel = 1
     this.maxLevel = Infinity
 
-    // 预填充前 60 关（纯内存查表，无 IO）
+    /** 运行时已生成的盘面签名，用于跨关卡去重 */
+    this.generatedSignatures = new Set()
+    /** 烘焙关卡的签名（首次需要时才算，200 关也就几毫秒） */
+    this.bakedSignatures = null
+
     CAMPAIGN.forEach(level => {
       this.levels[level.id] = level
     })
@@ -229,28 +130,77 @@ export default class LevelManager {
   }
 
   /**
-   * 第 61 关起：按 60 关循环，并做水平镜像制造变体
-   * 说明：镜像后的盘面同样可解（推箱子的左右对称性），但难度与原关一致，
-   * 不保证与原关不同名不同盘——超过 60 关属于"无尽模式"。
+   * 第 BAKED_SIZE+1 关起：运行时确定性生成
+   *
+   * seed 只由 levelNum 派生，所以玩家重玩、换设备看到的都是同一张图；
+   * 生成结果同时写进 this.levels 缓存，同一关只算一次。
+   *
    * @param {number} levelNum
    * @returns {Object}
    */
   generateLevel(levelNum) {
-    const baseIndex = (levelNum - 1) % CAMPAIGN.length
-    const cycle = Math.floor((levelNum - 1) / CAMPAIGN.length)
-    const base = CAMPAIGN[baseIndex]
+    const seen = this.getSeenSignatures()
+    const floor = this.getOptimalFloor(levelNum)
 
-    if (cycle === 0) return base
+    // 多试几个派生 seed：单次生成最多 14 个候选，撞不到下界时换个 seed
+    // 再来，比单纯加大 maxAttempts 更容易命中高步数盘面。
+    let best = null
+    for (let round = 0; round < 3; round++) {
+      const board = generateLevelBoard(levelNum, {
+        seen,
+        minOptimal: floor,
+        seedSalt: round
+      })
+      if (!board) continue
+      if (!best || board.optimal > best.optimal) best = board
+      if (best.optimal >= floor) break
+    }
 
-    const mirrored = cycle % 2 === 1
-    return normalize({
-      ...base,
-      name: `${base.name}·${cycle + 1}`,
-      penguin: mirrored ? mirrorPoint(base.penguin) : { ...base.penguin },
-      stones: base.stones.map(s => (mirrored ? { ...s, ...mirrorPoint(s) } : { ...s })),
-      target: mirrored ? mirrorRect(base.target) : { ...base.target },
-      obstacles: base.obstacles.map(o => (mirrored ? { ...o, ...mirrorPoint(o) } : { ...o }))
-    }, levelNum)
+    if (!best) {
+      console.warn(`第 ${levelNum} 关生成失败，使用兜底盘面`)
+      return buildFallbackLevel(levelNum)
+    }
+
+    this.generatedSignatures.add(best.signature || levelDataSignature(best))
+    return normalize(boardToLevelData(best, levelNum, getBandForLevel(levelNum)), levelNum)
+  }
+
+  /**
+   * 最优步数下界：后面的关不允许比前面简单
+   *
+   * 7×9 棋盘的最优步数天花板在 50 附近，难度档递进到后期会撞到上限。
+   * 下界**不能**简单地取「前一关 - 2」：某一关生成失败会把下界拉低，
+   * 后面几十关跟着一路往下掉（实测 201~230 从 31 掉到 20）。
+   * 所以用一个固定地板（烘焙末关 - 8），只在明显超出时才跟着抬。
+   *
+   * @param {number} levelNum
+   * @returns {number}
+   */
+  getOptimalFloor(levelNum) {
+    if (levelNum <= BAKED_SIZE) return 0
+    const floor = Math.max(1, BAKED_MAX_OPTIMAL - 8)
+    const prev = this.levels[levelNum - 1]
+    if (!prev) return floor
+    return Math.max(floor, prev.optimal - 2)
+  }
+
+  /**
+   * 已知盘面签名：烘焙关 + 本次运行已生成的
+   * @returns {Set<string>}
+   */
+  getSeenSignatures() {
+    if (!this.bakedSignatures) {
+      this.bakedSignatures = new Set()
+      CAMPAIGN.forEach(level => {
+        this.bakedSignatures.add(levelDataSignature(level))
+      })
+    }
+
+    if (this.generatedSignatures.size === 0) return this.bakedSignatures
+
+    const merged = new Set(this.bakedSignatures)
+    this.generatedSignatures.forEach(sig => merged.add(sig))
+    return merged
   }
 
   /**
@@ -270,7 +220,7 @@ export default class LevelManager {
   }
 
   /**
-   * 获取最大关卡数
+   * 获取最大关卡数（Infinity = 无上限）
    * @returns {number}
    */
   getMaxLevel() {
@@ -278,26 +228,10 @@ export default class LevelManager {
   }
 
   /**
-   * 已编排的固定关卡数量（60）
+   * 预烘焙的关卡数量
    * @returns {number}
    */
   getCampaignSize() {
     return CAMPAIGN.length
   }
-}
-
-/**
- * 水平镜像一个点（x 轴翻转）
- */
-function mirrorPoint(point) {
-  const width = GRID_COLS * CELL_SIZE
-  return { x: width - point.x - CELL_SIZE, y: point.y }
-}
-
-/**
- * 水平镜像一个矩形（保持宽度）
- */
-function mirrorRect(rect) {
-  const width = GRID_COLS * CELL_SIZE
-  return { ...rect, x: width - rect.x - rect.width }
 }

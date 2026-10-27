@@ -2,6 +2,8 @@
  * 成就展示场景
  * 显示所有成就和解锁状态
  *
+ * 背景与首页 / 排行榜一致（同一套海洋 + 海草画面），不再铺一整块奶油白面板。
+ *
  * 交互：
  *   - 点「已解锁」卡片 → 中央弹出详情卡（大企鹅造型 + 一句话 + 奖励）
  *   - 点「未解锁」卡片 → 左右抖两下，不弹层
@@ -11,6 +13,8 @@ import Button from './button'
 import {
   COLORS,
   drawGlassPanel,
+  drawOceanCached,
+  drawOceanMotion,
   drawOverlay,
   drawPenguin,
   drawStickerText,
@@ -19,6 +23,7 @@ import {
   roundRectPath
 } from './theme'
 import { viewport } from '../env'
+import { computeBoardLayout } from './layout'
 
 /** 点击 / 滚动的分界位移（px） */
 const TAP_SLOP = 8
@@ -26,6 +31,16 @@ const TAP_SLOP = 8
 const SHAKE_DURATION = 420
 /** 详情卡入场动画时长（ms） */
 const POPUP_ANIM = 220
+
+/** 顶部标题胶囊（与排行榜同款，切换页面时顶部元素不跳动） */
+const TITLE = {
+  width: 140,
+  height: 46
+}
+/** 标题胶囊 ↔ 进度条 */
+const GAP_TITLE_BAR = 12
+/** 进度条 ↔ 成就列表 */
+const GAP_BAR_LIST = 46
 
 /**
  * 详情卡尺寸全部按设计稿比例推导（设计稿 322×441）。
@@ -47,6 +62,36 @@ const POPUP = {
   chipGap: 12,        // 两个标签的间距
   closeSize: 30,      // 右上角 ✕ 的圆直径
   closeInset: 9       // ✕ 距卡片右边 / 上边的距离
+}
+
+/**
+ * drawPenguin 的纵向包围盒（单位：身体中心为原点，见 theme.js）
+ *
+ * 多数姿态就是「身体 + 脚底」的 -25.5 ~ 22，但有两个例外必须单独记：
+ *   - peek ：整体 drop +15，所以头顶从 -25.5 抬到 -10.5；冰堆 `fillRoundRect(-25, 10, 50, 15)`
+ *            画到 y=25，加上 drop 后底边到 y=40 —— 比常规姿态低 18 单位
+ *   - slide：以脚底 (0,22) 为支点旋转 -0.72rad，头顶被转下来、脚趾被转上去，
+ *            实测包围盒变成 -9.5 ~ 22.5
+ */
+const PENGUIN_BOX = {
+  default: { top: -25.5, bottom: 22 },
+  peek: { top: -10.5, bottom: 40 },
+  slide: { top: -9.5, bottom: 22.5 }
+}
+
+/**
+ * 姿态在卡片里的纵向修正
+ *
+ * `penguinScale 3.5` 对常规姿态刚好：企鹅占 149.75 ~ 316.75，上下都有余量。
+ * 但 peek 的冰台会落到 `penguinY + 40×3.5 = 379`，而一句话的中线在 362 ——
+ * 冰台直接把「掉下去一次，爬上来更稳。」盖掉一半（用户报的「企鹅遮住下面的字」）。
+ *
+ * 这里按姿态给「中心偏移 + 缩放」，让每个造型的视觉包围盒都落在
+ * 色带底部（85）到一句话（362）之间。**不去改 drawPenguin** ——
+ * 那是全局造型口径，菜单和对局里的同一个姿态不该跟着变。
+ */
+const POSE_FIT = {
+  peek: { offsetY: -36, scale: 3.1 }
 }
 
 export default class AchievementScene {
@@ -81,15 +126,41 @@ export default class AchievementScene {
     this.gestureStartX = 0
     this.gestureStartY = 0
 
+    // 纵向布局（标题胶囊 / 进度条 / 列表起点），在 buildLayout 里算
+    this.titlePanel = null
+    this.barY = 0
+    this.listTop = 0
+
     this.init()
   }
 
   /**
-   * 窗口尺寸变化后重排关闭按钮（其余内容在 render 时按实时画布尺寸计算）
+   * 窗口尺寸变化后重排（标题、进度条、列表起点、关闭按钮）
+   *
+   * 顶部留白取对局界面的 HUD y（computeBoardLayout().hudPanelY），
+   * 和排行榜同一口径 —— 两个二级页面切来切去时顶部元素不会上下跳。
    */
   relayout() {
+    this.buildLayout()
+  }
+
+  buildLayout() {
+    const vp = viewport()
+    const { hudPanelY } = computeBoardLayout(vp)
+
+    this.titlePanel = {
+      x: Math.round((vp.width - TITLE.width) / 2),
+      y: hudPanelY,
+      width: TITLE.width,
+      height: TITLE.height
+    }
+    this.barY = hudPanelY + TITLE.height + GAP_TITLE_BAR
+    this.listTop = this.barY + GAP_BAR_LIST
+
     if (this.closeButton) {
-      this.closeButton.x = viewport().width - 60
+      this.closeButton.x = vp.width - 60
+      // 和标题胶囊同一水平线居中（胶囊高 46，按钮高 40）
+      this.closeButton.y = hudPanelY + Math.round((TITLE.height - 40) / 2)
     }
   }
 
@@ -111,6 +182,8 @@ export default class AchievementScene {
       borderColor: '#C94A3C',
       onClick: () => this.hide()
     })
+
+    this.buildLayout()
   }
 
   /**
@@ -297,20 +370,14 @@ export default class AchievementScene {
   render(ctx) {
     if (!this.isVisible) return
 
-    // 遮罩 + 奶油面板
-    const vp = viewport()
-    drawOverlay(ctx, 0.55)
-    drawGlassPanel(ctx, 16, 10, vp.width - 32, vp.height - 20, 28, {
-      fill: 'rgba(255, 252, 246, 0.96)'
-    })
+    // 背景与首页 / 排行榜完全一致：海洋 + 海草（静态层走共享离屏缓存）
+    drawOceanCached(ctx)
+    drawOceanMotion(ctx, Date.now() / 1000)
 
-    // 详情卡打开时，背后换成一块干净的浅色底 ——
-    // 设计稿里弹层背后没有列表，露出半截被压暗的卡片会显得脏。
+    // 详情卡打开时，背后只压一层很轻的遮罩让卡片浮起来 ——
+    // 背景仍然是海草画面，不再铺一整块奶油白底
     if (this.expandedId) {
-      fillRoundRect(
-        ctx, 16, 10, vp.width - 32, vp.height - 20, 28,
-        'rgba(255, 252, 246, 0.985)'
-      )
+      drawOverlay(ctx, 0.2)
       this.renderPopup(ctx)
       return
     }
@@ -329,14 +396,20 @@ export default class AchievementScene {
   }
 
   /**
-   * 渲染标题
+   * 渲染标题：白色胶囊 + 深色字
+   *
+   * 不能再用「白字 + 白描边」的贴纸体 —— 底下一片海面，白字会糊掉。
    */
   renderTitle(ctx) {
-    drawStickerText(ctx, '成就系统', viewport().width / 2, 46, {
-      size: 26,
-      color: COLORS.lavenderDeep,
-      stroke: COLORS.white,
-      strokeWidth: 4
+    const { x, y, width, height } = this.titlePanel
+
+    drawGlassPanel(ctx, x, y, width, height, 23, {
+      fill: 'rgba(255, 255, 255, 0.86)'
+    })
+    drawStickerText(ctx, '成就', x + width / 2, y + height / 2, {
+      size: 22,
+      color: COLORS.navy,
+      strokeWidth: 0
     })
   }
 
@@ -348,11 +421,11 @@ export default class AchievementScene {
 
     // 进度条背景
     const barX = 30
-    const barY = 66
+    const barY = this.barY
     const barWidth = viewport().width - 60
     const barHeight = 18
 
-    fillRoundRect(ctx, barX, barY, barWidth, barHeight, 9, 'rgba(31, 58, 95, 0.1)')
+    fillRoundRect(ctx, barX, barY, barWidth, barHeight, 9, 'rgba(31, 58, 95, 0.28)')
 
     // 进度条
     const progressWidth = (barWidth * progress.percentage) / 100
@@ -360,15 +433,13 @@ export default class AchievementScene {
       fillRoundRect(ctx, barX, barY, Math.max(progressWidth, 12), barHeight, 9, COLORS.mint)
     }
 
-    // 进度文字
-    ctx.fillStyle = COLORS.navy
-    ctx.font = font(12)
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText(
+    // 进度文字：海面上直接写深色字会看不清，用贴纸体描一圈深蓝
+    drawStickerText(
+      ctx,
       `${progress.unlocked} / ${progress.total} (${Math.floor(progress.percentage)}%)`,
       viewport().width / 2,
-      barY + 34
+      barY + 34,
+      { size: 13, color: COLORS.white, stroke: COLORS.navyDeep, strokeWidth: 3.5 }
     )
   }
 
@@ -377,7 +448,7 @@ export default class AchievementScene {
    */
   renderAchievements(ctx) {
     const allAchievements = this.achievementManager.getAllAchievements()
-    const startY = 112
+    const startY = this.listTop
     const itemHeight = 90
     const vp = viewport()
 
@@ -424,6 +495,8 @@ export default class AchievementScene {
     const left = x + offsetX
 
     // 卡片
+    // 背景换成了海面，未解锁卡片不能再压到 0.55 —— 海水的蓝会透上来，
+    // 白色文字底变成一块脏灰。0.78 既保留「未解锁」的弱化感，又保证字读得清。
     fillRoundRect(
       ctx,
       left,
@@ -431,7 +504,7 @@ export default class AchievementScene {
       width,
       height,
       achievement.unlocked ? 16 : 14,
-      achievement.unlocked ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.55)'
+      achievement.unlocked ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.78)'
     )
 
     // 边框
@@ -484,11 +557,14 @@ export default class AchievementScene {
     }
 
     // 进度（F2：让玩家看得到离解锁还有多远）
+    // 放在「奖励」同一行右侧：左边是「奖励: 3🐟」，右边是「12/30」或
+    // 「首通 3 关后开启」（minWins 门槛文案），两者水平区间不重叠。
+    // 原来写的是 height/2 + 20 = y+60，和奖励行 y+67 差 7px，长文案会视觉上粘在一起
     if (!achievement.unlocked && achievement.progressText) {
       ctx.fillStyle = COLORS.waterDeep
       ctx.font = font(12)
       ctx.textAlign = 'right'
-      ctx.fillText(achievement.progressText, left + width - 14, y + height / 2 + 20)
+      ctx.fillText(achievement.progressText, left + width - 14, y + 67)
     }
   }
 
@@ -581,10 +657,11 @@ export default class AchievementScene {
     ctx.font = font(12.5, 'normal')
     ctx.fillText(achievement.description, x + width / 2, y + POPUP.subY)
 
-    // 企鹅造型
+    // 企鹅造型（peek / slide 这类延伸较大的姿态按 POSE_FIT 上移并微缩）
     const pose = achievement.pose || 'stand'
     const mood = pose === 'sleep' ? 'idle' : 'happy'
-    drawPenguin(ctx, x + width / 2, y + POPUP.penguinY, POPUP.penguinScale, {
+    const fit = POSE_FIT[pose] || { offsetY: 0, scale: POPUP.penguinScale }
+    drawPenguin(ctx, x + width / 2, y + POPUP.penguinY + fit.offsetY, fit.scale, {
       pose,
       prop: achievement.prop || null,
       mood
@@ -642,6 +719,25 @@ export default class AchievementScene {
     ctx.stroke()
 
     ctx.restore()
+  }
+
+  /**
+   * 某个姿态在卡片里的视觉纵向范围（相对卡片顶）
+   *
+   * 给回归测试用：断言每个造型的企鹅都不会压到顶部色带或底部那句话。
+   * 卡片实际绘制时还会叠加 y 偏移，这里只算「相对卡片顶」的值。
+   *
+   * @param {string} pose
+   * @returns {{top:number, bottom:number}}
+   */
+  getPenguinSpan(pose) {
+    const box = PENGUIN_BOX[pose] || PENGUIN_BOX.default
+    const fit = POSE_FIT[pose] || { offsetY: 0, scale: POPUP.penguinScale }
+    const centerY = POPUP.penguinY + fit.offsetY
+    return {
+      top: centerY + box.top * fit.scale,
+      bottom: centerY + box.bottom * fit.scale
+    }
   }
 
   /**

@@ -1,5 +1,5 @@
 import Sprite from '../base/sprite'
-import { drawPenguin } from '../ui/theme'
+import { COLORS, drawPenguin, drawStar } from '../ui/theme'
 
 /**
  * 滑动判定阈值（px，逻辑像素）
@@ -10,6 +10,18 @@ import { drawPenguin } from '../ui/theme'
  * 滑一格不需要刻意拉长距离。
  */
 const SWIPE_THRESHOLD = 24
+
+/**
+ * 情绪默认持续时间（毫秒），0 表示常驻到下一次切换
+ *
+ * happy 是一次性反馈，1.2 秒后自动回落到 idle；
+ * sad 要一直挂到复活或重开，所以是 0。
+ */
+const MOOD_DURATION = {
+  idle: 0,
+  happy: 1200,
+  sad: 0
+}
 
 /**
  * 企鹅类
@@ -23,11 +35,48 @@ export default class Penguin extends Sprite {
     this.isMoving = false
     this.direction = 'down'  // up, down, left, right
 
+    // 情绪：idle / happy / sad
+    this.mood = 'idle'
+    this.moodStartedAt = 0
+    this.moodDuration = 0
+
     // 触摸记录
     this.touchStartX = null
     this.touchStartY = null
     this.swiped = false  // 本次手势是否构成有效滑动
     this.swipeDirection = null  // 锁定的滑动方向
+  }
+
+  /**
+   * 切换情绪
+   * @param {string} mood - idle / happy / sad
+   * @param {number} [duration] - 持续毫秒数，0 表示常驻；不传则取默认值
+   */
+  setMood(mood, duration) {
+    this.mood = mood || 'idle'
+    this.moodStartedAt = Date.now()
+    this.moodDuration = Number.isFinite(duration) ? duration : (MOOD_DURATION[this.mood] || 0)
+  }
+
+  /**
+   * 当前情绪（到时自动回落到 idle）
+   * @returns {string}
+   */
+  getMood() {
+    if (this.moodDuration > 0 && Date.now() - this.moodStartedAt >= this.moodDuration) {
+      this.mood = 'idle'
+      this.moodDuration = 0
+    }
+    return this.mood
+  }
+
+  /**
+   * 复位情绪（复活、重开时调用）
+   */
+  resetMood() {
+    this.mood = 'idle'
+    this.moodStartedAt = 0
+    this.moodDuration = 0
   }
 
   /**
@@ -113,8 +162,8 @@ export default class Penguin extends Sprite {
   render(ctx) {
     const centerX = this.x + this.width / 2
     const centerY = this.y + this.height / 2
-    // 待机时轻微上下浮动
-    const bob = this.isMoving ? 0 : Math.sin(Date.now() * 0.005) * 1.2
+    const mood = this.getMood()
+    const now = Date.now() / 1000
 
     // 滑行时的霜迹
     if (this.isMoving) {
@@ -141,7 +190,45 @@ export default class Penguin extends Sprite {
       ctx.restore()
     }
 
+    // 三套动作曲线：待机呼吸 / 开心蹦跳 / 难过发抖
+    let bob = 0
+    let angle = 0
+    if (mood === 'happy') {
+      const hop = Math.abs(Math.sin(now * 6.5))
+      bob = -hop * 5
+      angle = Math.sin(now * 6.5) * 0.05
+    } else if (mood === 'sad') {
+      bob = 1.5 + Math.sin(now * 1.2) * 0.6
+      angle = Math.sin(now * 16) * 0.015
+    } else if (this.isMoving) {
+      bob = 0
+    } else {
+      bob = Math.sin(now * 2.2) * 1.5
+      angle = Math.sin(now * 1.4) * 0.02
+    }
+
     // 企鹅按格子尺寸等比缩放（50px 格子时为原始大小）
-    drawPenguin(ctx, centerX, centerY + bob, this.width / 50, { direction: this.direction })
+    const scale = this.width / 50
+    drawPenguin(ctx, centerX, centerY + bob, scale, {
+      direction: this.direction,
+      mood,
+      angle
+    })
+
+    // 推冰成功：绕着企鹅转三颗小星星
+    if (mood === 'happy') {
+      for (let i = 0; i < 3; i++) {
+        const a = now * 2.4 + (i * Math.PI * 2) / 3
+        const r = (24 + Math.sin(now * 3 + i) * 4) * scale
+        const size = (2.4 + Math.sin(now * 5 + i * 2) * 0.7) * scale
+        drawStar(
+          ctx,
+          centerX + Math.cos(a) * r,
+          centerY + bob + Math.sin(a) * r * 0.7 - 12 * scale,
+          size,
+          COLORS.yellow
+        )
+      }
+    }
   }
 }

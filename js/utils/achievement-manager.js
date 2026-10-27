@@ -18,8 +18,6 @@ const SPEED_RATIO_BLUR = 1.0
  *  - `totalWins` 统计的是"通关次数"，重刷第 1 关也会涨，导致"通关 50 关"类成就可被农场化。
  *    改为 `uniqueWins`（首通关卡数），且上限就是 60 关。
  *  - `totalStars` 每次通关都累加，重玩同一关会重复计星。改为"各关历史最高星之和"。
- *  - 「完美主义」原来只要求"已通关的 3 关全 3 星"，通关前 3 关就能白拿 2 条金鱼（价值 100）。
- *    改为"全部 60 关 3 星"。
  *  - 「精准操作」原来按 3 星判定（步数 ≤ par），而 par = 最优步数 × 1.2，几乎每次三星都算。
  *    改为"步数 == par"精确命中。
  *  - 「10 秒内通关」「5 秒内通关」在 par 16~47 步的关卡上物理不可达（死成就）。
@@ -36,6 +34,9 @@ export default class AchievementManager {
         name: '初出茅庐',
         description: '首次通关任意关卡',
         icon: '🏆',
+        pose: 'cheer',
+        prop: 'trophy',
+        quote: '第一块冰，稳稳落进洞里啦！',
         reward: { fish: 3 },
         condition: (stats) => stats.uniqueWins >= 1,
         progress: (stats) => ({ current: Math.min(stats.uniqueWins, 1), target: 1 })
@@ -45,6 +46,9 @@ export default class AchievementManager {
         name: '小有所成',
         description: '首通 10 个关卡',
         icon: '🎖️',
+        pose: 'wave',
+        prop: 'medal',
+        quote: '十关打卡，这枚勋章归我。',
         reward: { shrimp: 2 },
         condition: (stats) => stats.uniqueWins >= 10,
         progress: (stats) => ({ current: Math.min(stats.uniqueWins, 10), target: 10 })
@@ -54,6 +58,9 @@ export default class AchievementManager {
         name: '滑冰达人',
         description: '首通 30 个关卡',
         icon: '🥇',
+        pose: 'slide',
+        prop: 'snowflake',
+        quote: '冰面就是我的跑道。',
         reward: { squid: 2 },
         condition: (stats) => stats.uniqueWins >= 30,
         progress: (stats) => ({ current: Math.min(stats.uniqueWins, 30), target: 30 })
@@ -63,47 +70,12 @@ export default class AchievementManager {
         name: '滑冰大师',
         description: '首通全部 60 个关卡',
         icon: '👑',
+        pose: 'cheer',
+        prop: 'crown',
+        quote: '六十关全通，王冠有点沉。',
         reward: { goldfish: 1 },
         condition: (stats) => stats.uniqueWins >= CAMPAIGN_SIZE,
         progress: (stats) => ({ current: Math.min(stats.uniqueWins, CAMPAIGN_SIZE), target: CAMPAIGN_SIZE })
-      },
-
-      // 星级相关成就（各关最高星之和，重玩不累加）
-      {
-        id: 'star_10',
-        name: '星光初现',
-        description: '累计获得 10 颗星星',
-        icon: '⭐',
-        reward: { fish: 5 },
-        condition: (stats) => stats.totalStars >= 10,
-        progress: (stats) => ({ current: Math.min(stats.totalStars, 10), target: 10 })
-      },
-      {
-        id: 'star_50',
-        name: '星光璀璨',
-        description: '累计获得 50 颗星星',
-        icon: '🌟',
-        reward: { shrimp: 3 },
-        condition: (stats) => stats.totalStars >= 50,
-        progress: (stats) => ({ current: Math.min(stats.totalStars, 50), target: 50 })
-      },
-      {
-        id: 'star_100',
-        name: '星河满天',
-        description: '累计获得 100 颗星星',
-        icon: '✨',
-        reward: { squid: 2 },
-        condition: (stats) => stats.totalStars >= 100,
-        progress: (stats) => ({ current: Math.min(stats.totalStars, 100), target: 100 })
-      },
-      {
-        id: 'all_3star',
-        name: '完美主义',
-        description: '全部 60 关都拿到 3 星',
-        icon: '💫',
-        reward: { goldfish: 1 },
-        condition: (stats) => stats.allThreeStars,
-        progress: (stats) => ({ current: stats.threeStarLevels, target: CAMPAIGN_SIZE })
       },
 
       // 步数相关成就（精确命中 par，而不是"3 星"）
@@ -112,6 +84,9 @@ export default class AchievementManager {
         name: '精准操作',
         description: '以标准步数（正好等于 par）通关一次',
         icon: '🎯',
+        pose: 'hold',
+        prop: 'target',
+        quote: '一步不多，一步不少。',
         reward: { fish: 5 },
         condition: (stats) => stats.perfectMoves >= 1,
         progress: (stats) => ({ current: Math.min(stats.perfectMoves, 1), target: 1 })
@@ -121,6 +96,9 @@ export default class AchievementManager {
         name: '操作大师',
         description: '10 次以标准步数通关',
         icon: '🎪',
+        pose: 'hold',
+        prop: 'star',
+        quote: '十次满分，手比脑子快。',
         reward: { shrimp: 2 },
         condition: (stats) => stats.perfectMoves >= 10,
         progress: (stats) => ({ current: Math.min(stats.perfectMoves, 10), target: 10 })
@@ -132,6 +110,9 @@ export default class AchievementManager {
         name: '闪电企鹅',
         description: '用时不超过 par 的 1.5 倍通关',
         icon: '⚡',
+        pose: 'slide',
+        prop: 'lightning',
+        quote: '还没看清，我已经到了。',
         reward: { fish: 5 },
         condition: (stats) => stats.bestSpeedRatio > 0 && stats.bestSpeedRatio <= SPEED_RATIO_FAST
       },
@@ -140,6 +121,9 @@ export default class AchievementManager {
         name: '光速传说',
         description: '用时不超过 par 的 1.0 倍通关',
         icon: '💨',
+        pose: 'wave',
+        prop: 'lightning',
+        quote: '光都追不上这一趟。',
         reward: { squid: 1 },
         condition: (stats) => stats.bestSpeedRatio > 0 && stats.bestSpeedRatio <= SPEED_RATIO_BLUR
       },
@@ -150,6 +134,9 @@ export default class AchievementManager {
         name: '连胜新星',
         description: '连续通关 3 次',
         icon: '🔥',
+        pose: 'cheer',
+        prop: 'star',
+        quote: '连赢三把，手感来了。',
         reward: { fish: 2 },
         condition: (stats) => stats.maxStreak >= 3,
         progress: (stats) => ({ current: Math.min(stats.maxStreak, 3), target: 3 })
@@ -159,6 +146,9 @@ export default class AchievementManager {
         name: '连胜达人',
         description: '连续通关 10 次',
         icon: '💥',
+        pose: 'hold',
+        prop: 'heart',
+        quote: '十连胜，心跳比冰面还稳。',
         reward: { shrimp: 2 },
         condition: (stats) => stats.maxStreak >= 10,
         progress: (stats) => ({ current: Math.min(stats.maxStreak, 10), target: 10 })
@@ -168,6 +158,9 @@ export default class AchievementManager {
         name: '连胜传奇',
         description: '连续通关 20 次',
         icon: '🌋',
+        pose: 'cheer',
+        prop: 'confetti',
+        quote: '二十连胜，撒花庆祝。',
         reward: { squid: 3 },
         condition: (stats) => stats.maxStreak >= 20,
         progress: (stats) => ({ current: Math.min(stats.maxStreak, 20), target: 20 })
@@ -179,6 +172,9 @@ export default class AchievementManager {
         name: '重整旗鼓',
         description: '首次使用复活继续游戏',
         icon: '📢',
+        pose: 'peek',
+        prop: null,
+        quote: '掉下去一次，爬上来更稳。',
         reward: { fish: 3 },
         condition: (stats) => stats.revives >= 1,
         progress: (stats) => ({ current: Math.min(stats.revives, 1), target: 1 })
@@ -188,6 +184,9 @@ export default class AchievementManager {
         name: '不死企鹅',
         description: '累计复活 10 次',
         icon: '📣',
+        pose: 'wave',
+        prop: 'bubbles',
+        quote: '十次落水，十次浮上来。',
         reward: { shrimp: 2 },
         condition: (stats) => stats.revives >= 10,
         progress: (stats) => ({ current: Math.min(stats.revives, 10), target: 10 })
@@ -199,6 +198,9 @@ export default class AchievementManager {
         name: '收藏家',
         description: '4 种食物各累计获得 5 个',
         icon: '🎁',
+        pose: 'hold',
+        prop: 'fish',
+        quote: '四种口粮，一样都不能少。',
         reward: { squid: 1 },
         condition: (stats) => Object.keys(stats.foodEarned).every(
           type => (stats.foodEarned[type] || 0) >= 5
@@ -213,6 +215,9 @@ export default class AchievementManager {
         name: '坚持不懈',
         description: '累计游戏时间超过 2 小时',
         icon: '⏰',
+        pose: 'sleep',
+        prop: 'zzz',
+        quote: '两小时了，让我眯一会儿。',
         reward: { shrimp: 3 },
         condition: (stats) => stats.totalPlayTime >= 7200,
         progress: (stats) => ({ current: Math.floor(Math.min(stats.totalPlayTime, 7200) / 60), target: 120 })
@@ -245,7 +250,6 @@ export default class AchievementManager {
       maxStreak: 0,
       revives: 0,
       totalPlayTime: 0,
-      allThreeStars: false,
       foodEarned: { fish: 0, shrimp: 0, squid: 0, goldfish: 0 },
       levelStars: {}        // { 关卡号: 历史最高星 }
     }
@@ -326,8 +330,6 @@ export default class AchievementManager {
     // 累计游戏时间（按关卡用时累加，暂停时长已由 getElapsedSeconds 扣掉）
     this.stats.totalPlayTime += safeTime
 
-    this.refreshAllThreeStars()
-
     this.saveStats()
     this.checkAchievements()
   }
@@ -346,16 +348,6 @@ export default class AchievementManager {
     })
     this.stats.totalStars = total
     this.stats.threeStarLevels = three
-  }
-
-  /**
-   * 重算「全部关卡 3 星」
-   * 必须真的首通全部 60 关，而不是"已通关的那几关都 3 星"
-   */
-  refreshAllThreeStars() {
-    this.stats.allThreeStars =
-      this.stats.uniqueWins >= CAMPAIGN_SIZE &&
-      this.stats.threeStarLevels >= CAMPAIGN_SIZE
   }
 
   /**
@@ -400,15 +392,6 @@ export default class AchievementManager {
       const amount = Number(food[type]) || 0
       if (amount > 0) earned[type] += amount
     })
-    this.saveStats()
-    this.checkAchievements()
-  }
-
-  /**
-   * 记录全三星（外部强制写入时使用；正常流程由 refreshAllThreeStars 计算）
-   */
-  recordAllThreeStars(allThreeStars) {
-    this.stats.allThreeStars = !!allThreeStars
     this.saveStats()
     this.checkAchievements()
   }
@@ -505,10 +488,14 @@ export default class AchievementManager {
    * 获取成就进度
    */
   getProgress() {
+    // 必须按「现存成就」计数：老存档里可能残留已下线成就的 id
+    // （star_10 / star_50 / star_100 / all_3star），直接数数组长度会算出 19/15 这种假进度
+    const total = this.achievements.length
+    const unlocked = this.getUnlockedAchievements().length
     return {
-      unlocked: this.unlockedAchievements.length,
-      total: this.achievements.length,
-      percentage: (this.unlockedAchievements.length / this.achievements.length) * 100
+      unlocked,
+      total,
+      percentage: total > 0 ? (unlocked / total) * 100 : 0
     }
   }
 
@@ -536,8 +523,10 @@ export default class AchievementManager {
   loadAchievements() {
     try {
       const saved = wx.getStorageSync('unlockedAchievements')
-      if (saved) {
-        this.unlockedAchievements = saved
+      if (Array.isArray(saved)) {
+        // 过滤掉已下线的成就 id，否则老玩家会看到「已解锁数 > 总数」
+        const validIds = this.achievements.map(item => item.id)
+        this.unlockedAchievements = saved.filter(id => validIds.indexOf(id) !== -1)
       }
     } catch (e) {
       console.error('加载成就数据失败:', e)
@@ -572,7 +561,6 @@ export default class AchievementManager {
           levelStars: { ...(saved.levelStars || {}) }
         }
         this.refreshStarStats()
-        this.refreshAllThreeStars()
       }
     } catch (e) {
       console.error('加载统计数据失败:', e)

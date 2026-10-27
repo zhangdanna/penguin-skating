@@ -1500,6 +1500,11 @@ export default class Main {
     console.log(`游戏失败: ${reason}`)
     wx.vibrateShort({ type: 'heavy' })
 
+    // 难过表情常驻，直到复活或重开
+    if (this.penguin) {
+      this.penguin.setMood('sad')
+    }
+
     // 播放失败音效
     this.audioManager.playFailSound()
 
@@ -1554,6 +1559,11 @@ export default class Main {
 
     // 恢复游戏状态
     this.gameState = 'playing'
+
+    // 复活后情绪归位，别把失败表情带进新的一局
+    if (this.penguin) {
+      this.penguin.resetMood()
+    }
 
     if (this.settlementManager) {
       this.settlementManager.recordRevive()
@@ -1643,12 +1653,22 @@ export default class Main {
 
     // 所有冰块都进入目标区域才算通关
     let allInTarget = true
+    let justScored = false
     this.stones.forEach(stone => {
+      const wasInTarget = stone.inTarget
       stone.inTarget = this.target.contains(stone)
       if (!stone.inTarget) {
         allInTarget = false
+      } else if (!wasInTarget) {
+        justScored = true
       }
     })
+
+    // 每推进一块冰都值得开心一下，不是只有全部完成才笑。
+    // 加 moves > 0 的守卫：关卡一开始就有冰块摆在目标里时不该触发。
+    if (justScored && this.penguin && this.moves > 0) {
+      this.penguin.setMood('happy')
+    }
 
     if (allInTarget) {
       this.gameState = 'win'

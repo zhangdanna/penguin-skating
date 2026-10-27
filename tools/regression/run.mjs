@@ -1077,6 +1077,207 @@ freshPenguin.handleTouchStart({ clientX: 100, clientY: 100 })
 freshPenguin.handleTouchEnd()
 check('纯点击不产生移动', freshPenguin.handleTouchEnd() === null)
 
+// ---------- D8 企鹅情绪状态机 ----------
+freshPenguin.resetMood()
+check('企鹅默认情绪为 idle', freshPenguin.getMood() === 'idle', freshPenguin.getMood())
+
+freshPenguin.setMood('happy')
+check('setMood(happy) 立即生效', freshPenguin.getMood() === 'happy', freshPenguin.getMood())
+clock += 1300
+check('happy 1.2 秒后自动回落到 idle', freshPenguin.getMood() === 'idle', freshPenguin.getMood())
+
+freshPenguin.setMood('sad')
+clock += 60 * 1000
+check('sad 不会自动回落（常驻到复活 / 重开）',
+  freshPenguin.getMood() === 'sad', freshPenguin.getMood())
+
+freshPenguin.resetMood()
+check('resetMood 复位为 idle', freshPenguin.getMood() === 'idle', freshPenguin.getMood())
+
+// ---------- D8 企鹅绘制：所有姿态 / 道具 / 情绪都能画 ----------
+const ThemeMod = await loadModule(path.join(ROOT, 'js/ui/theme.js'))
+const { drawPenguin } = ThemeMod.namespace
+check('theme.js 导出 drawPenguin', typeof drawPenguin === 'function')
+
+const PENGUIN_POSES = ['stand', 'wave', 'cheer', 'slide', 'peek', 'hold', 'sleep']
+const PENGUIN_PROPS = ['trophy', 'medal', 'crown', 'fish', 'star', 'snowflake',
+  'lightning', 'heart', 'target', 'bubbles', 'zzz', 'confetti', null]
+const PENGUIN_MOODS = ['idle', 'happy', 'sad']
+let penguinDrawOk = true
+let penguinDrawError = ''
+try {
+  PENGUIN_POSES.forEach(pose => {
+    PENGUIN_PROPS.forEach(prop => {
+      PENGUIN_MOODS.forEach(mood => {
+        drawPenguin(makeCtx(), 100, 100, 1.5, { pose, prop, mood })
+      })
+    })
+  })
+} catch (e) {
+  penguinDrawOk = false
+  penguinDrawError = e.message
+}
+check('7 姿态 × 13 道具 × 3 情绪全部可绘制', penguinDrawOk, penguinDrawError)
+check('旧的 sad:true 仍等价于 mood:sad',
+  (() => { try { drawPenguin(makeCtx(), 100, 100, 1, { sad: true }); return true } catch (e) { return false } })())
+
+// ---------- D9 成就详情弹层：布局必须和设计稿一致 ----------
+const AchievementSceneMod = await loadModule(path.join(ROOT, 'js/ui/achievement-scene.js'))
+const AchievementScene = AchievementSceneMod.namespace.default
+
+/** 记录 fillText 的 ctx（makeCtx 是 Proxy，这里包一层把文字调用存下来） */
+function makeTextRecorder() {
+  const calls = []
+  const state = {}
+  const ctx = new Proxy(state, {
+    get(target, key) {
+      if (key === 'measureText') return (text) => ({ width: String(text).length * 8 })
+      if (key === 'createLinearGradient' || key === 'createRadialGradient') {
+        return () => ({ addColorStop() {} })
+      }
+      if (key === 'fillText') return (text, x, y) => calls.push({ text: String(text), x, y })
+      if (key in target) return target[key]
+      return () => {}
+    },
+    set(target, key, value) {
+      target[key] = value
+      return true
+    }
+  })
+  return { ctx, calls }
+}
+
+const stubAchievement = {
+  id: 'first_win',
+  name: '初出茅庐',
+  description: '首次通关任意关卡',
+  icon: '🏆',
+  pose: 'cheer',
+  prop: 'trophy',
+  quote: '第一块冰，稳稳落进洞里啦！',
+  reward: { fish: 3 },
+  unlocked: true
+}
+// 第二项只用来验证「弹层打开时列表不渲染」
+const stubSecond = {
+  id: 'win_10', name: '小有所成', description: '首通 10 个关卡',
+  icon: '🎖️', pose: 'wave', prop: 'medal', quote: '稳了。',
+  reward: { shrimp: 2 }, unlocked: true
+}
+const stubManager = {
+  getAllAchievements: () => [stubAchievement, stubSecond],
+  getProgress: () => ({ unlocked: 2, total: 2, percentage: 100 })
+}
+
+const popupScene = new AchievementScene(stubManager, () => {})
+popupScene.show()
+popupScene.expandedId = 'first_win'
+popupScene.popupOpenedAt = clock - 1000
+const recorder = makeTextRecorder()
+popupScene.render(recorder.ctx)
+const popupTexts = recorder.calls
+const popupRect = popupScene.popupRect
+
+check('详情卡宽度 = 320（375 屏）',
+  !!popupRect && Math.round(popupRect.width) === 320,
+  popupRect ? String(Math.round(popupRect.width)) : 'missing')
+check('详情卡高宽比对齐设计稿 322×441',
+  !!popupRect && Math.abs(popupRect.height / popupRect.width - 1.366) < 0.01,
+  popupRect ? (popupRect.height / popupRect.width).toFixed(3) : 'missing')
+
+const iconCall = popupTexts.find(item => item.text === '🏆')
+const nameCall = popupTexts.find(item => item.text === '初出茅庐')
+check('图标与名称在同一行（设计稿是一行「图标 + 名称」）',
+  !!iconCall && !!nameCall && Math.abs(iconCall.y - nameCall.y) < 0.5,
+  iconCall && nameCall ? `${iconCall.y} vs ${nameCall.y}` : 'missing')
+check('图标在名称左侧', !!iconCall && !!nameCall && iconCall.x < nameCall.x)
+
+const subCall = popupTexts.find(item => item.text === '首次通关任意关卡')
+const bandBottom = popupRect.y + Math.round(popupRect.width * 0.266)
+check('解锁条件留在顶部色带里（不再掉到卡片下部）',
+  !!subCall && subCall.y < bandBottom,
+  subCall ? `${subCall.y} < ${bandBottom}` : 'missing')
+
+const quoteCall = popupTexts.find(item => item.text.indexOf('第一块冰') !== -1)
+check('一句话带书名号', !!quoteCall && /^「.*」$/.test(quoteCall.text),
+  quoteCall ? quoteCall.text : 'missing')
+
+const unlockedChip = popupTexts.find(item => item.text === '✓ 已解锁')
+const rewardChip = popupTexts.find(item => /^奖励 3/.test(item.text))
+check('底部两个标签都存在', !!unlockedChip && !!rewardChip)
+check('两个标签不重叠', !!unlockedChip && !!rewardChip && unlockedChip.x < rewardChip.x)
+
+check('弹层打开时列表不渲染（背后不留被压暗的卡片）',
+  !popupTexts.some(item => item.text === '小有所成'),
+  popupTexts.map(item => item.text).join('|'))
+check('弹层打开时页面级元素（标题 / 关闭按钮）一起隐藏',
+  !popupTexts.some(item => item.text === '成就系统' || item.text === '✕'))
+
+const achievementSceneSrc = allSources.find(({ file }) => file.endsWith('achievement-scene.js'))
+
+// 右上角 ✕：命中判定必须真的能关掉弹层
+const closeCenter = popupScene.getCloseCenter(popupRect)
+popupScene.expandedId = 'first_win'
+popupScene.handlePopupTap({ clientX: closeCenter.x, clientY: closeCenter.y })
+check('点右上角 ✕ 关闭弹层', popupScene.expandedId === null, String(popupScene.expandedId))
+
+popupScene.expandedId = 'first_win'
+popupScene.handlePopupTap({
+  clientX: popupRect.x + popupRect.width / 2,
+  clientY: popupRect.y + popupRect.height / 2
+})
+check('点卡片中间不关闭', popupScene.expandedId === 'first_win', String(popupScene.expandedId))
+
+popupScene.expandedId = 'first_win'
+popupScene.handlePopupTap({ clientX: popupRect.x - 20, clientY: popupRect.y - 20 })
+check('点卡片外面关闭', popupScene.expandedId === null, String(popupScene.expandedId))
+
+check('✕ 是白色半透明圆底 + 深紫叉（白底白叉等于没画）',
+  !!achievementSceneSrc &&
+  /rgba\(255, 255, 255, 0\.9\)/.test(achievementSceneSrc.src) &&
+  /strokeStyle = COLORS\.lavenderDeep/.test(achievementSceneSrc.src))
+
+const themeSrcForInk = allSources.find(({ file }) => file.endsWith('theme.js'))
+check('奖励标签用深金色文字（黄底配黄字对比度只有 1.9:1）',
+  !!themeSrcForInk && /yellowInk: '#B98A12'/.test(themeSrcForInk.src))
+
+// 列表命中：点卡片任意位置都必须是这张卡（不能串到上一项）
+popupScene.expandedId = null
+const listRecorder = makeTextRecorder()
+popupScene.render(listRecorder.ctx)
+check('列表渲染后每张卡都建立了命中区',
+  popupScene.cardRects.length === stubManager.getAllAchievements().length,
+  String(popupScene.cardRects.length))
+
+let cardHitOk = true
+let cardHitDetail = ''
+popupScene.cardRects.forEach((rect, index) => {
+  const points = [
+    [rect.x + 2, rect.y + 2],
+    [rect.x + rect.width - 2, rect.y + 2],
+    [rect.x + 2, rect.y + rect.height - 2],
+    [rect.x + rect.width - 2, rect.y + rect.height - 2],
+    [rect.x + rect.width / 2, rect.y + rect.height / 2]
+  ]
+  points.forEach(([px, py]) => {
+    const hit = popupScene.getCardAt(px, py)
+    const expected = stubManager.getAllAchievements()[index]
+    if (!hit || hit.id !== expected.id) {
+      cardHitOk = false
+      cardHitDetail = `第 ${index + 1} 项 (${Math.round(px)},${Math.round(py)}) 命中 ${hit ? hit.id : 'null'}`
+    }
+  })
+})
+check('点卡片任意位置都命中它自己（四角 + 中心）', cardHitOk, cardHitDetail)
+
+// 这个场景的 render() 不调用 stage().apply()，触摸就不能 unproject，
+// 否则高屏（offsetY ≠ 0）上会整体偏上、点第 3 项弹第 2 项。
+const sceneCode = achievementSceneSrc.src
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/^\s*\/\/.*$/gm, '')
+check('成就场景的渲染与触摸坐标系成对（不能一边 stage 一边不 stage）',
+  /stage\(\)\.apply\(/.test(sceneCode) === /stage\(\)\.unproject\(/.test(sceneCode))
+
 // ---------- D7 静态层缓存与 shadowBlur ----------
 const shadowBlurHits = allSources.filter(({ src }) => /\.shadowBlur\s*=/.test(src))
 check('源码中不再有 shadowBlur（D7）', shadowBlurHits.length === 0,
@@ -1298,12 +1499,33 @@ am.recordWin({ level: 3, stars: 3, moves: 16, par: 16, time: 40, firstClear: tru
 check('步数正好等于 par 才解锁「精准操作」', am.unlockedAchievements.includes('perfect_moves'),
   am.unlockedAchievements.join(','))
 
-check('通关 3 关不会解锁「完美主义」（需 60 关全 3 星）',
-  !am.unlockedAchievements.includes('all_3star'), am.unlockedAchievements.join(','))
+// 成就改版：19 → 15，删掉 4 个星级成就
+const allAch = am.getAllAchievements()
+check('成就总数为 15（已删掉 4 个星级成就）', allAch.length === 15, `${allAch.length}`)
+const removedAchIds = ['star_10', 'star_50', 'star_100', 'all_3star']
+check('4 个已下线成就不在定义里',
+  removedAchIds.every(id => !allAch.some(item => item.id === id)),
+  allAch.map(item => item.id).join(','))
+check('每个成就都配了 pose / prop / quote（成就卡造型用）',
+  allAch.every(item => typeof item.pose === 'string' && item.pose &&
+    typeof item.quote === 'string' && item.quote &&
+    (item.prop === null || typeof item.prop === 'string')),
+  allAch.filter(item => !item.pose || !item.quote).map(item => item.id).join(','))
+check('15 个成就的造型组合互不重复',
+  new Set(allAch.map(item => item.pose + '|' + item.prop)).size === allAch.length,
+  allAch.map(item => item.pose + '|' + item.prop).join(','))
 
 am.recordWin({ level: 4, stars: 3, moves: 20, par: 16, time: 40, firstClear: true, undoUsed: true })
 check('用过「退一步」的关卡不计入精准步数',
   am.stats.perfectMoves === 1, `${am.stats.perfectMoves}`)
+
+// 老存档里残留已删成就 id 时，进度不能虚高
+am.unlockedAchievements = ['star_10', 'star_50', 'star_100', 'all_3star', 'first_win']
+const staleProgress = am.getProgress()
+check('残留已删成就 id 不会让进度超过 100%',
+  staleProgress.unlocked === 1 && staleProgress.percentage <= 100,
+  `${staleProgress.unlocked}/${staleProgress.total} = ${Math.round(staleProgress.percentage)}%`)
+am.unlockedAchievements = ['first_win']
 
 // ---------- 退一步 ----------
 console.log('\n[23] 退一步（F3）')

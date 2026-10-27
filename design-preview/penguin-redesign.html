@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>一企推推乐 · 企鹅形象改版设计方案</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 20px 80px;
+    background: #FFF9EE;
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+    color: #1F3A5F;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 40px; }
+  h1 { font-size: 28px; margin: 0 0 10px; letter-spacing: 1px; }
+  .sub { color: #4A6B8C; font-size: 14px; line-height: 1.7; }
+  h2 {
+    font-size: 19px; margin: 48px 0 6px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  h2 .num {
+    width: 26px; height: 26px; border-radius: 9px;
+    background: #A78BFA; color: #fff;
+    font-size: 14px; display: flex; align-items: center; justify-content: center;
+  }
+  .hint { color: #4A6B8C; font-size: 13px; margin: 0 0 18px; line-height: 1.7; }
+  .card {
+    background: #fff; border-radius: 20px; padding: 22px;
+    box-shadow: 0 6px 24px rgba(31,58,95,.08);
+    border: 1px solid rgba(31,58,95,.06);
+  }
+  .row { display: flex; gap: 18px; flex-wrap: wrap; }
+  .item { text-align: center; }
+  .item .label { font-size: 12px; color: #4A6B8C; margin-top: 8px; }
+  .item .label b { color: #1F3A5F; font-size: 13px; display: block; margin-bottom: 2px; }
+  canvas { display: block; border-radius: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+  .acard {
+    background: #fff; border-radius: 16px; padding: 10px 8px 12px;
+    border: 1.5px solid rgba(47,191,155,.35);
+    text-align: center;
+    transition: transform .18s ease, box-shadow .18s ease;
+  }
+  .acard:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(31,58,95,.12); }
+  .acard .aname { font-size: 12px; font-weight: 700; margin-top: 6px; }
+  .acard .apose { font-size: 10px; color: #8AA0B5; margin-top: 3px; font-family: ui-monospace, monospace; }
+  .acard canvas { margin: 0 auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 9px 10px; text-align: left; border-bottom: 1px solid rgba(31,58,95,.08); }
+  th { color: #4A6B8C; font-weight: 600; font-size: 12px; }
+  td code {
+    background: rgba(167,139,250,.14); color: #6D4FC4;
+    padding: 1px 6px; border-radius: 5px; font-size: 12px;
+  }
+  .tag {
+    display: inline-block; padding: 2px 8px; border-radius: 20px;
+    font-size: 11px; background: rgba(47,191,155,.15); color: #1FA383; font-weight: 600;
+  }
+  .tag.warn { background: rgba(255,159,90,.18); color: #C96A26; }
+  .popup-mock {
+    width: 320px; background: #fff; border-radius: 27px;
+    box-shadow: 0 18px 50px rgba(31,58,95,.22);
+    overflow: hidden; margin: 0 auto;
+  }
+  .popup-mock { position: relative; }
+  .popup-close {
+    position: absolute; top: 9px; right: 9px; width: 30px; height: 30px;
+    border-radius: 50%; background: rgba(255,255,255,.9); color: #8B6BE8;
+    font-size: 13px; font-weight: 700; line-height: 30px; text-align: center;
+  }
+  .popup-top {
+    background: linear-gradient(135deg, #A78BFA, #8B6BE8);
+    padding: 16px 18px 12px; color: #fff; text-align: center;
+  }
+  .popup-top .pt-name { font-size: 17px; font-weight: 800; letter-spacing: .5px; }
+  .popup-top .pt-sub { font-size: 11px; opacity: .85; margin-top: 3px; }
+  .popup-body { padding: 0 0 14px; }
+  .popup-body canvas { margin: 0 auto; }
+  .popup-desc {
+    padding: 0 22px; font-size: 12.5px; color: #4A6B8C; text-align: center; line-height: 1.6;
+  }
+  .popup-foot {
+    display: flex; justify-content: center; gap: 8px; margin-top: 12px; padding: 0 22px;
+  }
+  .chip {
+    font-size: 11.5px; padding: 4px 12px; border-radius: 20px;
+    background: rgba(47,191,155,.14); color: #1FA383; font-weight: 700;
+  }
+  .chip.reward { background: rgba(255,201,74,.22); color: #B98A12; }
+  .note {
+    background: rgba(255,201,74,.13); border-left: 3px solid #FFC94A;
+    padding: 12px 16px; border-radius: 0 10px 10px 0;
+    font-size: 12.5px; color: #6B5A2A; line-height: 1.7; margin-top: 16px;
+  }
+  .legend { display: flex; gap: 22px; flex-wrap: wrap; font-size: 12px; color: #4A6B8C; margin-top: 14px; }
+  .legend span { display: flex; align-items: center; gap: 6px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .checker {
+    background-image:
+      linear-gradient(45deg, rgba(190,235,255,.5) 25%, transparent 25%),
+      linear-gradient(-45deg, rgba(190,235,255,.5) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, rgba(190,235,255,.5) 75%),
+      linear-gradient(-45deg, transparent 75%, rgba(190,235,255,.5) 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    border-radius: 14px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>一企推推乐 · 企鹅形象改版设计方案</h1>
+    <div class="sub">
+      依据参考图重绘基础体型，并把「情绪」与「造型」做成 <code>drawPenguin()</code> 的可选参数 ——<br>
+      全项目只有这一个绘制入口，所以改一处，对局 / 菜单 / 失败页 / 成就卡全部同步。
+    </div>
+  </header>
+
+  <h2><span class="num">1</span>基础形象：旧版 vs 新版</h2>
+  <p class="hint">
+    旧版是「圆头 + 椭圆身」两个色块叠出来的雪人感，头身之间有粉色围巾割断；新版按参考图改为<b>一颗完整的蛋形身体</b>，
+    头与身体一体成型，白肚皮放大、眼睛白斑放大、脚改成三趾蹼足。
+  </p>
+  <div class="card">
+    <div class="row" style="justify-content:space-around">
+      <div class="item">
+        <canvas id="old" width="200" height="230"></canvas>
+        <div class="label"><b>旧版（现状）</b>雪人感 / 头身分离</div>
+      </div>
+      <div class="item">
+        <canvas id="newA" width="200" height="230"></canvas>
+        <div class="label"><b>新版 · 黄色围巾</b>绕在脖子上</div>
+      </div>
+      <div class="item">
+        <canvas id="newB" width="200" height="230"></canvas>
+        <div class="label"><b>新版 · 无围巾</b>完全贴合参考图</div>
+      </div>
+    </div>
+    <div class="legend">
+      <span><i class="dot" style="background:#1F3A5F"></i>身体单一路径（贝塞尔蛋形）</span>
+      <span><i class="dot" style="background:#FFF9EE"></i>白肚皮放大到下巴</span>
+      <span><i class="dot" style="background:#FF9F5A"></i>三趾蹼足</span>
+      <span><i class="dot" style="background:#FF7FB0"></i>腮红外移到脸颊</span>
+    </div>
+    <div class="note">
+      <b>围巾已定：</b>位置从肚子上移到脖子（贴着下巴、压在脸颊下方），颜色由粉色改为
+      <b style="color:#B98A12">黄色 #FFC94A</b>（暗部 #E5A72B）。黄色和橙色喙同属暖色，
+      所以围巾加了一圈深黄描边做区分，避免和嘴巴糊成一块。
+    </div>
+  </div>
+
+  <h2><span class="num">2</span>三种情绪（保持动态）</h2>
+  <p class="hint">
+    情绪统一为 <code>mood: 'idle' | 'happy' | 'sad'</code>。旧的 <code>sad: true</code> 继续兼容，内部直接映射成 <code>mood:'sad'</code>，
+    失败页 / 复活页不用改调用方式。三个状态都是逐帧动画，不是静态图。
+  </p>
+  <div class="card">
+    <div class="row" style="justify-content:space-around">
+      <div class="item">
+        <canvas id="mIdle" width="170" height="190"></canvas>
+        <div class="label"><b>待机 idle</b>缓慢呼吸浮动</div>
+      </div>
+      <div class="item">
+        <canvas id="mHappy" width="170" height="190"></canvas>
+        <div class="label"><b>成功 happy</b>弯眼 + 张嘴 + 蹦跳</div>
+      </div>
+      <div class="item">
+        <canvas id="mSad" width="170" height="190"></canvas>
+        <div class="label"><b>失败 sad</b>垂眼 + 泪滴 + 发抖</div>
+      </div>
+    </div>
+    <div class="note" style="margin-top:18px">
+      <b>触发点（已定位到具体代码行）：</b><br>
+      · <b>成功推入冰块</b> → <code>game.js</code> 的 <code>checkWinCondition()</code>，每块冰的 <code>stone.inTarget</code> 由 false 变 true 时，
+      调 <code>penguin.setMood('happy', 1200)</code>，1.2 秒后自动回落到 idle；全部冰块进洞时再触发一次更强的欢呼。<br>
+      · <b>失败</b> → <code>game.js</code> 的 <code>onFail(reason)</code>，<code>penguin.setMood('sad')</code> 常驻到复活/重开。
+    </div>
+  </div>
+
+  <h2><span class="num">3</span>游戏内实际尺寸检查</h2>
+  <p class="hint">
+    对局里企鹅只有 <b>一个格子大（约 50px）</b>，这是所有细节的真正考场。下面按实际格子尺寸渲染，右边是放大后的样子。
+  </p>
+  <div class="card">
+    <div class="row" style="align-items:center;gap:26px">
+      <div class="item">
+        <div class="checker" style="padding:10px;display:flex;gap:6px">
+          <canvas id="s50a" width="50" height="50"></canvas>
+          <canvas id="s50b" width="50" height="50"></canvas>
+          <canvas id="s50c" width="50" height="50"></canvas>
+        </div>
+        <div class="label"><b>50px 实际大小</b>idle / happy / sad</div>
+      </div>
+      <div class="item">
+        <canvas id="sBig" width="200" height="200"></canvas>
+        <div class="label"><b>放大 4 倍</b>同一份绘制代码</div>
+      </div>
+      <div class="item" style="max-width:300px;text-align:left">
+        <div class="label" style="line-height:1.8">
+          <b>小尺寸下的取舍</b>
+          眼睛白斑和瞳孔做了「最小可见尺寸」保底，50px 时仍能看清眼神；
+          腮红和脚趾在 50px 下会自然糊成色块，这是可接受的（参考图的可爱感主要来自轮廓，不是细节）。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2><span class="num">4</span>成就卡片造型（15 个成就各一种）</h2>
+  <p class="hint">
+    造型不是画 15 只企鹅，而是 <b>7 种姿态 × 10 种道具</b> 组合出来 —— 代码量小、风格绝对统一，后续加成就只要填两个字段。
+    下面每个卡片就是点开成就后看到的那只企鹅。
+  </p>
+  <div class="card">
+    <div class="grid" id="achGrid"></div>
+    <div class="note" style="margin-top:20px">
+      <b>姿态词表：</b><code>stand</code> 站立 · <code>wave</code> 挥手 · <code>cheer</code> 双翅高举 · <code>slide</code> 趴着滑 ·
+      <code>peek</code> 探头 · <code>hold</code> 双手捧 · <code>sleep</code> 打盹<br>
+      <b>道具词表：</b><code>trophy</code> 奖杯 · <code>medal</code> 勋章 · <code>crown</code> 皇冠 · <code>fish</code> 鱼 ·
+      <code>star</code> 星星 · <code>snowflake</code> 雪花 · <code>lightning</code> 闪电 · <code>heart</code> 爱心 ·
+      <code>target</code> 靶心 · <code>bubbles</code> 泡泡 · <code>zzz</code> 瞌睡
+    </div>
+  </div>
+
+  <h2><span class="num">5</span>点开已解锁卡片的样子</h2>
+  <p class="hint">
+    列表里点击<b>已解锁</b>的卡片 → 中央弹出这张卡（未解锁的点击只轻微抖动，不弹层）。
+    内容只有「造型 + 一句话 + 奖励 + 已解锁」，不做长文案 —— 保持简洁有趣。
+  </p>
+  <div class="card" style="display:flex;gap:34px;align-items:center;flex-wrap:wrap;justify-content:center">
+    <div class="popup-mock">
+      <div class="popup-top">
+        <div class="pt-name">🏆 初出茅庐</div>
+        <div class="pt-sub">首次通关任意关卡</div>
+      </div>
+      <span class="popup-close">✕</span>
+      <div class="popup-body">
+        <canvas id="popupPenguin" width="300" height="210"></canvas>
+        <div class="popup-desc">「第一块冰，稳稳落进洞里啦！」</div>
+        <div class="popup-foot">
+          <span class="chip">✓ 已解锁</span>
+          <span class="chip reward">奖励 3 🐟</span>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:280px">
+      <table>
+        <tr><th>交互</th><th>行为</th></tr>
+        <tr><td>点击已解锁卡片</td><td>弹层放大进入（0.85 → 1，轻微回弹）</td></tr>
+        <tr><td>点击未解锁卡片</td><td>左右抖动 2 下，不弹层</td></tr>
+        <tr><td>点击弹层外 / 右上角 ✕</td><td>关闭（弹层打开时列表和标题一起隐藏）</td></tr>
+        <tr><td>滚动列表</td><td>位移 &gt; 8px 判定为滚动，不触发点击</td></tr>
+      </table>
+      <div class="note" style="margin-top:14px">
+        弹层里的企鹅用的是<b>同一个 <code>drawPenguin()</code></b>，只是把 <code>pose</code> / <code>prop</code> 换成该成就对应的值，
+        所以永远不会出现「成就页的企鹅和对局里的企鹅长得不一样」。
+      </div>
+    </div>
+  </div>
+
+  <h2><span class="num">6</span>改动清单（确认后执行）</h2>
+  <div class="card">
+    <table>
+      <tr><th style="width:200px">文件</th><th>改动</th><th style="width:80px">风险</th></tr>
+      <tr>
+        <td><code>js/ui/theme.js</code></td>
+        <td>重写 <code>drawPenguin()</code>：蛋形身体单路径 + 新增 <code>mood / pose / prop / scarf</code> 参数，保持 <code>sad</code> 兼容</td>
+        <td><span class="tag warn">高</span></td>
+      </tr>
+      <tr>
+        <td><code>js/runtime/penguin.js</code></td>
+        <td>新增 <code>setMood(mood, duration)</code> 与三种情绪的运动曲线（呼吸 / 蹦跳 / 发抖）</td>
+        <td><span class="tag">中</span></td>
+      </tr>
+      <tr>
+        <td><code>game.js</code></td>
+        <td>两处埋点：<code>checkWinCondition()</code> 冰块入洞 → happy；<code>onFail()</code> → sad</td>
+        <td><span class="tag">低</span></td>
+      </tr>
+      <tr>
+        <td><code>js/utils/achievement-manager.js</code></td>
+        <td>删除 4 个成就定义；为剩余 15 个补 <code>pose</code> / <code>prop</code> / <code>quote</code> 字段；修正 <code>getProgress()</code> 计数口径</td>
+        <td><span class="tag warn">中</span></td>
+      </tr>
+      <tr>
+        <td><code>js/ui/achievement-scene.js</code></td>
+        <td>卡片点击命中 + 展开弹层 + 抖动动画 + 滚动/点击区分</td>
+        <td><span class="tag">中</span></td>
+      </tr>
+      <tr>
+        <td><code>tools/regression/run.mjs</code></td>
+        <td>删除「完美主义」断言；新增成就数量、点击展开、情绪状态机断言</td>
+        <td><span class="tag">低</span></td>
+      </tr>
+      <tr>
+        <td><code>game.md</code></td>
+        <td>成就数量 19 → 15，删掉「完美主义」相关说明与金鱼获取途径</td>
+        <td><span class="tag">低</span></td>
+      </tr>
+      <tr>
+        <td><code>tools/gen-share-image.py</code> / <code>gen-icon.py</code></td>
+        <td>分享图与图标里的企鹅同步成新造型（PIL 独立绘制，需手动对齐）</td>
+        <td><span class="tag">中</span></td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<script>
+const TAU = Math.PI * 2
+
+const C = {
+  navy: '#1F3A5F', navyDeep: '#152A45', navyWing: '#1A3352',
+  cream: '#FFF9EE', white: '#FFFFFF',
+  pink: '#FF7FB0', pinkDeep: '#E85F97',
+  orange: '#FF9F5A', orangeDeep: '#E07C36',
+  yellow: '#FFC94A', yellowDeep: '#E5A72B',
+  mint: '#2FBF9B', water: '#5BC8F5', ice: '#BEEBFF', coral: '#FF7A6B'
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  const rr = Math.min(r, w / 2, h / 2)
+  ctx.beginPath()
+  ctx.moveTo(x + rr, y)
+  ctx.lineTo(x + w - rr, y)
+  ctx.quadraticCurveTo(x + w, y, x + w, y + rr)
+  ctx.lineTo(x + w, y + h - rr)
+  ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h)
+  ctx.lineTo(x + rr, y + h)
+  ctx.quadraticCurveTo(x, y + h, x, y + h - rr)
+  ctx.lineTo(x, y + rr)
+  ctx.quadraticCurveTo(x, y, x + rr, y)
+  ctx.closePath()
+}
+
+/* ============================================================
+   新版企鹅
+   设计坐标系：宽约 36，高约 48，原点在身体中心，脚底 y ≈ +22
+   ============================================================ */
+function drawPenguin(ctx, cx, cy, s, opt) {
+  opt = opt || {}
+  const mood = opt.sad ? 'sad' : (opt.mood || 'idle')
+  const pose = opt.pose || 'stand'
+  const direction = opt.direction || 'down'
+  const scarf = opt.scarf !== false
+  const prop = opt.prop || null
+  const angle = opt.angle || 0
+
+  ctx.save()
+  ctx.translate(cx, cy)
+  ctx.rotate(angle)
+  ctx.scale(s, s)
+
+  // ---- 姿态变换（以脚底为支点）----
+  const groundY = 22
+  let poseAngle = 0, squashY = 1, drop = 0
+  if (pose === 'slide') { poseAngle = -0.72; squashY = 0.88 }
+  if (pose === 'sleep') { poseAngle = 0.10; squashY = 0.90 }
+  if (pose === 'peek') { drop = 15 }
+  ctx.translate(0, groundY)
+  ctx.rotate(poseAngle)
+  ctx.scale(1, squashY)
+  ctx.translate(0, -groundY + drop)
+
+  // ---- 地面阴影 ----
+  if (pose === 'stand' || pose === 'wave' || pose === 'cheer' || pose === 'hold') {
+    ctx.fillStyle = 'rgba(31,58,95,0.16)'
+    ctx.beginPath()
+    ctx.ellipse(0, groundY + 3, 14.5, 3.8, 0, 0, TAU)
+    ctx.fill()
+  }
+
+  // ---- 翅膀（先画，压在身体后面）----
+  drawFlipper(ctx, -1, pose)
+  drawFlipper(ctx, 1, pose)
+
+  // ---- 身体：一颗完整的蛋 ----
+  ctx.beginPath()
+  ctx.moveTo(0, -25.5)
+  ctx.bezierCurveTo(10, -25.5, 14.5, -20, 14.5, -12)
+  ctx.bezierCurveTo(14.5, -7, 17.5, -2.5, 17.5, 5)
+  ctx.bezierCurveTo(17.5, 15.5, 10, 22, 0, 22)
+  ctx.bezierCurveTo(-10, 22, -17.5, 15.5, -17.5, 5)
+  ctx.bezierCurveTo(-17.5, -2.5, -14.5, -7, -14.5, -12)
+  ctx.bezierCurveTo(-14.5, -20, -10, -25.5, 0, -25.5)
+  ctx.closePath()
+  ctx.fillStyle = C.navy
+  ctx.fill()
+  ctx.lineWidth = 1.5
+  ctx.strokeStyle = C.navyDeep
+  ctx.lineJoin = 'round'
+  ctx.stroke()
+
+  // ---- 白肚皮 ----
+  ctx.beginPath()
+  ctx.ellipse(0, 7, 12.9, 11.6, 0, 0, TAU)
+  ctx.fillStyle = C.cream
+  ctx.fill()
+
+  // ---- 脚：三趾蹼足 ----
+  ;[-1, 1].forEach(side => {
+    const fx = side * 6.8
+    ctx.fillStyle = C.orange
+    ctx.beginPath()
+    ctx.ellipse(fx - 3.0, 21.6, 2.6, 1.9, side * -0.12, 0, TAU)
+    ctx.ellipse(fx, 22.5, 2.8, 2.1, 0, 0, TAU)
+    ctx.ellipse(fx + 3.0, 21.6, 2.6, 1.9, side * 0.12, 0, TAU)
+    ctx.fill()
+  })
+
+  // ---- 围巾：绕在脖子上（黄色）----
+  if (scarf) {
+    // 主环
+    ctx.fillStyle = C.yellow
+    roundRect(ctx, -13.2, -4.0, 26.4, 5.8, 2.9)
+    ctx.fill()
+    ctx.strokeStyle = C.yellowDeep
+    ctx.lineWidth = 0.9
+    ctx.stroke()
+
+    // 垂下的巾角（略微外撇）
+    ctx.save()
+    ctx.translate(9.4, -1.2)
+    ctx.rotate(0.14)
+    ctx.fillStyle = C.yellowDeep
+    roundRect(ctx, -2.8, 0, 5.6, 11.8, 2.6)
+    ctx.fill()
+    ctx.fillStyle = C.yellow
+    roundRect(ctx, -2.0, 1.2, 4.0, 9.4, 2.0)
+    ctx.fill()
+    ctx.restore()
+  }
+
+  // ---- 眼睛白斑 ----
+  const eyeX = 5.9, eyeY = -11.6
+
+  if (mood === 'happy') {
+    ;[-1, 1].forEach(side => {
+      ctx.save()
+      ctx.translate(side * eyeX, eyeY)
+      ctx.rotate(side * 0.15)
+      ctx.beginPath()
+      ctx.ellipse(0, 0, 5.8, 6.4, 0, 0, TAU)
+      ctx.fillStyle = C.white
+      ctx.fill()
+      // 弯成 ∩ 的笑眼
+      ctx.beginPath()
+      ctx.arc(0, 1.8, 3.6, Math.PI * 1.08, Math.PI * 1.92)
+      ctx.strokeStyle = C.navyDeep
+      ctx.lineWidth = 2.0
+      ctx.lineCap = 'round'
+      ctx.stroke()
+      ctx.restore()
+    })
+  } else if (mood === 'sad') {
+    ;[-1, 1].forEach(side => {
+      ctx.save()
+      ctx.translate(side * eyeX, eyeY)
+      ctx.rotate(side * 0.15)
+      ctx.beginPath()
+      ctx.ellipse(0, 0, 5.8, 6.4, 0, 0, TAU)
+      ctx.clip()
+      ctx.fillStyle = C.white
+      ctx.fillRect(-7, -8, 14, 16)
+      // 瞳孔下移
+      ctx.beginPath()
+      ctx.arc(0, 2.1, 3.4, 0, TAU)
+      ctx.fillStyle = C.navyDeep
+      ctx.fill()
+      ctx.beginPath()
+      ctx.arc(-1.1, 0.9, 1.2, 0, TAU)
+      ctx.fillStyle = C.white
+      ctx.fill()
+      // 下垂眼皮（只盖住上缘，别盖成「怒眉」）
+      ctx.beginPath()
+      ctx.moveTo(-7, -8)
+      ctx.lineTo(7, -8)
+      ctx.lineTo(7, -3.4)
+      ctx.quadraticCurveTo(0, -5.4, -7, -2.6)
+      ctx.closePath()
+      ctx.fillStyle = C.navy
+      ctx.fill()
+      ctx.restore()
+    })
+    // 泪滴
+    ctx.fillStyle = 'rgba(91,200,245,0.92)'
+    ctx.beginPath()
+    ctx.moveTo(-eyeX - 0.2, eyeY + 6.4)
+    ctx.quadraticCurveTo(-eyeX - 2.9, eyeY + 11.6, -eyeX - 0.2, eyeY + 12.2)
+    ctx.quadraticCurveTo(-eyeX + 2.5, eyeY + 11.6, -eyeX - 0.2, eyeY + 6.4)
+    ctx.fill()
+  } else {
+    const off = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[direction] || [0, 0]
+    ;[-1, 1].forEach(side => {
+      ctx.save()
+      ctx.translate(side * eyeX, eyeY)
+      ctx.rotate(side * 0.15)
+      ctx.beginPath()
+      ctx.ellipse(0, 0, 5.8, 6.4, 0, 0, TAU)
+      ctx.fillStyle = C.white
+      ctx.fill()
+      ctx.restore()
+
+      const px = side * eyeX + off[0] * 0.9
+      const py = eyeY + 0.6 + off[1] * 0.9
+      ctx.beginPath()
+      ctx.arc(px, py, 3.5, 0, TAU)
+      ctx.fillStyle = C.navyDeep
+      ctx.fill()
+      ctx.beginPath()
+      ctx.arc(px - 1.2, py - 1.5, 1.35, 0, TAU)
+      ctx.fillStyle = C.white
+      ctx.fill()
+      ctx.beginPath()
+      ctx.arc(px + 1.25, py + 1.05, 0.62, 0, TAU)
+      ctx.fillStyle = 'rgba(255,255,255,0.85)'
+      ctx.fill()
+    })
+  }
+
+  // ---- 腮红 ----
+  ctx.fillStyle = 'rgba(255,150,190,0.78)'
+  ;[-1, 1].forEach(side => {
+    ctx.beginPath()
+    ctx.ellipse(side * 12.6, -6.2, 3.1, 2.1, 0, 0, TAU)
+    ctx.fill()
+  })
+
+  // ---- 嘴 ----
+  drawBeak(ctx, mood)
+
+  // ---- hold 姿态：前面两只小手 ----
+  if (pose === 'hold') {
+    ctx.fillStyle = C.navyWing
+    ;[-1, 1].forEach(side => {
+      ctx.beginPath()
+      ctx.ellipse(side * 6.2, 9.5, 2.6, 3.4, side * 0.5, 0, TAU)
+      ctx.fill()
+    })
+  }
+
+  // ---- 道具 ----
+  if (prop) drawProp(ctx, prop)
+
+  ctx.restore()
+
+  // ---- 姿态相关的附加装饰（不随身体旋转）----
+  if (pose === 'peek') {
+    ctx.save()
+    ctx.translate(cx, cy)
+    ctx.scale(s, s)
+    // 冰台
+    ctx.fillStyle = '#CFEFFF'
+    roundRect(ctx, -31, 12, 62, 13, 6)
+    ctx.fill()
+    ctx.strokeStyle = '#9FD9F5'
+    ctx.lineWidth = 1.2
+    ctx.stroke()
+    // 一只挥手的翅膀
+    ctx.save()
+    ctx.translate(14, 7)
+    ctx.rotate(-2.0)
+    ctx.beginPath()
+    ctx.moveTo(0, 0)
+    ctx.bezierCurveTo(4.6, 0.8, 6.6, 7.5, 4.8, 14.5)
+    ctx.bezierCurveTo(3.8, 18.5, 0.2, 18.5, -0.4, 14.5)
+    ctx.bezierCurveTo(-1.3, 8, -1.5, 2, 0, 0)
+    ctx.closePath()
+    ctx.fillStyle = '#1A3352'
+    ctx.fill()
+    ctx.strokeStyle = '#12263D'
+    ctx.lineWidth = 1.1
+    ctx.stroke()
+    ctx.restore()
+    ctx.restore()
+  }
+
+  if (pose === 'slide') {
+    ctx.save()
+    ctx.translate(cx, cy)
+    ctx.scale(s, s)
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)'
+    ctx.lineWidth = 2.2
+    ctx.lineCap = 'round'
+    ;[[12, 6], [17, 12], [22, 18]].forEach(([x, y]) => {
+      ctx.beginPath()
+      ctx.moveTo(x, y)
+      ctx.lineTo(x + 9, y)
+      ctx.stroke()
+    })
+    ctx.restore()
+  }
+}
+
+function drawFlipper(ctx, side, pose) {
+  let raise = 0
+  if (pose === 'cheer') raise = 2.05
+  if (pose === 'wave' && side === 1) raise = 1.95
+
+  ctx.save()
+  ctx.translate(side * 13.8, -5)
+  ctx.rotate(-side * (0.16 + raise))
+  ctx.beginPath()
+  ctx.moveTo(0, 0)
+  ctx.bezierCurveTo(side * 4.6, 0.8, side * 6.6, 7.5, side * 4.8, 14.5)
+  ctx.bezierCurveTo(side * 3.8, 18.5, side * 0.2, 18.5, side * -0.4, 14.5)
+  ctx.bezierCurveTo(side * -1.3, 8, side * -1.5, 2, 0, 0)
+  ctx.closePath()
+  ctx.fillStyle = '#1A3352'
+  ctx.fill()
+  ctx.strokeStyle = '#12263D'
+  ctx.lineWidth = 1.1
+  ctx.stroke()
+  ctx.restore()
+}
+
+function drawBeak(ctx, mood) {
+  if (mood === 'happy') {
+    ctx.beginPath()
+    ctx.moveTo(-4.3, -7.6)
+    ctx.quadraticCurveTo(0, -9.1, 4.3, -7.6)
+    ctx.quadraticCurveTo(2.6, -4.4, 0, -4.0)
+    ctx.quadraticCurveTo(-2.6, -4.4, -4.3, -7.6)
+    ctx.closePath()
+    ctx.fillStyle = C.orange
+    ctx.fill()
+    ctx.beginPath()
+    ctx.ellipse(0, -4.7, 2.9, 2.1, 0, 0, TAU)
+    ctx.fillStyle = '#C0392B'
+    ctx.fill()
+    ctx.beginPath()
+    ctx.ellipse(0, -3.9, 1.7, 1.1, 0, 0, TAU)
+    ctx.fillStyle = C.pink
+    ctx.fill()
+    return
+  }
+
+  ctx.beginPath()
+  ctx.moveTo(-4.3, -7.6)
+  ctx.quadraticCurveTo(0, -9.1, 4.3, -7.6)
+  ctx.quadraticCurveTo(2.5, -3.9, 0, -3.2)
+  ctx.quadraticCurveTo(-2.5, -3.9, -4.3, -7.6)
+  ctx.closePath()
+  ctx.fillStyle = C.orange
+  ctx.fill()
+
+  ctx.strokeStyle = C.orangeDeep
+  ctx.lineWidth = 1.0
+  ctx.lineCap = 'round'
+  ctx.beginPath()
+  if (mood === 'sad') {
+    ctx.moveTo(-2.4, -4.6)
+    ctx.quadraticCurveTo(0, -5.8, 2.4, -4.6)
+  } else {
+    ctx.moveTo(-2.6, -5.9)
+    ctx.quadraticCurveTo(0, -4.8, 2.6, -5.9)
+  }
+  ctx.stroke()
+}
+
+function drawProp(ctx, prop) {
+  switch (prop) {
+    case 'crown': {
+      ctx.beginPath()
+      ctx.moveTo(-7.5, -24.5)
+      ctx.lineTo(-7.5, -30.5)
+      ctx.lineTo(-3.6, -27.6)
+      ctx.lineTo(0, -32.2)
+      ctx.lineTo(3.6, -27.6)
+      ctx.lineTo(7.5, -30.5)
+      ctx.lineTo(7.5, -24.5)
+      ctx.closePath()
+      ctx.fillStyle = C.yellow
+      ctx.fill()
+      ctx.strokeStyle = C.yellowDeep
+      ctx.lineWidth = 0.9
+      ctx.lineJoin = 'round'
+      ctx.stroke()
+      break
+    }
+    case 'medal': {
+      ctx.strokeStyle = C.pinkDeep
+      ctx.lineWidth = 2.4
+      ctx.lineCap = 'round'
+      ctx.beginPath()
+      ctx.moveTo(-4.2, 0.5)
+      ctx.lineTo(0, 5.2)
+      ctx.lineTo(4.2, 0.5)
+      ctx.stroke()
+      ctx.beginPath()
+      ctx.arc(0, 8.6, 4.4, 0, TAU)
+      ctx.fillStyle = C.yellow
+      ctx.fill()
+      ctx.strokeStyle = C.yellowDeep
+      ctx.lineWidth = 1
+      ctx.stroke()
+      ctx.beginPath()
+      ctx.arc(0, 8.6, 2.1, 0, TAU)
+      ctx.fillStyle = '#FFF3C4'
+      ctx.fill()
+      break
+    }
+    case 'trophy': {
+      ctx.fillStyle = C.yellow
+      ctx.beginPath()
+      ctx.moveTo(-4.6, 6.5)
+      ctx.lineTo(4.6, 6.5)
+      ctx.quadraticCurveTo(4.2, 14.5, 0, 14.5)
+      ctx.quadraticCurveTo(-4.2, 14.5, -4.6, 6.5)
+      ctx.closePath()
+      ctx.fill()
+      ctx.strokeStyle = C.yellowDeep
+      ctx.lineWidth = 0.9
+      ctx.stroke()
+      ctx.fillStyle = C.yellowDeep
+      roundRect(ctx, -1.1, 14.2, 2.2, 3.2, 1)
+      ctx.fill()
+      roundRect(ctx, -3.6, 17.0, 7.2, 2.0, 1)
+      ctx.fill()
+      break
+    }
+    case 'fish': {
+      ctx.fillStyle = '#7FD4F5'
+      ctx.beginPath()
+      ctx.ellipse(0, 10, 5.4, 3.1, -0.2, 0, TAU)
+      ctx.fill()
+      ctx.beginPath()
+      ctx.moveTo(4.6, 10)
+      ctx.lineTo(8.4, 7.4)
+      ctx.lineTo(8.4, 12.6)
+      ctx.closePath()
+      ctx.fill()
+      ctx.fillStyle = C.navyDeep
+      ctx.beginPath()
+      ctx.arc(-3.1, 9.2, 0.8, 0, TAU)
+      ctx.fill()
+      break
+    }
+    case 'star': {
+      drawStarShape(ctx, 0, 9.5, 5.6, C.yellow, C.yellowDeep)
+      break
+    }
+    case 'snowflake': {
+      ctx.strokeStyle = '#8FD9F7'
+      ctx.lineWidth = 1.4
+      ctx.lineCap = 'round'
+      for (let i = 0; i < 6; i++) {
+        const a = (i * Math.PI) / 3
+        ctx.beginPath()
+        ctx.moveTo(0, 10)
+        ctx.lineTo(Math.cos(a) * 5.4, 10 + Math.sin(a) * 5.4)
+        ctx.stroke()
+      }
+      break
+    }
+    case 'lightning': {
+      ctx.beginPath()
+      ctx.moveTo(-1.5, 2)
+      ctx.lineTo(4.5, 2)
+      ctx.lineTo(0.5, 8.5)
+      ctx.lineTo(4, 8.5)
+      ctx.lineTo(-3, 18)
+      ctx.lineTo(-0.5, 10.5)
+      ctx.lineTo(-4, 10.5)
+      ctx.closePath()
+      ctx.fillStyle = C.yellow
+      ctx.fill()
+      ctx.strokeStyle = C.yellowDeep
+      ctx.lineWidth = 0.8
+      ctx.stroke()
+      break
+    }
+    case 'heart': {
+      ctx.fillStyle = '#FF6F9C'
+      ctx.beginPath()
+      ctx.moveTo(0, 14.5)
+      ctx.bezierCurveTo(-7.5, 9.5, -6, 3.5, -2.6, 3.5)
+      ctx.bezierCurveTo(-0.9, 3.5, 0, 5, 0, 5)
+      ctx.bezierCurveTo(0, 5, 0.9, 3.5, 2.6, 3.5)
+      ctx.bezierCurveTo(6, 3.5, 7.5, 9.5, 0, 14.5)
+      ctx.fill()
+      break
+    }
+    case 'target': {
+      ctx.beginPath()
+      ctx.arc(0, 10, 5.6, 0, TAU)
+      ctx.fillStyle = C.white
+      ctx.fill()
+      ctx.strokeStyle = C.coral
+      ctx.lineWidth = 1.6
+      ctx.stroke()
+      ctx.beginPath()
+      ctx.arc(0, 10, 3.2, 0, TAU)
+      ctx.strokeStyle = C.coral
+      ctx.stroke()
+      ctx.beginPath()
+      ctx.arc(0, 10, 1.1, 0, TAU)
+      ctx.fillStyle = C.coral
+      ctx.fill()
+      break
+    }
+    case 'bubbles': {
+      ctx.strokeStyle = 'rgba(120,200,240,0.85)'
+      ctx.lineWidth = 1.1
+      ;[[-9, -4, 3.2], [-13, -10, 2.2], [-6, -12, 1.6]].forEach(([bx, by, br]) => {
+        ctx.beginPath()
+        ctx.arc(bx, by, br, 0, TAU)
+        ctx.stroke()
+      })
+      break
+    }
+    case 'zzz': {
+      ctx.fillStyle = '#8B6BE8'
+      ctx.font = 'bold 7px sans-serif'
+      ctx.fillText('z', 13, -18)
+      ctx.font = 'bold 9px sans-serif'
+      ctx.fillText('z', 17, -24)
+      ctx.font = 'bold 11px sans-serif'
+      ctx.fillText('Z', 22, -31)
+      break
+    }
+    case 'confetti': {
+      const bits = [
+        [-16, -20, 0.6, C.pink], [15, -24, -0.4, C.yellow], [-13, -8, 1.1, C.mint],
+        [17, -10, -0.9, C.lavender], [-19, 2, 0.3, C.yellow], [19, 4, -1.2, C.pink]
+      ]
+      bits.forEach(([bx, by, rot, col]) => {
+        ctx.save()
+        ctx.translate(bx, by)
+        ctx.rotate(rot)
+        ctx.fillStyle = col
+        ctx.fillRect(-1.5, -1, 3, 2)
+        ctx.restore()
+      })
+      break
+    }
+  }
+}
+
+function drawStarShape(ctx, cx, cy, r, fill, stroke) {
+  ctx.beginPath()
+  for (let i = 0; i < 10; i++) {
+    const rr = i % 2 === 0 ? r : r * 0.45
+    const a = -Math.PI / 2 + (i * Math.PI) / 5
+    const x = cx + Math.cos(a) * rr
+    const y = cy + Math.sin(a) * rr
+    if (i === 0) ctx.moveTo(x, y)
+    else ctx.lineTo(x, y)
+  }
+  ctx.closePath()
+  ctx.fillStyle = fill
+  ctx.fill()
+  if (stroke) {
+    ctx.strokeStyle = stroke
+    ctx.lineWidth = 0.8
+    ctx.lineJoin = 'round'
+    ctx.stroke()
+  }
+}
+
+/* ============================================================
+   旧版企鹅（现状，用于对比）
+   ============================================================ */
+function drawOldPenguin(ctx, cx, cy, scale) {
+  ctx.save()
+  ctx.translate(cx, cy)
+  ctx.scale(scale, scale)
+
+  ctx.fillStyle = 'rgba(31, 58, 95, 0.18)'
+  ctx.beginPath()
+  ctx.ellipse(0, 27, 16, 4.5, 0, 0, TAU)
+  ctx.fill()
+
+  ctx.fillStyle = C.navy
+  ctx.strokeStyle = C.navyDeep
+  ctx.lineWidth = 1.6
+  ctx.beginPath()
+  ctx.ellipse(0, 6, 15, 18, 0, 0, TAU)
+  ctx.fill()
+  ctx.stroke()
+
+  ctx.fillStyle = C.cream
+  ctx.beginPath()
+  ctx.ellipse(0, 9, 10, 13, 0, 0, TAU)
+  ctx.fill()
+
+  ctx.fillStyle = '#16304F'
+  ctx.beginPath()
+  ctx.ellipse(-13.5, 7, 4.5, 10, -0.25, 0, TAU)
+  ctx.ellipse(13.5, 7, 4.5, 10, 0.25, 0, TAU)
+  ctx.fill()
+
+  ctx.fillStyle = C.orange
+  ctx.beginPath()
+  ctx.ellipse(-6, 22, 5, 3, 0, 0, TAU)
+  ctx.ellipse(6, 22, 5, 3, 0, 0, TAU)
+  ctx.fill()
+
+  ctx.fillStyle = C.pink
+  roundRect(ctx, -12, -5, 24, 7, 3.5)
+  ctx.fill()
+  ctx.fillStyle = C.pinkDeep
+  roundRect(ctx, 8, -1, 6, 13, 3)
+  ctx.fill()
+
+  ctx.fillStyle = C.navy
+  ctx.strokeStyle = C.navyDeep
+  ctx.lineWidth = 1.6
+  ctx.beginPath()
+  ctx.arc(0, -11, 12, 0, TAU)
+  ctx.fill()
+  ctx.stroke()
+
+  ctx.fillStyle = 'rgba(255, 127, 176, 0.55)'
+  ctx.beginPath()
+  ctx.arc(-7.5, -7, 2.6, 0, TAU)
+  ctx.arc(7.5, -7, 2.6, 0, TAU)
+  ctx.fill()
+
+  ctx.fillStyle = C.white
+  ctx.beginPath()
+  ctx.arc(-4, -12, 3.2, 0, TAU)
+  ctx.arc(4, -12, 3.2, 0, TAU)
+  ctx.fill()
+
+  ctx.fillStyle = C.navyDeep
+  ctx.beginPath()
+  ctx.arc(-4, -11, 1.8, 0, TAU)
+  ctx.arc(4, -11, 1.8, 0, TAU)
+  ctx.fill()
+
+  ctx.fillStyle = C.white
+  ctx.beginPath()
+  ctx.arc(-4.6, -11.8, 0.8, 0, TAU)
+  ctx.arc(3.4, -11.8, 0.8, 0, TAU)
+  ctx.fill()
+
+  ctx.fillStyle = C.orange
+  ctx.beginPath()
+  ctx.moveTo(0, -8)
+  ctx.lineTo(-3.5, -4.5)
+  ctx.lineTo(3.5, -4.5)
+  ctx.closePath()
+  ctx.fill()
+
+  ctx.restore()
+}
+
+/* ============================================================
+   画布工具
+   ============================================================ */
+function setupCanvas(canvas) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2)
+  const w = canvas.width
+  const h = canvas.height
+  canvas.width = w * dpr
+  canvas.height = h * dpr
+  canvas.style.width = w + 'px'
+  canvas.style.height = h + 'px'
+  canvas._cssW = w
+  canvas._cssH = h
+  canvas._dpr = dpr
+  return canvas.getContext('2d')
+}
+
+function clear(ctx, canvas) {
+  ctx.setTransform(canvas._dpr, 0, 0, canvas._dpr, 0, 0)
+  ctx.clearRect(0, 0, canvas._cssW, canvas._cssH)
+}
+
+/* ============================================================
+   静态渲染
+   ============================================================ */
+function drawStatic(canvas, fn) {
+  const ctx = setupCanvas(canvas)
+  clear(ctx, canvas)
+  fn(ctx, canvas._cssW, canvas._cssH)
+}
+
+drawStatic(document.getElementById('old'), (ctx, w, h) => {
+  drawOldPenguin(ctx, w / 2, h / 2 + 4, 3.4)
+})
+
+drawStatic(document.getElementById('newA'), (ctx, w, h) => {
+  drawPenguin(ctx, w / 2, h / 2 + 6, 3.4, { scarf: true })
+})
+
+drawStatic(document.getElementById('newB'), (ctx, w, h) => {
+  drawPenguin(ctx, w / 2, h / 2 + 6, 3.4, { scarf: false })
+})
+
+drawStatic(document.getElementById('sBig'), (ctx, w, h) => {
+  drawPenguin(ctx, w / 2, h / 2 + 4, 3.6, { scarf: true })
+})
+
+/* ---- 成就卡片 ---- */
+const ACHIEVEMENTS = [
+  { name: '初出茅庐', pose: 'cheer', prop: 'trophy' },
+  { name: '小有所成', pose: 'wave', prop: 'medal' },
+  { name: '滑冰达人', pose: 'slide', prop: 'snowflake' },
+  { name: '滑冰大师', pose: 'cheer', prop: 'crown' },
+  { name: '精准操作', pose: 'hold', prop: 'target' },
+  { name: '操作大师', pose: 'hold', prop: 'star' },
+  { name: '闪电企鹅', pose: 'slide', prop: 'lightning' },
+  { name: '光速传说', pose: 'wave', prop: 'lightning' },
+  { name: '连胜新星', pose: 'cheer', prop: 'star' },
+  { name: '连胜达人', pose: 'hold', prop: 'heart' },
+  { name: '连胜传奇', pose: 'cheer', prop: 'confetti' },
+  { name: '重整旗鼓', pose: 'peek', prop: null },
+  { name: '不死企鹅', pose: 'wave', prop: 'bubbles' },
+  { name: '收藏家', pose: 'hold', prop: 'fish' },
+  { name: '坚持不懈', pose: 'sleep', prop: 'zzz' }
+]
+
+const grid = document.getElementById('achGrid')
+ACHIEVEMENTS.forEach(a => {
+  const wrap = document.createElement('div')
+  wrap.className = 'acard'
+
+  const cv = document.createElement('canvas')
+  cv.width = 108
+  cv.height = 104
+  wrap.appendChild(cv)
+
+  const name = document.createElement('div')
+  name.className = 'aname'
+  name.textContent = a.name
+  wrap.appendChild(name)
+
+  const pose = document.createElement('div')
+  pose.className = 'apose'
+  pose.textContent = a.pose + (a.prop ? ' + ' + a.prop : '')
+  wrap.appendChild(pose)
+
+  grid.appendChild(wrap)
+
+  drawStatic(cv, (ctx, w, h) => {
+    const g = ctx.createLinearGradient(0, 0, 0, h)
+    g.addColorStop(0, '#F4FBFF')
+    g.addColorStop(1, '#E4F5FF')
+    ctx.fillStyle = g
+    roundRect(ctx, 0, 0, w, h, 12)
+    ctx.fill()
+    const s = a.pose === 'peek' ? 1.55 : 1.7
+    const oy = a.pose === 'peek' ? 6 : (a.pose === 'cheer' ? 10 : 4)
+    drawPenguin(ctx, w / 2, h / 2 + oy, s, {
+      pose: a.pose,
+      prop: a.prop,
+      mood: a.pose === 'sleep' ? 'idle' : (a.prop === 'star' || a.prop === 'crown' || a.prop === 'trophy' ? 'happy' : 'idle')
+    })
+  })
+})
+
+drawStatic(document.getElementById('popupPenguin'), (ctx, w, h) => {
+  const g = ctx.createRadialGradient(w / 2, h / 2 + 10, 10, w / 2, h / 2 + 10, 120)
+  g.addColorStop(0, 'rgba(255,233,190,0.75)')
+  g.addColorStop(1, 'rgba(255,249,238,0)')
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, w, h)
+  drawPenguin(ctx, w / 2, h / 2 + 22, 3.0, { pose: 'cheer', prop: 'trophy', mood: 'happy' })
+})
+
+/* ============================================================
+   动态渲染（情绪）
+   ============================================================ */
+const anims = [
+  { id: 'mIdle', mood: 'idle' },
+  { id: 'mHappy', mood: 'happy' },
+  { id: 'mSad', mood: 'sad' }
+].map(cfg => {
+  const canvas = document.getElementById(cfg.id)
+  return { canvas, ctx: setupCanvas(canvas), mood: cfg.mood }
+})
+
+function drawSparkles(ctx, cx, cy, t) {
+  ctx.save()
+  for (let i = 0; i < 3; i++) {
+    const a = t * 1.8 + (i * TAU) / 3
+    const r = 34 + Math.sin(t * 3 + i) * 4
+    const x = cx + Math.cos(a) * r
+    const y = cy + Math.sin(a) * r * 0.8 - 10
+    const sc = 0.7 + Math.sin(t * 4 + i * 2) * 0.3
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.scale(sc, sc)
+    drawStarShape(ctx, 0, 0, 5, '#FFD86B', null)
+    ctx.restore()
+  }
+  ctx.restore()
+}
+
+function frame(now) {
+  const t = now / 1000
+
+  anims.forEach(a => {
+    const { ctx, canvas } = a
+    clear(ctx, canvas)
+    const cx = canvas._cssW / 2
+    const cy = canvas._cssH / 2 + 8
+
+    let bob = 0, angle = 0, sy = 1
+
+    if (a.mood === 'idle') {
+      bob = Math.sin(t * 2.2) * 1.8
+      angle = Math.sin(t * 1.4) * 0.02
+    } else if (a.mood === 'happy') {
+      const hop = Math.abs(Math.sin(t * 6.5))
+      bob = -hop * 7
+      sy = 1 + Math.sin(t * 13) * 0.035
+      angle = Math.sin(t * 6.5) * 0.05
+    } else {
+      bob = 2 + Math.sin(t * 1.2) * 0.8
+      angle = Math.sin(t * 16) * 0.018
+    }
+
+    drawPenguin(ctx, cx, cy + bob, 2.9, { mood: a.mood, angle, scarf: true, direction: 'down' })
+
+    if (a.mood === 'happy') {
+      drawSparkles(ctx, cx, cy + bob, t)
+    }
+    if (a.mood === 'sad') {
+      // 泪滴下落
+      const p = (t * 1.6) % 1
+      ctx.save()
+      ctx.globalAlpha = 1 - p
+      ctx.fillStyle = 'rgba(91,200,245,0.95)'
+      ctx.beginPath()
+      ctx.arc(cx - 16, cy + 22 + p * 40, 2.6 - p * 1.2, 0, TAU)
+      ctx.fill()
+      ctx.restore()
+    }
+  })
+
+  requestAnimationFrame(frame)
+}
+requestAnimationFrame(frame)
+
+/* ============================================================
+   50px 实际尺寸
+   ============================================================ */
+;[
+  { id: 's50a', mood: 'idle' },
+  { id: 's50b', mood: 'happy' },
+  { id: 's50c', mood: 'sad' }
+].forEach(cfg => {
+  const canvas = document.getElementById(cfg.id)
+  drawStatic(canvas, (ctx, w, h) => {
+    drawPenguin(ctx, w / 2, h / 2 + 2, w / 50, { mood: cfg.mood })
+  })
+})
+</script>
+</body>
+</html>

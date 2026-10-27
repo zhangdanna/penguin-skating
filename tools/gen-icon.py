@@ -100,12 +100,3 @@ draw.ellipse([px - 5, py - pr - 3, px - 3, py - pr - 1], fill=(255, 255, 255, 25
 draw.ellipse([px + 3, py - pr - 3, px + 5, py - pr - 1], fill=(255, 255, 255, 255))
 # 嘴（橙色三角）
 draw.polygon([(px - 3, py - 8), (px + 3, py - 8), (px, py - 4)], fill=(255, 140, 0, 255))
-
-# ---- 保存 ----
-img.save(r'D:\working\play\other\penguin-skating-game\images\app-icon.png')
-print(f'app-icon.png saved: {img.size}')
-
-# 生成 144x144 版本
-img144 = img.resize((144, 144), Image.LANCZOS)
-img144.save(r'D:\working\play\other\penguin-skating-game\images\app-icon-144.png')
-print(f'app-icon-144.png saved: {img144.size}')

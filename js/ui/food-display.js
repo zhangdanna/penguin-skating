@@ -96,10 +96,14 @@ export default class FoodDisplay {
 
   /**
    * 一行展示所有食物（图标 + 数量）
+   *
+   * 鱼这一格显示 `12/30` 而不是 `×12`：食物是有上限的（体力系统），
+   * 但原来界面上完全看不出来。玩家不知道上限存在，通关奖励被截断时
+   * 只会觉得「我过了怎么没加鱼」。满了用橙色标出来，至少是个可见信号。
    */
   renderFoodIcons(ctx, status) {
     const foods = [
-      { icon: '🐟', count: status.food.fish },
+      { icon: '🐟', count: status.food.fish, cap: status.max },
       { icon: '🦐', count: status.food.shrimp },
       { icon: '🦑', count: status.food.squid },
       { icon: '🐠', count: status.food.goldfish }
@@ -113,9 +117,12 @@ export default class FoodDisplay {
 
     foods.forEach((food, index) => {
       const cellCenterX = this.x + cellWidth * (index + 0.5)
-      const countText = `×${food.count}`
+      const countText = food.cap ? `${food.count}/${food.cap}` : `×${food.count}`
+      const isFull = food.cap ? food.count >= food.cap : false
+      // 带上限的文案更长，字号收一档，避免和相邻格子挤在一起
+      const countSize = food.cap ? 12 : 14
 
-      ctx.font = font(14)
+      ctx.font = font(countSize)
       const countWidth = ctx.measureText(countText).width
       const iconWidth = 17
       const gap = 4
@@ -128,8 +135,8 @@ export default class FoodDisplay {
       ctx.fillText(food.icon, startX, iconY)
 
       // 数量
-      ctx.font = font(14)
-      ctx.fillStyle = COLORS.navySoft
+      ctx.font = font(countSize)
+      ctx.fillStyle = isFull ? COLORS.orangeDeep : COLORS.navySoft
       ctx.fillText(countText, startX + iconWidth + gap, iconY)
     })
 

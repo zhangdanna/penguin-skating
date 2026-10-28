@@ -116,7 +116,9 @@ export const LEVEL_BANDS = [
     from: 81,
     upTo: 120,
     stones: 3,
-    target: [2, 2],
+    // 竖排 3 格：和 1×3 横排交替，避免中后期目标形状千篇一律。
+    // 注意格数必须严格等于 stones，否则会出现「3 个目标点只有 2 块冰」
+    target: [1, 3],
     walls: [10, 13],
     holes: [3, 4],
     snows: [2, 3],
@@ -666,6 +668,11 @@ function reverseWalk(rand, target, obstacles, grid, stoneCount, pullTarget) {
   // 一开始就通关的盘面没有意义
   if (stoneList.every(s => inRect(target, s.col, s.row))) return null
 
+  // 不允许「冰块开局就压在目标格上」：
+  // 目标格被冰块盖住后，玩家数到的目标点会比冰块少（出现过「3 个目标点
+  // 只有 2 块冰」的反馈），而且这种局面等于白送一块冰，难度也虚高。
+  if (stoneList.some(s => inRect(target, s.col, s.row))) return null
+
   return {
     penguin: { col: colOf(penguin), row: rowOf(penguin) },
     stones: stoneList,
@@ -676,8 +683,29 @@ function reverseWalk(rand, target, obstacles, grid, stoneCount, pullTarget) {
   }
 }
 
+/**
+ * 目标区格数必须等于冰块数
+ *
+ * 多出来的空格永远填不满，玩家会以为「目标点比冰块多」是 bug；少格则
+ * 根本不可能通关。这里按冰块数兜底纠正形状（保持矩形），难度档写错也
+ * 不会产出坏关卡。
+ *
+ * @param {number[]} size - [宽格数, 高格数]
+ * @param {number} stoneCount
+ * @returns {number[]}
+ */
+function fitTargetSize(size, stoneCount) {
+  const tw = Math.max(1, Math.round(size[0]))
+  const th = Math.max(1, Math.round(size[1]))
+  if (tw * th === stoneCount) return [tw, th]
+  if (th === 1) return [stoneCount, 1]
+  if (tw === 1) return [1, stoneCount]
+  // 非单行形状对不上格数时退回横排，保证「格数 === 冰块数」
+  return [stoneCount, 1]
+}
+
 function buildBoard(rand, band, levelNum, pullTarget) {
-  const target = pickTarget(rand, band.target)
+  const target = pickTarget(rand, fitTargetSize(band.target, band.stones))
   if (!target) return null
 
   const obstacles = placeObstacles(rand, target, band, overflowHoles(levelNum))

@@ -1,6 +1,23 @@
 import { COLORS, drawCandyButton, drawStickerText } from './theme'
 
 /**
+ * 全局点击音钩子
+ *
+ * 全项目 20 多个按钮都由 Button 渲染，在构造函数里塞回调太啰嗦，
+ * 在场景的 onTouchStart 里各写一遍又会漏。所以在这里开一个模块级钩子，
+ * 由 game.js 在 initUI() 里注入一次：
+ *
+ *   setButtonTapSound(() => audioManager.playButtonSound())
+ *
+ * 只在「按下且命中」时触发（不是抬起），手指一落就有反馈，手感更实。
+ */
+let tapSound = null
+
+export function setButtonTapSound(fn) {
+  tapSound = typeof fn === 'function' ? fn : null
+}
+
+/**
  * 按钮组件
  * 可点击的UI按钮（糖果胶囊风）
  */
@@ -46,6 +63,14 @@ export default class Button {
 
     if (this.contains(touch.clientX, touch.clientY)) {
       this.isHovered = true
+      // 点击音在「按下」时给，不等抬起 —— 触觉反馈越早越像实体按钮
+      if (tapSound) {
+        try {
+          tapSound()
+        } catch (e) {
+          // 音频异常绝不能影响按钮本身
+        }
+      }
       return true
     }
     return false

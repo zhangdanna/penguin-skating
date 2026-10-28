@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>一企推推乐 · 音频试听台</title>
+<style>
+  :root {
+    --bg: #0e1116;
+    --card: #161c26;
+    --card-2: #1c2430;
+    --line: #263040;
+    --text: #e8eef7;
+    --dim: #8d9cb3;
+    --accent: #5ab0e8;
+    --warm: #ffc94a;
+    --mint: #4fd1b0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 28px 24px 60px;
+    background: radial-gradient(1200px 600px at 50% -10%, #172233 0%, var(--bg) 55%);
+    color: var(--text);
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  header { margin-bottom: 26px; }
+  h1 { font-size: 22px; margin: 0 0 6px; letter-spacing: .5px; }
+  .sub { color: var(--dim); font-size: 13px; line-height: 1.7; }
+  .sub code { background: #1d2634; padding: 1px 6px; border-radius: 4px; color: var(--accent); }
+
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0 8px; }
+  button {
+    font: inherit; font-size: 13px; cursor: pointer;
+    background: var(--card-2); color: var(--text);
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 9px 14px; transition: .16s;
+  }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary { background: rgba(90,176,232,.14); border-color: rgba(90,176,232,.5); color: var(--accent); }
+  button.warm { background: rgba(255,201,74,.12); border-color: rgba(255,201,74,.45); color: var(--warm); }
+
+  h2 { font-size: 14px; color: var(--dim); font-weight: 500; letter-spacing: 1px;
+       margin: 30px 0 12px; text-transform: uppercase; }
+
+  .bgm-card {
+    background: linear-gradient(180deg, var(--card) 0%, #131a23 100%);
+    border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px;
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  }
+  .bgm-card .meta { flex: 1; min-width: 200px; }
+  .bgm-card .title { font-size: 15px; margin-bottom: 4px; }
+  .bgm-card .desc { font-size: 12px; color: var(--dim); line-height: 1.6; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .cue {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 14px 16px; cursor: pointer; transition: .16s; position: relative; overflow: hidden;
+  }
+  .cue:hover { border-color: rgba(90,176,232,.55); background: var(--card-2); }
+  .cue.playing { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(90,176,232,.3) inset; }
+  .cue-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .cue-name { font-size: 14px; }
+  .cue-key { font-size: 11px; color: var(--dim); font-family: ui-monospace, Menlo, monospace; }
+  .cue-use { font-size: 12px; color: var(--dim); margin: 5px 0 9px; line-height: 1.55; min-height: 32px; }
+  canvas { width: 100%; height: 34px; display: block; }
+  .cue-foot { display: flex; gap: 10px; font-size: 11px; color: #6b7b93; margin-top: 8px;
+              font-family: ui-monospace, Menlo, monospace; }
+  .badge { padding: 1px 6px; border-radius: 5px; background: #202a38; }
+  .badge.ui { color: var(--mint); }
+  .badge.sfx { color: var(--accent); }
+
+  .log {
+    margin-top: 18px; font-size: 12px; color: var(--dim); font-family: ui-monospace, Menlo, monospace;
+    background: #0b0f14; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px;
+    min-height: 44px; white-space: pre-wrap; line-height: 1.7;
+  }
+  .err { color: #ff8f8f; }
+  footer { margin-top: 34px; font-size: 12px; color: #5d6b80; line-height: 1.8; }
+  footer b { color: var(--dim); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>一企推推乐 · 音频试听台</h1>
+    <div class="sub">
+      验收用页面，不进发布包。<b>先听再改</b>：素材由 <code>tools/gen-sfx.py</code> 生成，
+      参数改完重跑脚本即可，不需要找素材、也不需要手工剪音频。
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <button class="primary" id="btnAll">▶ 顺序试听全部音效</button>
+    <button class="warm" id="btnCombo">⌨ 连打 8 次滑动（听冷却与池化）</button>
+    <button class="warm" id="btnWin">★ 通关 → 三颗星</button>
+    <button id="btnStop">■ 停止</button>
+  </div>
+
+  <h2>背景音乐</h2>
+  <div class="bgm-card">
+    <div class="meta">
+      <div class="title">bgm.wav · 16s 无缝循环</div>
+      <div class="desc">
+        C 大调，90 BPM，6 小节。音乐盒主旋律 + 柔和铺底 + 雪沙反拍。<br>
+        循环靠「尾音折回开头」实现，不靠淡出——所以接缝处不会有呼吸断层。
+      </div>
+    </div>
+    <button class="primary" id="btnBgm">▶ 循环播放</button>
+    <canvas id="bgmWave" style="width:280px;height:40px;flex:0 0 280px"></canvas>
+  </div>
+
+  <h2>音效（Cue Sheet）</h2>
+  <div class="grid" id="grid"></div>
+
+  <div class="log" id="log">就绪。点任意卡片试听，或点上方「连打 8 次滑动」听池化效果。</div>
+
+  <footer>
+    <b>听什么：</b>滑动/推动要短、能连打不糊；撞墙要"否定感"而不是奖励感；<br>
+    通关要完成感但不能盖住三颗星的叮；失败要遗憾不要惩罚（解谜游戏失败很频繁）。<br>
+    <b>音量关系：</b>UI 点击 &lt; 玩法反馈 &lt; 结算音效，BGM 始终垫底。
+  </footer>
+</div>
+
+<script type="module">
+// ---- cue 列表（文案与顺序是验收用的，调参请改 js/utils/audio-cues.js） ----
+const CUES = [
+  { key: 'tap',         file: 'ui_tap.wav',        name: '点按',      use: '所有按钮按下时。短、亮、轻，不能盖过玩法音效。' },
+  { key: 'back',        file: 'ui_back.wav',       name: '返回 / 关闭', use: '关闭弹层、返回上一级。下行两音，明确"退出"语义。' },
+  { key: 'slide',       file: 'slide.wav',         name: '滑行一格',   use: '企鹅移动。冰刀擦冰面 + 颗粒调制，一局听上百次，必须不烦。' },
+  { key: 'push',        file: 'push.wav',          name: '推动冰块',   use: '推箱子成功。比滑行更重更长，低频给"推动"的体感。' },
+  { key: 'bump',        file: 'collision.wav',     name: '撞墙 / 推不动', use: '边界、冰墙、雪堆阻挡。要"否定感"，不能像奖励音。' },
+  { key: 'undo',        file: 'undo.wav',          name: '退一步',     use: '反向扫频噪声，听感是"倒带"。用 slide 会让人以为又往前走了一步。' },
+  { key: 'star',        file: 'star.wav',          name: '单颗星亮起',  use: '结算页星星逐颗亮起，playbackRate 逐颗升高三个半音。' },
+  { key: 'levelStart',  file: 'level-start.wav',   name: '关卡开始',   use: '进入对局。玩家会连打几十次，必须短、轻、不抢戏。' },
+  { key: 'win',         file: 'win.wav',           name: '通关',       use: '木琴琶音上行 + 铺底和弦。播放期间 BGM 自动闪避。' },
+  { key: 'fail',        file: 'fail.wav',          name: '失败',       use: '下行三音 + 低频沉。要"遗憾"不要"惩罚"。' },
+  { key: 'achievement', file: 'achievement.wav',   name: '成就解锁',    use: '三音上行 + 亮 sparkle。只在非结算场景播，避免与通关音撞。' },
+  { key: 'revive',      file: 'revive.wav',        name: '复活',       use: '气泡上升 + 柔和和弦。"重新开始"的希望感。' }
+]
+
+const logEl = document.getElementById('log')
+const log = (msg, isErr) => { logEl.innerHTML = isErr ? `<span class="err">${msg}</span>` : msg }
+
+// 读取调参值（拿不到就只显示文案，不影响试听）
+let cueMeta = {}
+try {
+  const mod = await import('../js/utils/audio-cues.js')
+  cueMeta = mod.SfxCues || {}
+} catch (e) {
+  log('提示：未读到 js/utils/audio-cues.js（file:// 打开时浏览器会拦模块导入）。试听不受影响，只是不显示调参值。')
+}
+
+const BASE = '../audio/'
+const ctx = new (window.AudioContext || window.webkitAudioContext)()
+const buffers = new Map()
+
+async function loadBuffer(file) {
+  if (buffers.has(file)) return buffers.get(file)
+  const res = await fetch(BASE + file)
+  const arr = await res.arrayBuffer()
+  const buf = await ctx.decodeAudioData(arr)
+  buffers.set(file, buf)
+  return buf
+}
+
+function peaks(buf, width) {
+  const data = buf.getChannelData(0)
+  const block = Math.max(1, Math.floor(data.length / width))
+  const out = new Float32Array(width)
+  for (let i = 0; i < width; i++) {
+    let max = 0
+    const start = i * block
+    for (let j = 0; j < block; j += 4) {
+      const v = Math.abs(data[start + j] || 0)
+      if (v > max) max = v
+    }
+    out[i] = max
+  }
+  return out
+}
+
+function drawWave(canvas, buf, color) {
+  const dpr = window.devicePixelRatio || 1
+  const w = canvas.clientWidth, h = canvas.clientHeight || 34
+  canvas.width = w * dpr; canvas.height = h * dpr
+  const c = canvas.getContext('2d')
+  c.scale(dpr, dpr)
+  c.clearRect(0, 0, w, h)
+  const p = peaks(buf, Math.floor(w))
+  const mid = h / 2
+  c.strokeStyle = color
+  c.lineWidth = 1
+  c.beginPath()
+  for (let i = 0; i < p.length; i++) {
+    const y = Math.max(1, p[i] * (h / 2) * 0.92)
+    c.moveTo(i + 0.5, mid - y)
+    c.lineTo(i + 0.5, mid + y)
+  }
+  c.stroke()
+}
+
+function play(file, { gain = 1, rate = 1 } = {}) {
+  return loadBuffer(file).then((buf) => {
+    const src = ctx.createBufferSource()
+    src.buffer = buf
+    src.playbackRate.value = rate
+    const g = ctx.createGain()
+    g.gain.value = gain
+    src.connect(g).connect(ctx.destination)
+    src.start()
+    return src
+  }).catch((e) => log(`加载失败 ${file}: ${e.message}`, true))
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+// ---- 构建卡片 ----
+const grid = document.getElementById('grid')
+const cards = []
+CUES.forEach((cue, index) => {
+  const el = document.createElement('div')
+  el.className = 'cue'
+  const meta = cueMeta[cue.key] || {}
+  el.innerHTML = `
+    <div class="cue-head">
+      <span class="cue-name">${cue.name}</span>
+      <span class="cue-key">${cue.key}</span>
+    </div>
+    <div class="cue-use">${cue.use}</div>
+    <canvas></canvas>
+    <div class="cue-foot">
+      <span class="badge ${meta.bus || 'sfx'}">${meta.bus || 'sfx'}</span>
+      <span>gain ${meta.gain !== undefined ? meta.gain : '—'}</span>
+      <span>voices ${meta.voices !== undefined ? meta.voices : '—'}</span>
+      <span>cd ${meta.cooldown !== undefined ? meta.cooldown + 'ms' : '—'}</span>
+    </div>`
+  grid.appendChild(el)
+
+  const canvas = el.querySelector('canvas')
+  loadBuffer(cue.file).then((buf) => drawWave(canvas, buf, '#4a7ba6'))
+
+  el.addEventListener('click', async () => {
+    if (ctx.state === 'suspended') await ctx.resume()
+    play(cue.file)
+    el.classList.add('playing')
+    setTimeout(() => el.classList.remove('playing'), 420)
+    log(`▶ ${cue.name}（${cue.file}）`)
+  })
+  cards.push(el)
+})
+
+// ---- BGM ----
+const bgmAudio = new Audio(BASE + 'bgm.wav')
+bgmAudio.loop = true
+bgmAudio.volume = 0.7
+const btnBgm = document.getElementById('btnBgm')
+btnBgm.addEventListener('click', () => {
+  if (bgmAudio.paused) {
+    bgmAudio.play().then(() => { btnBgm.textContent = '⏸ 暂停' }).catch((e) => log(e.message, true))
+  } else {
+    bgmAudio.pause()
+    btnBgm.textContent = '▶ 循环播放'
+  }
+})
+loadBuffer('bgm.wav').then((buf) => {
+  drawWave(document.getElementById('bgmWave'), buf, '#c9a24a')
+})
+
+// ---- 演示：连打滑动 ----
+document.getElementById('btnCombo').addEventListener('click', async () => {
+  if (ctx.state === 'suspended') await ctx.resume()
+  const meta = cueMeta.slide || {}
+  const cd = meta.cooldown || 55
+  log(`连打 8 次，间隔 ${Math.max(cd, 70)}ms —— 听是否互相叠住、是否出现"咔哒"断音`)
+  for (let i = 0; i < 8; i++) {
+    play('slide.wav', { rate: 0.94 + Math.random() * 0.13 })
+    cards[2].classList.add('playing')
+    setTimeout(() => cards[2].classList.remove('playing'), 200)
+    await sleep(Math.max(cd, 70))
+  }
+})
+
+// ---- 演示：通关 → 三颗星 ----
+document.getElementById('btnWin').addEventListener('click', async () => {
+  if (ctx.state === 'suspended') await ctx.resume()
+  log('通关音效起 → 0.35s 后三颗星依次叮（每颗高三个半音）')
+  play('win.wav')
+  await sleep(350)
+  for (let i = 0; i < 3; i++) {
+    play('star.wav', { rate: 1 + i * 0.12 })
+    cards[6].classList.add('playing')
+    setTimeout(() => cards[6].classList.remove('playing'), 260)
+    await sleep(200)
+  }
+})
+
+document.getElementById('btnAll').addEventListener('click', async () => {
+  if (ctx.state === 'suspended') await ctx.resume()
+  for (let i = 0; i < CUES.length; i++) {
+    const cue = CUES[i]
+    play(cue.file)
+    cards[i].classList.add('playing')
+    log(`▶ ${cue.name}`)
+    await sleep(cue.key === 'win' || cue.key === 'fail' || cue.key === 'achievement' || cue.key === 'revive' ? 1500 : 520)
+    cards[i].classList.remove('playing')
+  }
+})
+
+document.getElementById('btnStop').addEventListener('click', () => {
+  bgmAudio.pause()
+  btnBgm.textContent = '▶ 循环播放'
+  log('已停止')
+})
+</script>
+</body>
+</html>

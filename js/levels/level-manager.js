@@ -41,10 +41,44 @@ function calcPar(optimal) {
 }
 
 /**
+ * 目标区兜底纠正：格数必须等于冰块数
+ *
+ * 数据来源有三条（烘焙产物 / 运行时生成 / 早期版本的旧包），任何一条
+ * 出现「目标格比冰块多」，玩家都会当成 bug —— 多出来的空格永远填不满，
+ * 场上却只有这么多块冰。烘焙器已经用 fitTargetSize 保证过了，这里再兜
+ * 一道：万一跑到旧数据，也不会把坏盘面摆到玩家面前。
+ *
+ * 纠正时保持原有朝向（竖排继续竖排），并把矩形夹回棋盘内。
+ *
+ * @param {Object} target - { x, y, width, height }
+ * @param {number} stoneCount
+ * @returns {Object}
+ */
+export function fitTargetRect(target, stoneCount) {
+  const cols = Math.max(1, Math.round(target.width / CELL_SIZE))
+  const rows = Math.max(1, Math.round(target.height / CELL_SIZE))
+  if (cols * rows === stoneCount) return { ...target }
+
+  const nextCols = rows > cols ? 1 : stoneCount
+  const nextRows = rows > cols ? stoneCount : 1
+  const width = nextCols * CELL_SIZE
+  const height = nextRows * CELL_SIZE
+
+  return {
+    ...target,
+    width,
+    height,
+    x: Math.min(Math.max(0, target.x), GRID_COLS * CELL_SIZE - width),
+    y: Math.min(Math.max(0, target.y), GRID_ROWS * CELL_SIZE - height)
+  }
+}
+
+/**
  * 补全一个关卡的公共字段
  */
 function normalize(raw, levelNum) {
   const optimal = Math.max(1, Math.round(raw.optimal) || 1)
+  const stones = raw.stones.map(s => ({ ...s }))
   return {
     id: levelNum,
     name: raw.name || `关卡 ${levelNum}`,
@@ -53,8 +87,8 @@ function normalize(raw, levelNum) {
     par: calcPar(optimal),
     grid: { width: GRID_COLS, height: GRID_ROWS, cellSize: CELL_SIZE },
     penguin: { ...raw.penguin },
-    stones: raw.stones.map(s => ({ ...s })),
-    target: { ...raw.target },
+    stones,
+    target: fitTargetRect(raw.target, stones.length),
     obstacles: (raw.obstacles || []).map(o => ({ ...o }))
   }
 }

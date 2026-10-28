@@ -30,6 +30,7 @@ import AchievementNotification from './js/ui/achievement-notification'
 import ReviveScene from './js/ui/revive-scene'
 import PrivacyScene from './js/ui/privacy-scene'
 import GameHUD, { UNDO_FOOD_COST } from './js/ui/game-hud'
+import { setButtonTapSound } from './js/ui/button'
 import {
   computeBoardLayout,
   GRID_COLS,
@@ -459,6 +460,48 @@ export default class Main {
 
     // 播放背景音乐
     this.audioManager.playBGM()
+
+    // 每日签到（当天第一次打开才发，只弹一次）
+    this.checkDailyGift()
+  }
+
+  /**
+   * 每日签到
+   *
+   * 当天第一次打开游戏自动发 5🐟，只弹一次提示。
+   * 不做签到面板 / 连续签到 / 补签 —— 需求就是「提示 + 给鱼」。
+   *
+   * 延迟 600ms 再弹：开局第一帧就盖一个 modal，玩家会以为进了什么广告页。
+   * 等菜单和海草动画先出来，提示才像是「附赠」而不是「拦截」。
+   */
+  checkDailyGift() {
+    if (!this.foodManager || !this.foodManager.canClaimDailyGift()) return
+
+    const result = this.foodManager.claimDailyGift()
+    if (!result.claimed) return
+
+    setTimeout(() => {
+      if (typeof wx === 'undefined') return
+
+      const giftLine = `今天的第一份礼物：🐟 × ${result.actual}`
+      const totalLine = `当前食物 ${result.total}/${result.max}`
+
+      // showModal 在部分基础库 / 开发者工具里不可用，退回 toast
+      if (typeof wx.showModal !== 'function') {
+        if (typeof wx.showToast === 'function') {
+          wx.showToast({ title: `每日签到 +${result.actual}🐟`, icon: 'none', duration: 2500 })
+        }
+        return
+      }
+
+      wx.showModal({
+        title: '每日签到',
+        content: `${giftLine}\n${totalLine}`,
+        showCancel: false,
+        confirmText: '收下',
+        confirmColor: '#2FBF9B'
+      })
+    }, 600)
   }
 
   /**
@@ -576,6 +619,9 @@ export default class Main {
    */
   initAudio() {
     this.audioManager = new AudioManager()
+
+    // 全项目所有按钮共用一条点击音（钩子定义在 js/ui/button.js）
+    setButtonTapSound(() => this.audioManager.playButtonSound())
   }
 
   /**
@@ -654,6 +700,12 @@ export default class Main {
     this.resultScene = new ResultScene(this.sceneManager)
     this.resultScene.onNextLevel = () => this.nextLevel()
     this.resultScene.onReplay = () => this.restartLevel()
+    // 星星逐颗亮起时各给一声"叮"，第三颗比第一颗高三个半音，形成上行
+    this.resultScene.onStarReveal = (index) => {
+      if (this.audioManager) {
+        this.audioManager.playStarSound({ rate: 1 + index * 0.12 })
+      }
+    }
 
     // 创建游戏HUD
     // F3/F4：底部第三个按钮从「返回」改成「退一步」，
@@ -736,11 +788,16 @@ export default class Main {
       })
 
       // 创建障碍物：关卡坐标（50px 网格）换算到当前棋盘，尺寸对齐一格
+      // col / row 必须显式带上：冰墙靠它判断上下左右是否连着别的墙。
+      // 不能从换算后的像素反算 —— toBoardPixel 加了 boardOffsetX，
+      // (x / cellSize) 不是整数，四舍五入会整体偏一格。
       this.obstacles = ObstacleFactory.createFromLevelData(
         (levelData.obstacles || []).map(obstacle => ({
           ...obstacle,
           ...this.toBoardPixel(obstacle),
-          size: this.cellSize
+          size: this.cellSize,
+          col: Math.round(obstacle.x / LEVEL_CELL),
+          row: Math.round(obstacle.y / LEVEL_CELL)
         }))
       )
 
@@ -762,6 +819,12 @@ export default class Main {
       // 通知结算管理器开始关卡
       if (this.settlementManager) {
         this.settlementManager.startLevel(levelNum, levelData.difficulty || 'easy')
+      }
+
+      // 音频：进入对局把 BGM 压到 game 档，并给一记开场提示音
+      if (this.audioManager) {
+        this.audioManager.setBgmState('game')
+        this.audioManager.playLevelStartSound()
       }
 
       console.log(`关卡 ${levelNum} 加载成功: ${levelData.name}, 障碍物: ${this.obstacles.length}`)
@@ -1215,8 +1278,9 @@ export default class Main {
 
     this.undoUsed = true
 
-    // 反向音效 + 轻振动
-    this.audioManager.playSlideSound()
+    // 反向音效（undo 是独立 cue：噪声反向扫频，听感是"倒带"，
+    // 用 slide 会让人以为又往前走了一步）+ 轻振动
+    this.audioManager.playUndoSound()
     if (typeof wx !== 'undefined') {
       wx.vibrateShort({ type: 'light' })
     }
@@ -1236,6 +1300,8 @@ export default class Main {
     this.clearOverlays()
     this.gameState = 'menu'
     this.penguin = null
+    // 回菜单：BGM 恢复到 menu 档（音效场景化，不是整首换曲）
+    if (this.audioManager) this.audioManager.setBgmState('menu')
     this.sceneManager.switchTo('menu')
   }
 
@@ -1560,6 +1626,12 @@ export default class Main {
     // 恢复游戏状态
     this.gameState = 'playing'
 
+    // 复活成功：气泡上升音 + BGM 回 game 档
+    if (this.audioManager) {
+      this.audioManager.setBgmState('game')
+      this.audioManager.playReviveSound()
+    }
+
     // 复活后情绪归位，别把失败表情带进新的一局
     if (this.penguin) {
       this.penguin.resetMood()
@@ -1692,6 +1764,8 @@ export default class Main {
 
     // 播放通关音效
     this.audioManager.playWinSound()
+    // 结算页 BGM 让路：通关音效 + 星级音效是主角
+    this.audioManager.setBgmState('result')
 
     // 通知结算管理器完成关卡（使用对象参数，避免与旧的位置参数错位）
     if (this.settlementManager) {
@@ -1834,6 +1908,14 @@ export default class Main {
         this.foodManager.giveRewards(achievement.reward)
       }
     })
+
+    // 只在"非结算"场景给成就音。
+    // 通关那一下 notify=false，此时 win 音效正在播，再叠一个成就音就是两个
+    // 上行音阶撞在一起 —— 玩家听到的是"糊"，不是"更爽"。
+    if (newAchievements.length > 0 && notify && this.audioManager) {
+      this.audioManager.playAchievementSound()
+    }
+
     return newAchievements
   }
 

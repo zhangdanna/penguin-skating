@@ -21,6 +21,7 @@ const EXCLUDE_PATTERNS = [
   /^docs\b/,
   /^tools\b/,
   /^local-preview\b/,
+  /^design-preview\b/,
   /^node_modules\b/,
   /^dist-h5\b/,
   /^dist-weapp\b/,
@@ -56,12 +57,21 @@ function copyDir(src, dest) {
 }
 
 // 清理旧产物
-// Windows 下 dist-weapp 常被微信开发者工具、资源管理器或预览进程占用，
-// 直接 rmdir 会抛 EBUSY。这里做重试，并在目录本身被占用时改为清空内容后复用。
+//
+// Windows 下 dist-weapp 常被微信开发者工具、资源管理器或预览进程占用。
+// 三重降级：
+//   1. rmSync（带重试）
+//   2. 删不掉就清空目录内容、复用目录本身
+//   3. 连内容都清不掉就跳过清理，靠 copyFileSync 就地覆盖
+//
+// 不要按 e.code 白名单（EBUSY / EPERM）过滤：本机 rmSync 会被
+// safe-delete shim 接管，抛出来的错误不带这两个 code，一过滤就会把
+// 后面两级降级整个跳过，构建直接失败。
 async function cleanDist() {
   if (!fs.existsSync(DIST)) return
 
-  const maxAttempts = 6
+  let lastError = null
+  const maxAttempts = 3
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
@@ -73,34 +83,30 @@ async function cleanDist() {
       })
       return
     } catch (e) {
-      if (e.code !== 'EBUSY' && e.code !== 'EPERM') {
-        throw e
-      }
-
-      if (attempt === maxAttempts - 1) {
-        // 目录句柄被占用时 rmdir 会失败，但通常仍允许删除内部文件
-        try {
-          for (const entry of fs.readdirSync(DIST)) {
-            fs.rmSync(path.join(DIST, entry), {
-              recursive: true,
-              force: true,
-              maxRetries: 3,
-              retryDelay: 150
-            })
-          }
-          console.warn('⚠️  dist-weapp 目录被占用，已清空内容并复用该目录')
-          return
-        } catch (inner) {
-          throw new Error(
-            `无法清理 dist-weapp（${e.code}）。` +
-            '请关闭微信开发者工具、资源管理器或正在预览该目录的进程后重试。'
-          )
-        }
-      }
-
+      lastError = e
       await delay(300 * (attempt + 1))
     }
   }
+
+  // 降级一：目录句柄被占用时 rmdir 会失败，但通常仍允许删除内部文件
+  try {
+    for (const entry of fs.readdirSync(DIST)) {
+      fs.rmSync(path.join(DIST, entry), {
+        recursive: true,
+        force: true,
+        maxRetries: 3,
+        retryDelay: 150
+      })
+    }
+    console.warn('⚠️  dist-weapp 目录被占用，已清空内容并复用该目录')
+    return
+  } catch (inner) {
+    lastError = inner
+  }
+
+  // 降级二：跳过清理，就地覆盖。会残留已删除的旧文件，但不至于构建失败
+  const reason = (lastError && lastError.message ? lastError.message.split('\n')[0] : '未知原因')
+  console.warn(`⚠️  dist-weapp 无法清理（${reason}），改为就地覆盖，可能残留已删除的旧文件`)
 }
 
 await cleanDist()

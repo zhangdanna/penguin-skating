@@ -414,6 +414,21 @@ const wxAPIs = {
         el.volume = Math.max(0, Math.min(1, Number.isFinite(v) ? v : 1));
       },
 
+      // 与微信 InnerAudioContext.playbackRate 对齐（基础库 2.11.0+）。
+      // 音频管理器靠它给同一音效做 ±5% 的速率抖动，避免连打时"哒哒哒"机械感。
+      // H5 端不提供的话，本地预览听起来会比真机更单调，容易误判成音效重复。
+      get playbackRate() {
+        return el.playbackRate || 1;
+      },
+      set playbackRate(value) {
+        const v = Number(value);
+        try {
+          el.playbackRate = Math.max(0.5, Math.min(2, Number.isFinite(v) ? v : 1));
+        } catch (e) {
+          // 部分浏览器/未加载元数据时会抛，忽略
+        }
+      },
+
       get paused() {
         return el.paused;
       },

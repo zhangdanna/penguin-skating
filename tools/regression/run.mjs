@@ -520,6 +520,75 @@ check(`目标区映射为 ${expectCols}x${expectRows} 格`,
   game.target.cols === expectCols && game.target.rows === expectRows,
   `${game.target.cols}x${game.target.rows}`)
 
+// 冰墙连通：相邻墙格必须在创建时就带上 links，绘制端靠它决定
+// 「哪条边是接缝不描边」。少了这个信息，一段 3 格墙会被画成三个
+// 独立小方块，玩家读不出「这是一堵墙」。
+let wallLevelNum = 0
+for (let i = 1; i <= game.levelManager.getCampaignSize(); i++) {
+  const lv = game.levelManager.getLevel(i)
+  const walls = (lv.obstacles || []).filter(o => o.type === 'wall')
+  const set = new Set(walls.map(o => `${Math.round(o.x / 50)}:${Math.round(o.y / 50)}`))
+  const hasLink = walls.some(o => {
+    const c = Math.round(o.x / 50)
+    const r = Math.round(o.y / 50)
+    return set.has(`${c + 1}:${r}`) || set.has(`${c}:${r + 1}`)
+  })
+  if (hasLink) { wallLevelNum = i; break }
+}
+check(`战役中存在相连的冰墙段（第 ${wallLevelNum} 关）`, wallLevelNum > 0)
+
+if (wallLevelNum > 0) {
+  game.foodManager.addFish(50)
+  await game.loadLevel(wallLevelNum)
+  const walls = game.obstacles.filter(o => o.type === 'wall')
+  // 邻居判定用像素差（格宽已知），**不要**用 x / width 反算格子 ——
+  // 棋盘带 boardOffsetX，反算出来不是整数，会整体偏一格，
+  // 那样测出来的「一致」只是公式自洽，测不出真实错位。
+  const neighborOf = (o, dx, dy) => walls.find(b =>
+    Math.abs(b.x - (o.x + dx * game.cellSize)) < 0.5 &&
+    Math.abs(b.y - (o.y + dy * game.cellSize)) < 0.5)
+  let linksOk = walls.length > 0
+  let linksDetail = ''
+  walls.forEach(o => {
+    const want = {
+      up: !!neighborOf(o, 0, -1),
+      down: !!neighborOf(o, 0, 1),
+      left: !!neighborOf(o, -1, 0),
+      right: !!neighborOf(o, 1, 0)
+    }
+    if (o.links.up !== want.up || o.links.down !== want.down ||
+      o.links.left !== want.left || o.links.right !== want.right) {
+      linksOk = false
+      linksDetail = linksDetail || `(${o.x},${o.y}) ${JSON.stringify(o.links)} ≠ ${JSON.stringify(want)}`
+    }
+  })
+  check(`第 ${wallLevelNum} 关 ${walls.length} 块冰墙的连通信息与像素邻居一致`, linksOk, linksDetail)
+}
+
+// 工厂单测：连通只认 col / row，不认像素
+const ObstacleMod = await loadModule(path.join(ROOT, 'js/runtime/obstacle.js'))
+const ObstacleFactoryClass = ObstacleMod.namespace.ObstacleFactory
+const straightWall = ObstacleFactoryClass.createFromLevelData([
+  { type: 'wall', x: 999, y: 999, size: 50, col: 2, row: 3 },
+  { type: 'wall', x: 999, y: 999, size: 50, col: 3, row: 3 },
+  { type: 'wall', x: 999, y: 999, size: 50, col: 4, row: 3 },
+  { type: 'wall', x: 999, y: 999, size: 50, col: 4, row: 4 }
+])
+check('冰墙连通：3 格横墙首尾单侧连接、中间两侧连接',
+  straightWall[0].links.right && !straightWall[0].links.left &&
+  straightWall[1].links.left && straightWall[1].links.right &&
+  straightWall[2].links.left && !straightWall[2].links.right &&
+  !straightWall[0].links.up,
+  JSON.stringify(straightWall.map(w => w.links)))
+check('冰墙连通：拐角处同时连上邻居',
+  straightWall[2].links.down && straightWall[3].links.up,
+  JSON.stringify(straightWall[3].links))
+check('冰墙连通：没带 col/row 时退化为独立方块（不猜位置）',
+  (() => {
+    const lone = ObstacleFactoryClass.createFromLevelData([{ type: 'wall', x: 0, y: 0, size: 50 }])[0]
+    return !lone.links.up && !lone.links.down && !lone.links.left && !lone.links.right
+  })())
+
 console.log('\n[11] 排行榜走开放数据域（A6）')
 game.sceneManager.switchTo('rank')
 check('切换排行榜后下发了 SHOW_RANK',
@@ -927,6 +996,33 @@ check('难度按 optimal 单调递增（无断崖）', optimalMonotonic, parDeta
 check('每关冰块数 1~3（BFS 编码上限）', stonesOk)
 check(`${baked} 关盘面互不重复（实际 ${boardKeys.size} 个）`, boardKeys.size === baked, `${boardKeys.size}`)
 
+// 目标格数必须严格等于冰块数。
+// 多出来的空格永远填不满，玩家会把它当成 bug（反馈过「3 个目标点只有 2 块冰」）；
+// 少格则根本通不了关。
+const CELL = 50
+const targetCells = (lv) =>
+  Math.round(lv.target.width / CELL) * Math.round(lv.target.height / CELL)
+const inTargetRect = (lv, s) =>
+  s.x >= lv.target.x && s.x < lv.target.x + lv.target.width &&
+  s.y >= lv.target.y && s.y < lv.target.y + lv.target.height
+let sizeOk = true
+let sizeDetail = ''
+let startClean = true
+let startDetail = ''
+for (let i = 1; i <= baked; i++) {
+  const lv = lm.getLevel(i)
+  if (targetCells(lv) !== lv.stones.length) {
+    sizeOk = false
+    sizeDetail = sizeDetail || `Lv.${i} 目标 ${targetCells(lv)} 格 / 冰 ${lv.stones.length} 块`
+  }
+  if (lv.stones.some(s => inTargetRect(lv, s))) {
+    startClean = false
+    startDetail = startDetail || `Lv.${i} 开局就有冰块压在目标格上`
+  }
+}
+check('目标格数 === 冰块数（不存在填不满的空目标）', sizeOk, sizeDetail)
+check('开局没有冰块压在目标格上（目标标记不会被遮住）', startClean, startDetail)
+
 const lv1 = lm.getLevel(1)
 const lvLast = lm.getLevel(baked)
 check(`第 1 关 optimal=${lv1.optimal}、第 ${baked} 关 optimal=${lvLast.optimal}（难度确实在涨）`,
@@ -946,11 +1042,48 @@ check(`第 ${beyondNum} 关难度不塌回新手区（optimal=${beyond.optimal}�
   beyond.optimal >= 20, `${beyond.optimal}`)
 check('第 61 关之后仍能继续出关（无上限）', !!lm.getLevel(baked + 50))
 
+// 运行时生成段同样不允许「目标格 ≠ 冰块数」。
+// 烘焙段由 fitTargetSize 兜着，运行时走的是另一条路径（generateLevel →
+// normalize），必须单独校验，否则只测烘焙段等于漏了一半。
+let runtimeSizeOk = true
+let runtimeSizeDetail = ''
+for (let n = baked + 1; n <= baked + 10; n++) {
+  const lv = lm.getLevel(n)
+  const cells = Math.round(lv.target.width / CELL) * Math.round(lv.target.height / CELL)
+  if (cells !== lv.stones.length) {
+    runtimeSizeOk = false
+    runtimeSizeDetail = runtimeSizeDetail || `Lv.${n} 目标 ${cells} 格 / 冰 ${lv.stones.length} 块`
+  }
+  if (lv.stones.some(s => inTargetRect(lv, s))) {
+    runtimeSizeOk = false
+    runtimeSizeDetail = runtimeSizeDetail || `Lv.${n} 开局冰块压在目标格上`
+  }
+}
+check(`运行时生成段（${baked + 1}~${baked + 10} 关）目标格 === 冰块数`,
+  runtimeSizeOk, runtimeSizeDetail)
+
 // seed 只由关卡号派生：换一个实例取同一关，盘面必须完全一致
 const LevelManagerClass = lm.constructor
 const freshManager = new LevelManagerClass()
 check('运行时生成是确定性的（换实例同一关盘面一致）',
   JSON.stringify(freshManager.getLevel(beyondNum)) === JSON.stringify(beyond))
+
+// 兜底：旧包/异常数据里的「目标格 ≠ 冰块数」必须被 normalize 纠正。
+// 历史上 dist-weapp 有 40 关是「4 格目标配 3 块冰」，玩家会当成 bug。
+const LMMod = await loadModule(path.join(ROOT, 'js/levels/level-manager.js'))
+const fitTargetRect = LMMod.namespace.fitTargetRect
+const fixedSquare = fitTargetRect({ x: 100, y: 200, width: 100, height: 100 }, 3)
+check('目标区兜底：2×2 目标配 3 块冰被纠正成 3 格',
+  Math.round(fixedSquare.width / CELL) * Math.round(fixedSquare.height / CELL) === 3,
+  `${fixedSquare.width / CELL}x${fixedSquare.height / CELL}`)
+const fixedTall = fitTargetRect({ x: 100, y: 200, width: 50, height: 200 }, 3)
+check('目标区兜底保持竖排朝向',
+  Math.round(fixedTall.width / CELL) === 1 && Math.round(fixedTall.height / CELL) === 3,
+  `${fixedTall.width / CELL}x${fixedTall.height / CELL}`)
+const fixedEdge = fitTargetRect({ x: 300, y: 400, width: 50, height: 50 }, 3)
+check('目标区兜底后不会越出棋盘',
+  fixedEdge.x + fixedEdge.width <= 7 * CELL && fixedEdge.y + fixedEdge.height <= 9 * CELL,
+  `x=${fixedEdge.x / CELL} w=${fixedEdge.width / CELL}`)
 
 // ---------- C6 排行榜上报口径 ----------
 const WechatMod = await loadModule(path.join(ROOT, 'js/utils/wechat-service.js'))
@@ -1751,6 +1884,49 @@ check('结算页拿到的是实际入账', game.resultScene.rewards === actualGi
 const lost = game.resultScene.getLostRewards()
 check(`能算出未入账部分（${lost.join('')}）`, lost.length === 1, JSON.stringify(lost))
 
+// 每日签到：当天第一次打开自动发 5🐟，只发一次
+const giftBackup = { food: { ...foodMgr.food }, date: foodMgr.dailyGiftDate }
+
+foodMgr.food = { fish: 0, shrimp: 0, squid: 0, goldfish: 0 }
+foodMgr.dailyGiftDate = ''
+check('当天没领过 → 可以签到', foodMgr.canClaimDailyGift() === true)
+
+const giftFirst = foodMgr.claimDailyGift()
+check(`签到发放 ${foodMgr.dailyGiftAmount}🐟`, giftFirst.claimed && giftFirst.actual === foodMgr.dailyGiftAmount,
+  `claimed=${giftFirst.claimed} actual=${giftFirst.actual}`)
+check('签到后食物到账', foodMgr.getTotalFood() === foodMgr.dailyGiftAmount,
+  `${foodMgr.getTotalFood()}`)
+
+const giftSecond = foodMgr.claimDailyGift()
+check('同一天第二次打开不再发', giftSecond.claimed === false && giftSecond.actual === 0,
+  `claimed=${giftSecond.claimed}`)
+check('同一天第二次不重复加鱼', foodMgr.getTotalFood() === foodMgr.dailyGiftAmount,
+  `${foodMgr.getTotalFood()}`)
+
+// 食物满的时候签到照样要发得出去 —— 这是「上限不该吃掉承诺奖励」的核心
+foodMgr.food = { fish: foodMgr.maxFood, shrimp: 0, squid: 0, goldfish: 0 }
+foodMgr.dailyGiftDate = ''
+const giftAtCap = foodMgr.claimDailyGift()
+check('食物已满时签到仍然发放（允许溢出上限）',
+  giftAtCap.claimed && giftAtCap.actual === foodMgr.dailyGiftAmount,
+  `claimed=${giftAtCap.claimed} actual=${giftAtCap.actual}`)
+check(`签到溢出后总量 = maxFood + ${foodMgr.dailyGiftAmount}`,
+  foodMgr.getTotalFood() === foodMgr.maxFood + foodMgr.dailyGiftAmount,
+  `${foodMgr.getTotalFood()}`)
+
+// 溢出通道只开给签到：通关奖励必须继续严格截断
+const capBefore = foodMgr.getTotalFood()
+check('签到之外的通路仍然严格按 maxFood 截断',
+  foodMgr.addFood('fish', 5) === 0 && foodMgr.getTotalFood() === capBefore,
+  `${foodMgr.getTotalFood()}`)
+
+// 跨天重置
+foodMgr.dailyGiftDate = '1970-1-1'
+check('跨天后重新可领', foodMgr.canClaimDailyGift() === true)
+
+foodMgr.food = giftBackup.food
+foodMgr.dailyGiftDate = giftBackup.date
+
 foodMgr.food = foodMgrBackup
 
 // 重玩：第一步时不该重开（原实现会重新 loadLevel，白扣一次入场食物）
@@ -1834,5 +2010,106 @@ check('切后台的时长不计入恢复', afterBackground === 0, `${afterBackgr
 foodMgr.food = foodMgrBackup
 
 Date.now = realNow
+
+// ---------- 音频系统 ----------
+// 这套断言守的是"音频系统的基础设施"，不是素材好不好听：
+// 素材质量靠人耳验收（tools/audio-lab.html），代码侧只需要保证
+// 「素材不静音、冷却生效、并发有上限、后台不碰实例、长音效会闪避 BGM」。
+console.log('\n[27] 音频系统：cue 表 / 冷却 / 声部池 / 闪避')
+
+const cuesMod = await loadModule(path.join(ROOT, 'js/utils/audio-cues.js'))
+const SfxCues = cuesMod.namespace.SfxCues
+const CUE_ALIASES = cuesMod.namespace.CUE_ALIASES
+
+const cueKeys = Object.keys(SfxCues)
+const missingCueFiles = cueKeys.filter((k) => !fs.existsSync(path.join(ROOT, SfxCues[k].file)))
+check(`音效表 ${cueKeys.length} 个 cue 的素材全部存在`, missingCueFiles.length === 0, missingCueFiles.join(','))
+
+const badCue = cueKeys.filter((k) => {
+  const c = SfxCues[k]
+  return !(c.bus && c.gain > 0 && c.gain <= 1 && c.voices >= 1 && c.cooldown >= 0 && c.durMs > 0)
+})
+check('cue 表字段完整（bus/gain/voices/cooldown/durMs）', badCue.length === 0, badCue.join(','))
+
+// 素材必须真的有声音。历史上 audio/button.wav 是 0.1s 的全零静音文件，
+// 代码侧毫无异常、真机上点按钮就是没声，靠肉眼看代码永远发现不了。
+const silentCues = []
+cueKeys.forEach((k) => {
+  const p = path.join(ROOT, SfxCues[k].file)
+  if (!fs.existsSync(p)) return
+  const buf = fs.readFileSync(p)
+  let hasSound = false
+  for (let i = 44; i + 1 < buf.length; i += 2) {
+    if (buf[i] !== 0 || buf[i + 1] !== 0) { hasSound = true; break }
+  }
+  if (!hasSound) silentCues.push(k)
+})
+check('所有音效素材非静音（防 button.wav 全零回归）', silentCues.length === 0, silentCues.join(','))
+
+const amgr = game.audioManager
+amgr.suspended = false
+amgr.setSoundEnabled(true)
+amgr.setMusicEnabled(true)
+
+check('旧 cue 名 collision/button 仍可播放',
+  CUE_ALIASES.collision === 'bump' && CUE_ALIASES.button === 'tap' &&
+  amgr.playCue('collision', { force: true }) === true &&
+  amgr.playCue('button', { force: true }) === true)
+
+// 冷却：同一 cue 在 cooldown 内第二次播放必须被拦掉，否则快速连点就是机关枪
+const realNow2 = Date.now
+let audioClock = 5000000
+Date.now = () => audioClock
+const cdFirst = amgr.playCue('slide', { force: true })
+const cdBlocked = amgr.playCue('slide')
+audioClock += SfxCues.slide.cooldown + 10
+const cdPassed = amgr.playCue('slide')
+check('冷却期内重复播放被拦截',
+  cdFirst === true && cdBlocked === false && cdPassed === true,
+  `${cdFirst}/${cdBlocked}/${cdPassed}`)
+
+// 声部池：连打时扩容，但绝不超过 voices 上限（无上限会开出一堆音频实例）
+// 先把池复位到"只预热 1 个空闲声部"，模拟冷启动后的第一次连打
+const slideVoice = (amgr.pools.slide || [])[0]
+slideVoice.busy = false
+amgr.pools.slide = [slideVoice]
+const poolBefore = amgr.pools.slide.length
+for (let i = 0; i < 4; i++) {
+  audioClock += SfxCues.slide.cooldown + 10
+  amgr.playCue('slide')
+}
+const poolAfter = (amgr.pools.slide || []).length
+check('连打时声部池扩容且不超过上限',
+  poolAfter > poolBefore && poolAfter === SfxCues.slide.voices,
+  `${poolBefore} → ${poolAfter} / 上限 ${SfxCues.slide.voices}`)
+
+// 闪避：长音效播放期间 BGM 目标音量必须下降
+amgr.duckFactor = 1
+const bgmBeforeDuck = amgr.targetBgmVolume()
+amgr.playCue('win', { force: true })
+const bgmAfterDuck = amgr.targetBgmVolume()
+check('通关音效触发 BGM 闪避', bgmAfterDuck < bgmBeforeDuck,
+  `${bgmBeforeDuck.toFixed(2)} → ${bgmAfterDuck.toFixed(2)}`)
+amgr.duckFactor = 1
+
+// 场景化音量：菜单 > 对局 > 结算，音效在结算页才是主角
+amgr.bgmState = 'menu'
+const volMenu = amgr.targetBgmVolume()
+amgr.bgmState = 'game'
+const volGame = amgr.targetBgmVolume()
+amgr.bgmState = 'result'
+const volResult = amgr.targetBgmVolume()
+check('BGM 分场景音量单调递减（menu > game > result）',
+  volMenu > volGame && volGame > volResult,
+  `${volMenu.toFixed(2)} > ${volGame.toFixed(2)} > ${volResult.toFixed(2)}`)
+amgr.bgmState = 'menu'
+Date.now = realNow2
+
+// 后台挂起：任何播放请求都必须被拒，绝不碰 InnerAudioContext
+amgr.suspended = true
+const suspendedPlay = amgr.playCue('tap', { force: true })
+amgr.suspended = false
+check('后台挂起时拒绝播放（不碰音频实例）', suspendedPlay === false)
+
 console.log(`\n===== 结果：${passed} 通过 / ${failed} 失败 =====`)
 process.exit(failed === 0 ? 0 : 1)

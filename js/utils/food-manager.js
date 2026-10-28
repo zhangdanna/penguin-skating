@@ -10,6 +10,9 @@ const SPEED_BONUS_PAR_RATIO = 2.2
 /** 单次恢复最多补几条（防止长时间挂机 / 后台一次性补满） */
 const MAX_RECOVERY_BURST = 3
 
+/** 每日签到送几条鱼 */
+const DAILY_GIFT_AMOUNT = 5
+
 export default class FoodManager {
   constructor() {
     // 食物类型及价值
@@ -63,6 +66,10 @@ export default class FoodManager {
     this.freeRefillPerDay = 1
     this.freeRefill = { date: this.getTodayDate(), used: 0 }
 
+    // 每日签到：当天第一次打开游戏自动发鱼，只提示一次
+    this.dailyGiftAmount = DAILY_GIFT_AMOUNT
+    this.dailyGiftDate = ''
+
     // 连续通关记录
     this.consecutiveWins = 0
     this.lastWinTime = 0
@@ -78,6 +85,7 @@ export default class FoodManager {
     this.loadFood()
     this.loadRecoveryTime()
     this.loadFreeRefill()
+    this.loadDailyGift()
     this.checkRecovery()
   }
 
@@ -148,6 +156,84 @@ export default class FoodManager {
       this.saveFreeRefill()
     }
     return actual
+  }
+
+  /**
+   * 读取签到记录
+   *
+   * 只存日期字符串，跨天判断和 freeRefill 同一套口径（本地日期）。
+   * 不做防改时间：改手机时间刷 5 条鱼的成本远高于收益，不值得为它加复杂度。
+   */
+  loadDailyGift() {
+    try {
+      const saved = wx.getStorageSync('dailyGift')
+      this.dailyGiftDate = (saved && saved.date) || ''
+    } catch (e) {
+      this.dailyGiftDate = ''
+    }
+  }
+
+  /**
+   * 保存签到记录
+   */
+  saveDailyGift() {
+    try {
+      wx.setStorageSync('dailyGift', { date: this.dailyGiftDate })
+    } catch (e) {
+      console.error('保存签到记录失败:', e)
+    }
+  }
+
+  /**
+   * 今天还能不能领签到
+   * @returns {boolean}
+   */
+  canClaimDailyGift() {
+    return this.dailyGiftDate !== this.getTodayDate()
+  }
+
+  /**
+   * 领取每日签到
+   *
+   * 签到是「今天回来过」的承诺奖励，**不受体力上限截断**：
+   * 食物满的时候照样入账，最多把总量顶到 maxFood + 本次发放量。
+   * 原来所有 addFood 都严格按 maxFood 截断，结果是「体力攒满的老玩家
+   * 反而领不到签到」，等于惩罚活跃玩家。
+   *
+   * 注意这个溢出通道只开给签到。通关奖励 / 恢复仍然严格截断 ——
+   * 那是 F1 的口径，放开的话金鱼又能无限堆积。
+   *
+   * @returns {{claimed:boolean, amount:number, actual:number, total:number, max:number}}
+   */
+  claimDailyGift() {
+    const snapshot = () => ({
+      claimed: false,
+      amount: 0,
+      actual: 0,
+      total: this.getTotalFood(),
+      max: this.maxFood
+    })
+
+    if (!this.canClaimDailyGift()) return snapshot()
+
+    const amount = this.dailyGiftAmount
+    const actual = this.addFood('fish', amount, { overflow: amount })
+
+    // 一条都没发出去（容量异常）就不消耗今天的次数，下次打开还能领
+    if (actual <= 0) {
+      return { ...snapshot(), amount }
+    }
+
+    this.dailyGiftDate = this.getTodayDate()
+    this.saveDailyGift()
+
+    return {
+      claimed: true,
+      amount,
+      actual,
+      total: this.getTotalFood(),
+      max: this.maxFood
+    }
   }
 
   /**
@@ -246,9 +332,13 @@ export default class FoodManager {
    *
    * @param {string} type - 食物类型
    * @param {number} amount - 数量
+   * @param {Object} [options]
+   * @param {number} [options.overflow=0] - 允许突破 maxFood 的额度。
+   *        只给每日签到用：签到是承诺奖励，不该因为体力满就作废。
+   *        通关奖励 / 自然恢复一律走默认值 0，保持 F1 的严格截断。
    * @returns {number} 实际入账数量
    */
-  addFood(type, amount) {
+  addFood(type, amount, options = {}) {
     if (!this.foodTypes[type]) {
       console.warn(`未知食物类型: ${type}`)
       return 0
@@ -256,7 +346,9 @@ export default class FoodManager {
     if (!(amount > 0)) return 0
 
     const value = this.foodTypes[type].value
-    const room = this.maxFood - this.getTotalFood()
+    const overflow = Math.max(0, Number(options.overflow) || 0)
+    const cap = this.maxFood + overflow
+    const room = cap - this.getTotalFood()
 
     if (room <= 0) {
       console.log(`食物已满（${this.getTotalFood()}/${this.maxFood}），丢弃 ${amount}${this.foodTypes[type].icon}`)

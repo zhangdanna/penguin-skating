@@ -37,7 +37,9 @@ export default class Stone extends Sprite {
     // 之前只有菱形本体跟着格子缩放，阴影、裂纹、高光、描边宽度都是固定像素，
     // 在 42px / 56px 格子上会明显错位。
     const k = Math.min(this.width, this.height) / 40
-    const size = 18.56 * k            // 菱形边长（= 0.464 × 格子）
+    // 0.464 → 0.5：菱形再大一点点。0.464 在 44px 格子上只有 20px 宽，
+    // 叠在浅冰面上几乎看不见（截图实测要盯两秒才找到）。
+    const size = 20 * k               // 菱形边长
     const radius = 5 * k
     const thickness = 4 * k           // 底部厚度
     const half = size / Math.SQRT2    // 菱形对角线的一半
@@ -54,19 +56,21 @@ export default class Stone extends Sprite {
     ctx.fill()
 
     // 底部厚度：先画一层向下偏移的菱形
+    // 侧面色用「折射后偏深一点的同一块冰」，不用深海军蓝 —— 深色侧壁
+    // 会把冰读成实心塑料，冰晶的透光感全靠侧壁不能太沉。
     diamondPath(ctx, cx, cy + thickness, size, radius)
-    ctx.fillStyle = '#63B2D8'
+    ctx.fillStyle = '#8ACBEA'
     ctx.fill()
-    ctx.strokeStyle = 'rgba(37, 110, 150, 0.7)'
+    ctx.strokeStyle = 'rgba(96, 168, 208, 0.75)'
     ctx.lineWidth = 1.5 * k
     ctx.stroke()
 
     // 冰晶主体
     diamondPath(ctx, cx, cy, size, radius)
     const ice = ctx.createLinearGradient(0, cy - 21 * k, 0, cy + 21 * k)
-    ice.addColorStop(0, '#F8FDFF')
-    ice.addColorStop(0.45, '#E2F4FF')
-    ice.addColorStop(1, '#A6D9F5')
+    ice.addColorStop(0, '#FFFFFF')
+    ice.addColorStop(0.45, '#EAF8FF')
+    ice.addColorStop(1, '#B5E2F8')
     ctx.fillStyle = ice
     ctx.fill()
 
@@ -126,9 +130,11 @@ export default class Stone extends Sprite {
     ctx.stroke()
 
     // 外轮廓：让冰晶从浅色冰面中清晰跳出来
+    // 中浅冰蓝，不是深蓝 —— 冰晶的边是折射光，压太深就成了塑料块的轮廓。
+    // 真正拉开对比的是上面那层近白的冰体和白色高光。
     diamondPath(ctx, cx, cy, size, radius)
-    ctx.strokeStyle = 'rgba(64, 148, 196, 0.9)'
-    ctx.lineWidth = 2.2 * k
+    ctx.strokeStyle = 'rgba(96, 170, 212, 0.88)'
+    ctx.lineWidth = 2.4 * k
     ctx.stroke()
 
     // 气泡与冰晶闪光

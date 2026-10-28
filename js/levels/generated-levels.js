@@ -252,28 +252,82 @@ export const GENERATED_LEVELS = {
     difficulty: 'easy',
     optimal: 14,
     par: 14,
-    penguin: { x: 300, y: 250 },
-    stones: [{ x: 200, y: 150, size: 40 }, { x: 50, y: 250, size: 40 }, { x: 250, y: 250, size: 40 }],
+    penguin: { x: 150, y: 400 },
+    stones: [{ x: 200, y: 250, size: 40 }, { x: 50, y: 300, size: 40 }, { x: 150, y: 350, size: 40 }],
     target: { x: 50, y: 250, width: 150, height: 50 },
     obstacles: [
-      { type: 'wall', x: 50, y: 300, size: 50 },
-      { type: 'wall', x: 100, y: 300, size: 50 },
-      { type: 'wall', x: 150, y: 300, size: 50 },
-      { type: 'wall', x: 200, y: 300, size: 50 },
+      { type: 'wall', x: 50, y: 400, size: 50 },
+      { type: 'wall', x: 100, y: 400, size: 50 },
+      { type: 'wall', x: 50, y: 200, size: 50 },
       { type: 'wall', x: 100, y: 200, size: 50 },
       { type: 'wall', x: 150, y: 200, size: 50 },
-      { type: 'wall', x: 0, y: 300, size: 50 },
-      { type: 'wall', x: 0, y: 350, size: 50 },
-      { type: 'hole', x: 100, y: 350, size: 50 },
+      { type: 'wall', x: 200, y: 200, size: 50 },
+      { type: 'wall', x: 50, y: 50, size: 50 },
+      { type: 'hole', x: 300, y: 300, size: 50 },
+      { type: 'hole', x: 200, y: 400, size: 50 },
       { type: 'hole', x: 50, y: 150, size: 50 },
-      { type: 'hole', x: 0, y: 100, size: 50 },
-      { type: 'snow', x: 300, y: 100, size: 50 },
-      { type: 'snow', x: 100, y: 50, size: 50 }
+      { type: 'snow', x: 50, y: 100, size: 50 },
+      { type: 'snow', x: 250, y: 250, size: 50 }
     ]
   },
   16: {
     id: 16,
-    name: '并排推进',
+    name: '冰窟险径',
+    difficulty: 'easy',
+    optimal: 14,
+    par: 14,
+    penguin: { x: 50, y: 200 },
+    stones: [{ x: 50, y: 250, size: 40 }, { x: 100, y: 350, size: 40 }, { x: 150, y: 250, size: 40 }],
+    target: { x: 50, y: 300, width: 150, height: 50 },
+    obstacles: [
+      { type: 'wall', x: 0, y: 200, size: 50 },
+      { type: 'wall', x: 0, y: 250, size: 50 },
+      { type: 'wall', x: 0, y: 150, size: 50 },
+      { type: 'wall', x: 50, y: 150, size: 50 },
+      { type: 'wall', x: 100, y: 100, size: 50 },
+      { type: 'wall', x: 100, y: 150, size: 50 },
+      { type: 'wall', x: 100, y: 200, size: 50 },
+      { type: 'wall', x: 300, y: 0, size: 50 },
+      { type: 'wall', x: 300, y: 50, size: 50 },
+      { type: 'wall', x: 300, y: 100, size: 50 },
+      { type: 'hole', x: 300, y: 300, size: 50 },
+      { type: 'hole', x: 150, y: 50, size: 50 },
+      { type: 'hole', x: 100, y: 50, size: 50 },
+      { type: 'snow', x: 0, y: 300, size: 50 }
+    ]
+  },
+  17: {
+    id: 17,
+    name: '绝境推演',
+    difficulty: 'easy',
+    optimal: 15,
+    par: 15,
+    penguin: { x: 200, y: 200 },
+    stones: [{ x: 50, y: 300, size: 40 }, { x: 50, y: 100, size: 40 }, { x: 150, y: 200, size: 40 }],
+    target: { x: 50, y: 150, width: 50, height: 150 },
+    obstacles: [
+      { type: 'wall', x: 200, y: 0, size: 50 },
+      { type: 'wall', x: 200, y: 50, size: 50 },
+      { type: 'wall', x: 200, y: 100, size: 50 },
+      { type: 'wall', x: 200, y: 150, size: 50 },
+      { type: 'wall', x: 200, y: 250, size: 50 },
+      { type: 'wall', x: 200, y: 300, size: 50 },
+      { type: 'wall', x: 200, y: 350, size: 50 },
+      { type: 'wall', x: 200, y: 400, size: 50 },
+      { type: 'wall', x: 250, y: 200, size: 50 },
+      { type: 'wall', x: 250, y: 250, size: 50 },
+      { type: 'wall', x: 250, y: 300, size: 50 },
+      { type: 'wall', x: 0, y: 200, size: 50 },
+      { type: 'hole', x: 0, y: 350, size: 50 },
+      { type: 'hole', x: 300, y: 300, size: 50 },
+      { type: 'hole', x: 150, y: 350, size: 50 },
+      { type: 'snow', x: 50, y: 400, size: 50 },
+      { type: 'snow', x: 150, y: 150, size: 50 }
+    ]
+  },
+  18: {
+    id: 18,
+    name: '双石入洞',
     difficulty: 'easy',
     optimal: 16,
     par: 16,
@@ -290,9 +344,9 @@ export const GENERATED_LEVELS = {
       { type: 'hole', x: 200, y: 150, size: 50 }
     ]
   },
-  17: {
-    id: 17,
-    name: '裂隙迷阵',
+  19: {
+    id: 19,
+    name: '窄道推进',
     difficulty: 'easy',
     optimal: 16,
     par: 16,
@@ -313,9 +367,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 100, y: 0, size: 50 }
     ]
   },
-  18: {
-    id: 18,
-    name: '冰墙回廊',
+  20: {
+    id: 20,
+    name: '裂隙迷阵',
     difficulty: 'easy',
     optimal: 16,
     par: 16,
@@ -333,8 +387,36 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 200, y: 0, size: 50 }
     ]
   },
-  19: {
-    id: 19,
+  21: {
+    id: 21,
+    name: '冰封深渊',
+    difficulty: 'easy',
+    optimal: 16,
+    par: 16,
+    penguin: { x: 50, y: 250 },
+    stones: [{ x: 250, y: 350, size: 40 }, { x: 100, y: 250, size: 40 }, { x: 250, y: 200, size: 40 }],
+    target: { x: 200, y: 250, width: 50, height: 150 },
+    obstacles: [
+      { type: 'wall', x: 0, y: 100, size: 50 },
+      { type: 'wall', x: 50, y: 100, size: 50 },
+      { type: 'wall', x: 100, y: 100, size: 50 },
+      { type: 'wall', x: 150, y: 100, size: 50 },
+      { type: 'wall', x: 250, y: 0, size: 50 },
+      { type: 'wall', x: 250, y: 50, size: 50 },
+      { type: 'wall', x: 250, y: 100, size: 50 },
+      { type: 'wall', x: 50, y: 0, size: 50 },
+      { type: 'wall', x: 50, y: 50, size: 50 },
+      { type: 'wall', x: 300, y: 150, size: 50 },
+      { type: 'hole', x: 150, y: 300, size: 50 },
+      { type: 'hole', x: 100, y: 150, size: 50 },
+      { type: 'hole', x: 0, y: 250, size: 50 },
+      { type: 'snow', x: 0, y: 300, size: 50 },
+      { type: 'snow', x: 250, y: 300, size: 50 },
+      { type: 'snow', x: 200, y: 50, size: 50 }
+    ]
+  },
+  22: {
+    id: 22,
     name: '窄道推进',
     difficulty: 'medium',
     optimal: 17,
@@ -354,8 +436,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 300, y: 50, size: 50 }
     ]
   },
-  20: {
-    id: 20,
+  23: {
+    id: 23,
     name: '裂隙迷阵',
     difficulty: 'medium',
     optimal: 17,
@@ -379,8 +461,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 250, y: 150, size: 50 }
     ]
   },
-  21: {
-    id: 21,
+  24: {
+    id: 24,
     name: '冰墙回廊',
     difficulty: 'medium',
     optimal: 17,
@@ -401,8 +483,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 200, size: 50 }
     ]
   },
-  22: {
-    id: 22,
+  25: {
+    id: 25,
     name: '窄道推进',
     difficulty: 'medium',
     optimal: 17,
@@ -423,8 +505,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 150, y: 300, size: 50 }
     ]
   },
-  23: {
-    id: 23,
+  26: {
+    id: 26,
     name: '裂隙迷阵',
     difficulty: 'medium',
     optimal: 17,
@@ -448,32 +530,42 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 250, y: 250, size: 50 }
     ]
   },
-  24: {
-    id: 24,
-    name: '三冰排序',
+  27: {
+    id: 27,
+    name: '永冻荒原',
     difficulty: 'medium',
-    optimal: 18,
-    par: 18,
-    penguin: { x: 50, y: 200 },
-    stones: [{ x: 100, y: 200, size: 40 }, { x: 250, y: 350, size: 40 }, { x: 50, y: 300, size: 40 }],
-    target: { x: 150, y: 350, width: 150, height: 50 },
+    optimal: 17,
+    par: 17,
+    penguin: { x: 50, y: 300 },
+    stones: [{ x: 250, y: 150, size: 40 }, { x: 100, y: 250, size: 40 }, { x: 50, y: 250, size: 40 }],
+    target: { x: 50, y: 200, width: 150, height: 50 },
     obstacles: [
-      { type: 'wall', x: 200, y: 400, size: 50 },
-      { type: 'wall', x: 250, y: 400, size: 50 },
-      { type: 'wall', x: 0, y: 50, size: 50 },
-      { type: 'wall', x: 0, y: 100, size: 50 },
+      { type: 'wall', x: 250, y: 50, size: 50 },
+      { type: 'wall', x: 300, y: 50, size: 50 },
+      { type: 'wall', x: 100, y: 100, size: 50 },
+      { type: 'wall', x: 150, y: 100, size: 50 },
+      { type: 'wall', x: 200, y: 100, size: 50 },
+      { type: 'wall', x: 100, y: 150, size: 50 },
+      { type: 'wall', x: 150, y: 150, size: 50 },
+      { type: 'wall', x: 200, y: 150, size: 50 },
+      { type: 'wall', x: 200, y: 250, size: 50 },
       { type: 'wall', x: 200, y: 300, size: 50 },
-      { type: 'wall', x: 250, y: 300, size: 50 },
-      { type: 'wall', x: 150, y: 50, size: 50 },
-      { type: 'wall', x: 200, y: 50, size: 50 },
-      { type: 'hole', x: 100, y: 0, size: 50 },
-      { type: 'hole', x: 300, y: 250, size: 50 },
-      { type: 'snow', x: 0, y: 150, size: 50 },
-      { type: 'snow', x: 250, y: 200, size: 50 }
+      { type: 'wall', x: 200, y: 350, size: 50 },
+      { type: 'wall', x: 200, y: 400, size: 50 },
+      { type: 'wall', x: 50, y: 350, size: 50 },
+      { type: 'wall', x: 100, y: 350, size: 50 },
+      { type: 'hole', x: 50, y: 0, size: 50 },
+      { type: 'hole', x: 0, y: 200, size: 50 },
+      { type: 'hole', x: 50, y: 400, size: 50 },
+      { type: 'hole', x: 150, y: 400, size: 50 },
+      { type: 'snow', x: 250, y: 300, size: 50 },
+      { type: 'snow', x: 250, y: 250, size: 50 },
+      { type: 'snow', x: 100, y: 50, size: 50 },
+      { type: 'snow', x: 100, y: 0, size: 50 }
     ]
   },
-  25: {
-    id: 25,
+  28: {
+    id: 28,
     name: '窄道推进',
     difficulty: 'medium',
     optimal: 19,
@@ -497,8 +589,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 400, size: 50 }
     ]
   },
-  26: {
-    id: 26,
+  29: {
+    id: 29,
     name: '裂隙迷阵',
     difficulty: 'medium',
     optimal: 19,
@@ -518,8 +610,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 200, y: 350, size: 50 }
     ]
   },
-  27: {
-    id: 27,
+  30: {
+    id: 30,
     name: '冰墙回廊',
     difficulty: 'medium',
     optimal: 19,
@@ -541,8 +633,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 150, y: 150, size: 50 }
     ]
   },
-  28: {
-    id: 28,
+  31: {
+    id: 31,
     name: '死角回廊',
     difficulty: 'medium',
     optimal: 19,
@@ -569,40 +661,40 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 250, y: 0, size: 50 }
     ]
   },
-  29: {
-    id: 29,
+  32: {
+    id: 32,
     name: '无尽寒潮',
     difficulty: 'medium',
     optimal: 19,
     par: 19,
-    penguin: { x: 50, y: 400 },
-    stones: [{ x: 50, y: 50, size: 40 }, { x: 50, y: 350, size: 40 }, { x: 150, y: 150, size: 40 }],
-    target: { x: 50, y: 150, width: 150, height: 50 },
+    penguin: { x: 250, y: 400 },
+    stones: [{ x: 200, y: 250, size: 40 }, { x: 250, y: 350, size: 40 }, { x: 100, y: 300, size: 40 }],
+    target: { x: 150, y: 300, width: 150, height: 50 },
     obstacles: [
-      { type: 'wall', x: 300, y: 350, size: 50 },
-      { type: 'wall', x: 300, y: 400, size: 50 },
-      { type: 'wall', x: 0, y: 250, size: 50 },
-      { type: 'wall', x: 0, y: 300, size: 50 },
-      { type: 'wall', x: 150, y: 50, size: 50 },
-      { type: 'wall', x: 200, y: 50, size: 50 },
       { type: 'wall', x: 0, y: 100, size: 50 },
-      { type: 'wall', x: 0, y: 150, size: 50 },
-      { type: 'wall', x: 0, y: 200, size: 50 },
-      { type: 'wall', x: 150, y: 300, size: 50 },
-      { type: 'wall', x: 200, y: 300, size: 50 },
-      { type: 'wall', x: 250, y: 300, size: 50 },
-      { type: 'wall', x: 150, y: 250, size: 50 },
-      { type: 'hole', x: 150, y: 100, size: 50 },
-      { type: 'hole', x: 100, y: 200, size: 50 },
+      { type: 'wall', x: 50, y: 100, size: 50 },
+      { type: 'wall', x: 300, y: 0, size: 50 },
+      { type: 'wall', x: 300, y: 50, size: 50 },
+      { type: 'wall', x: 300, y: 250, size: 50 },
+      { type: 'wall', x: 300, y: 300, size: 50 },
+      { type: 'wall', x: 100, y: 200, size: 50 },
+      { type: 'wall', x: 150, y: 200, size: 50 },
+      { type: 'wall', x: 150, y: 50, size: 50 },
+      { type: 'wall', x: 150, y: 100, size: 50 },
+      { type: 'wall', x: 150, y: 150, size: 50 },
+      { type: 'hole', x: 250, y: 50, size: 50 },
+      { type: 'hole', x: 100, y: 350, size: 50 },
       { type: 'hole', x: 200, y: 400, size: 50 },
-      { type: 'hole', x: 250, y: 0, size: 50 },
-      { type: 'snow', x: 150, y: 350, size: 50 },
-      { type: 'snow', x: 200, y: 0, size: 50 },
-      { type: 'snow', x: 0, y: 50, size: 50 }
+      { type: 'hole', x: 150, y: 350, size: 50 },
+      { type: 'hole', x: 200, y: 150, size: 50 },
+      { type: 'snow', x: 0, y: 400, size: 50 },
+      { type: 'snow', x: 0, y: 250, size: 50 },
+      { type: 'snow', x: 300, y: 150, size: 50 },
+      { type: 'snow', x: 100, y: 0, size: 50 }
     ]
   },
-  30: {
-    id: 30,
+  33: {
+    id: 33,
     name: '冰墙回廊',
     difficulty: 'medium',
     optimal: 20,
@@ -626,8 +718,100 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 250, y: 200, size: 50 }
     ]
   },
-  31: {
-    id: 31,
+  34: {
+    id: 34,
+    name: '冰窟险径',
+    difficulty: 'medium',
+    optimal: 20,
+    par: 20,
+    penguin: { x: 50, y: 50 },
+    stones: [{ x: 100, y: 50, size: 40 }, { x: 50, y: 100, size: 40 }, { x: 200, y: 100, size: 40 }],
+    target: { x: 50, y: 200, width: 150, height: 50 },
+    obstacles: [
+      { type: 'wall', x: 0, y: 250, size: 50 },
+      { type: 'wall', x: 50, y: 250, size: 50 },
+      { type: 'wall', x: 300, y: 0, size: 50 },
+      { type: 'wall', x: 300, y: 50, size: 50 },
+      { type: 'wall', x: 300, y: 100, size: 50 },
+      { type: 'wall', x: 300, y: 150, size: 50 },
+      { type: 'wall', x: 300, y: 400, size: 50 },
+      { type: 'hole', x: 0, y: 200, size: 50 },
+      { type: 'hole', x: 150, y: 50, size: 50 },
+      { type: 'hole', x: 200, y: 250, size: 50 },
+      { type: 'snow', x: 200, y: 0, size: 50 },
+      { type: 'snow', x: 250, y: 350, size: 50 }
+    ]
+  },
+  35: {
+    id: 35,
+    name: '无尽寒潮',
+    difficulty: 'medium',
+    optimal: 20,
+    par: 20,
+    penguin: { x: 100, y: 50 },
+    stones: [{ x: 100, y: 100, size: 40 }, { x: 250, y: 350, size: 40 }, { x: 200, y: 350, size: 40 }],
+    target: { x: 150, y: 300, width: 150, height: 50 },
+    obstacles: [
+      { type: 'wall', x: 0, y: 400, size: 50 },
+      { type: 'wall', x: 50, y: 400, size: 50 },
+      { type: 'wall', x: 100, y: 400, size: 50 },
+      { type: 'wall', x: 200, y: 100, size: 50 },
+      { type: 'wall', x: 250, y: 100, size: 50 },
+      { type: 'wall', x: 300, y: 100, size: 50 },
+      { type: 'wall', x: 50, y: 200, size: 50 },
+      { type: 'wall', x: 50, y: 250, size: 50 },
+      { type: 'wall', x: 50, y: 300, size: 50 },
+      { type: 'wall', x: 50, y: 350, size: 50 },
+      { type: 'wall', x: 50, y: 0, size: 50 },
+      { type: 'wall', x: 50, y: 50, size: 50 },
+      { type: 'wall', x: 0, y: 200, size: 50 },
+      { type: 'wall', x: 0, y: 250, size: 50 },
+      { type: 'hole', x: 100, y: 250, size: 50 },
+      { type: 'hole', x: 100, y: 350, size: 50 },
+      { type: 'hole', x: 150, y: 350, size: 50 },
+      { type: 'hole', x: 250, y: 200, size: 50 },
+      { type: 'hole', x: 300, y: 0, size: 50 },
+      { type: 'snow', x: 150, y: 50, size: 50 },
+      { type: 'snow', x: 50, y: 150, size: 50 },
+      { type: 'snow', x: 200, y: 250, size: 50 }
+    ]
+  },
+  36: {
+    id: 36,
+    name: '永冻荒原',
+    difficulty: 'medium',
+    optimal: 20,
+    par: 20,
+    penguin: { x: 0, y: 250 },
+    stones: [{ x: 250, y: 50, size: 40 }, { x: 150, y: 100, size: 40 }, { x: 50, y: 250, size: 40 }],
+    target: { x: 150, y: 150, width: 150, height: 50 },
+    obstacles: [
+      { type: 'wall', x: 100, y: 350, size: 50 },
+      { type: 'wall', x: 150, y: 350, size: 50 },
+      { type: 'wall', x: 100, y: 50, size: 50 },
+      { type: 'wall', x: 100, y: 100, size: 50 },
+      { type: 'wall', x: 100, y: 150, size: 50 },
+      { type: 'wall', x: 100, y: 200, size: 50 },
+      { type: 'wall', x: 300, y: 0, size: 50 },
+      { type: 'wall', x: 300, y: 50, size: 50 },
+      { type: 'wall', x: 300, y: 100, size: 50 },
+      { type: 'wall', x: 200, y: 350, size: 50 },
+      { type: 'wall', x: 250, y: 350, size: 50 },
+      { type: 'wall', x: 0, y: 350, size: 50 },
+      { type: 'wall', x: 50, y: 350, size: 50 },
+      { type: 'hole', x: 250, y: 250, size: 50 },
+      { type: 'hole', x: 300, y: 200, size: 50 },
+      { type: 'hole', x: 50, y: 400, size: 50 },
+      { type: 'hole', x: 150, y: 0, size: 50 },
+      { type: 'hole', x: 0, y: 300, size: 50 },
+      { type: 'snow', x: 250, y: 400, size: 50 },
+      { type: 'snow', x: 200, y: 0, size: 50 },
+      { type: 'snow', x: 250, y: 0, size: 50 },
+      { type: 'snow', x: 50, y: 0, size: 50 }
+    ]
+  },
+  37: {
+    id: 37,
     name: '窄道推进',
     difficulty: 'medium',
     optimal: 21,
@@ -649,8 +833,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 0, size: 50 }
     ]
   },
-  32: {
-    id: 32,
+  38: {
+    id: 38,
     name: '一线生机',
     difficulty: 'medium',
     optimal: 21,
@@ -676,8 +860,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 100, y: 150, size: 50 }
     ]
   },
-  33: {
-    id: 33,
+  39: {
+    id: 39,
     name: '极寒试炼',
     difficulty: 'medium',
     optimal: 21,
@@ -706,9 +890,69 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 50, y: 300, size: 50 }
     ]
   },
-  34: {
-    id: 34,
-    name: '极地深渊',
+  40: {
+    id: 40,
+    name: '死角回廊',
+    difficulty: 'medium',
+    optimal: 21,
+    par: 21,
+    penguin: { x: 100, y: 100 },
+    stones: [{ x: 200, y: 250, size: 40 }, { x: 50, y: 250, size: 40 }, { x: 100, y: 150, size: 40 }],
+    target: { x: 100, y: 200, width: 150, height: 50 },
+    obstacles: [
+      { type: 'wall', x: 100, y: 300, size: 50 },
+      { type: 'wall', x: 150, y: 300, size: 50 },
+      { type: 'wall', x: 200, y: 100, size: 50 },
+      { type: 'wall', x: 250, y: 100, size: 50 },
+      { type: 'wall', x: 300, y: 100, size: 50 },
+      { type: 'wall', x: 250, y: 150, size: 50 },
+      { type: 'wall', x: 250, y: 200, size: 50 },
+      { type: 'wall', x: 250, y: 250, size: 50 },
+      { type: 'wall', x: 250, y: 300, size: 50 },
+      { type: 'wall', x: 50, y: 50, size: 50 },
+      { type: 'wall', x: 100, y: 50, size: 50 },
+      { type: 'wall', x: 150, y: 50, size: 50 },
+      { type: 'hole', x: 150, y: 150, size: 50 },
+      { type: 'hole', x: 300, y: 400, size: 50 },
+      { type: 'hole', x: 50, y: 100, size: 50 },
+      { type: 'snow', x: 50, y: 0, size: 50 },
+      { type: 'snow', x: 100, y: 0, size: 50 },
+      { type: 'snow', x: 300, y: 50, size: 50 }
+    ]
+  },
+  41: {
+    id: 41,
+    name: '绝境推演',
+    difficulty: 'medium',
+    optimal: 21,
+    par: 21,
+    penguin: { x: 150, y: 400 },
+    stones: [{ x: 100, y: 300, size: 40 }, { x: 100, y: 150, size: 40 }, { x: 150, y: 350, size: 40 }],
+    target: { x: 50, y: 200, width: 50, height: 150 },
+    obstacles: [
+      { type: 'wall', x: 0, y: 350, size: 50 },
+      { type: 'wall', x: 50, y: 350, size: 50 },
+      { type: 'wall', x: 100, y: 350, size: 50 },
+      { type: 'wall', x: 250, y: 0, size: 50 },
+      { type: 'wall', x: 250, y: 50, size: 50 },
+      { type: 'wall', x: 250, y: 350, size: 50 },
+      { type: 'wall', x: 250, y: 400, size: 50 },
+      { type: 'wall', x: 50, y: 0, size: 50 },
+      { type: 'wall', x: 100, y: 0, size: 50 },
+      { type: 'wall', x: 150, y: 0, size: 50 },
+      { type: 'wall', x: 200, y: 0, size: 50 },
+      { type: 'wall', x: 200, y: 100, size: 50 },
+      { type: 'wall', x: 200, y: 150, size: 50 },
+      { type: 'hole', x: 200, y: 300, size: 50 },
+      { type: 'hole', x: 200, y: 400, size: 50 },
+      { type: 'hole', x: 100, y: 100, size: 50 },
+      { type: 'snow', x: 150, y: 50, size: 50 },
+      { type: 'snow', x: 300, y: 0, size: 50 }
+    ]
+  },
+  42: {
+    id: 42,
+    name: '永冻荒原',
     difficulty: 'medium',
     optimal: 21,
     par: 21,
@@ -740,8 +984,39 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 300, y: 100, size: 50 }
     ]
   },
-  35: {
-    id: 35,
+  43: {
+    id: 43,
+    name: '极地深渊',
+    difficulty: 'medium',
+    optimal: 21,
+    par: 21,
+    penguin: { x: 250, y: 0 },
+    stones: [{ x: 150, y: 50, size: 40 }, { x: 250, y: 50, size: 40 }, { x: 250, y: 250, size: 40 }],
+    target: { x: 150, y: 150, width: 150, height: 50 },
+    obstacles: [
+      { type: 'wall', x: 0, y: 0, size: 50 },
+      { type: 'wall', x: 0, y: 50, size: 50 },
+      { type: 'wall', x: 100, y: 0, size: 50 },
+      { type: 'wall', x: 100, y: 50, size: 50 },
+      { type: 'wall', x: 100, y: 100, size: 50 },
+      { type: 'wall', x: 50, y: 400, size: 50 },
+      { type: 'wall', x: 100, y: 400, size: 50 },
+      { type: 'wall', x: 150, y: 400, size: 50 },
+      { type: 'wall', x: 200, y: 400, size: 50 },
+      { type: 'wall', x: 200, y: 350, size: 50 },
+      { type: 'wall', x: 250, y: 350, size: 50 },
+      { type: 'wall', x: 300, y: 350, size: 50 },
+      { type: 'hole', x: 50, y: 200, size: 50 },
+      { type: 'hole', x: 50, y: 150, size: 50 },
+      { type: 'hole', x: 100, y: 250, size: 50 },
+      { type: 'hole', x: 250, y: 200, size: 50 },
+      { type: 'hole', x: 300, y: 100, size: 50 },
+      { type: 'snow', x: 0, y: 300, size: 50 },
+      { type: 'snow', x: 250, y: 400, size: 50 }
+    ]
+  },
+  44: {
+    id: 44,
     name: '一线生机',
     difficulty: 'medium',
     optimal: 22,
@@ -762,8 +1037,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 100, size: 50 }
     ]
   },
-  36: {
-    id: 36,
+  45: {
+    id: 45,
     name: '三冰排序',
     difficulty: 'medium',
     optimal: 22,
@@ -786,8 +1061,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 300, size: 50 }
     ]
   },
-  37: {
-    id: 37,
+  46: {
+    id: 46,
     name: '冰窟险径',
     difficulty: 'medium',
     optimal: 22,
@@ -813,8 +1088,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 300, size: 50 }
     ]
   },
-  38: {
-    id: 38,
+  47: {
+    id: 47,
     name: '一线生机',
     difficulty: 'medium',
     optimal: 22,
@@ -838,69 +1113,97 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 50, y: 0, size: 50 }
     ]
   },
-  39: {
-    id: 39,
+  48: {
+    id: 48,
     name: '极寒试炼',
     difficulty: 'medium',
     optimal: 22,
     par: 22,
-    penguin: { x: 50, y: 100 },
-    stones: [{ x: 100, y: 100, size: 40 }, { x: 100, y: 350, size: 40 }, { x: 250, y: 250, size: 40 }],
+    penguin: { x: 50, y: 350 },
+    stones: [{ x: 50, y: 300, size: 40 }, { x: 200, y: 150, size: 40 }, { x: 250, y: 350, size: 40 }],
     target: { x: 150, y: 250, width: 150, height: 50 },
     obstacles: [
-      { type: 'wall', x: 150, y: 400, size: 50 },
-      { type: 'wall', x: 200, y: 400, size: 50 },
-      { type: 'wall', x: 150, y: 0, size: 50 },
-      { type: 'wall', x: 200, y: 0, size: 50 },
-      { type: 'wall', x: 200, y: 150, size: 50 },
-      { type: 'wall', x: 200, y: 200, size: 50 },
       { type: 'wall', x: 150, y: 350, size: 50 },
       { type: 'wall', x: 200, y: 350, size: 50 },
-      { type: 'wall', x: 250, y: 350, size: 50 },
-      { type: 'wall', x: 300, y: 350, size: 50 },
+      { type: 'wall', x: 150, y: 50, size: 50 },
+      { type: 'wall', x: 200, y: 50, size: 50 },
+      { type: 'wall', x: 250, y: 50, size: 50 },
+      { type: 'wall', x: 300, y: 100, size: 50 },
+      { type: 'wall', x: 300, y: 150, size: 50 },
+      { type: 'wall', x: 300, y: 200, size: 50 },
+      { type: 'wall', x: 300, y: 250, size: 50 },
+      { type: 'wall', x: 50, y: 150, size: 50 },
+      { type: 'wall', x: 100, y: 150, size: 50 },
       { type: 'hole', x: 250, y: 200, size: 50 },
-      { type: 'hole', x: 50, y: 350, size: 50 },
-      { type: 'hole', x: 100, y: 0, size: 50 },
-      { type: 'hole', x: 300, y: 50, size: 50 },
-      { type: 'snow', x: 0, y: 200, size: 50 },
-      { type: 'snow', x: 100, y: 200, size: 50 },
-      { type: 'snow', x: 50, y: 250, size: 50 }
+      { type: 'hole', x: 50, y: 0, size: 50 },
+      { type: 'hole', x: 150, y: 300, size: 50 },
+      { type: 'hole', x: 250, y: 150, size: 50 },
+      { type: 'snow', x: 200, y: 0, size: 50 },
+      { type: 'snow', x: 0, y: 400, size: 50 }
     ]
   },
-  40: {
-    id: 40,
-    name: '极地深渊',
+  49: {
+    id: 49,
+    name: '永冻长廊',
     difficulty: 'medium',
     optimal: 22,
     par: 22,
-    penguin: { x: 0, y: 250 },
-    stones: [{ x: 250, y: 300, size: 40 }, { x: 50, y: 250, size: 40 }, { x: 200, y: 200, size: 40 }],
-    target: { x: 150, y: 300, width: 150, height: 50 },
+    penguin: { x: 150, y: 50 },
+    stones: [{ x: 50, y: 250, size: 40 }, { x: 250, y: 350, size: 40 }, { x: 150, y: 100, size: 40 }],
+    target: { x: 250, y: 200, width: 50, height: 150 },
     obstacles: [
+      { type: 'wall', x: 50, y: 100, size: 50 },
+      { type: 'wall', x: 50, y: 150, size: 50 },
+      { type: 'wall', x: 100, y: 350, size: 50 },
+      { type: 'wall', x: 150, y: 350, size: 50 },
       { type: 'wall', x: 200, y: 350, size: 50 },
-      { type: 'wall', x: 250, y: 350, size: 50 },
-      { type: 'wall', x: 150, y: 100, size: 50 },
-      { type: 'wall', x: 150, y: 150, size: 50 },
-      { type: 'wall', x: 150, y: 200, size: 50 },
+      { type: 'wall', x: 150, y: 0, size: 50 },
+      { type: 'wall', x: 200, y: 0, size: 50 },
+      { type: 'wall', x: 250, y: 0, size: 50 },
+      { type: 'wall', x: 300, y: 0, size: 50 },
+      { type: 'wall', x: 0, y: 100, size: 50 },
+      { type: 'wall', x: 0, y: 150, size: 50 },
+      { type: 'hole', x: 0, y: 50, size: 50 },
+      { type: 'hole', x: 100, y: 300, size: 50 },
+      { type: 'hole', x: 50, y: 350, size: 50 },
+      { type: 'hole', x: 150, y: 400, size: 50 },
+      { type: 'snow', x: 100, y: 0, size: 50 },
+      { type: 'snow', x: 300, y: 50, size: 50 },
+      { type: 'snow', x: 100, y: 150, size: 50 }
+    ]
+  },
+  50: {
+    id: 50,
+    name: '无尽寒潮',
+    difficulty: 'medium',
+    optimal: 22,
+    par: 22,
+    penguin: { x: 150, y: 100 },
+    stones: [{ x: 150, y: 150, size: 40 }, { x: 50, y: 250, size: 40 }, { x: 250, y: 250, size: 40 }],
+    target: { x: 150, y: 350, width: 150, height: 50 },
+    obstacles: [
+      { type: 'wall', x: 300, y: 50, size: 50 },
+      { type: 'wall', x: 300, y: 100, size: 50 },
+      { type: 'wall', x: 0, y: 150, size: 50 },
+      { type: 'wall', x: 0, y: 200, size: 50 },
       { type: 'wall', x: 50, y: 50, size: 50 },
       { type: 'wall', x: 100, y: 50, size: 50 },
       { type: 'wall', x: 150, y: 50, size: 50 },
       { type: 'wall', x: 200, y: 50, size: 50 },
-      { type: 'wall', x: 300, y: 300, size: 50 },
-      { type: 'wall', x: 300, y: 350, size: 50 },
-      { type: 'hole', x: 250, y: 200, size: 50 },
-      { type: 'hole', x: 300, y: 100, size: 50 },
-      { type: 'hole', x: 100, y: 100, size: 50 },
-      { type: 'hole', x: 50, y: 200, size: 50 },
-      { type: 'snow', x: 300, y: 0, size: 50 },
-      { type: 'snow', x: 50, y: 350, size: 50 },
-      { type: 'snow', x: 0, y: 250, size: 50 },
-      { type: 'snow', x: 200, y: 150, size: 50 }
+      { type: 'wall', x: 0, y: 0, size: 50 },
+      { type: 'wall', x: 0, y: 50, size: 50 },
+      { type: 'wall', x: 0, y: 100, size: 50 },
+      { type: 'hole', x: 50, y: 0, size: 50 },
+      { type: 'hole', x: 300, y: 400, size: 50 },
+      { type: 'hole', x: 150, y: 300, size: 50 },
+      { type: 'hole', x: 50, y: 150, size: 50 },
+      { type: 'snow', x: 250, y: 200, size: 50 },
+      { type: 'snow', x: 250, y: 50, size: 50 }
     ]
   },
-  41: {
-    id: 41,
-    name: '无尽寒潮',
+  51: {
+    id: 51,
+    name: '永冻荒原',
     difficulty: 'medium',
     optimal: 22,
     par: 22,
@@ -929,9 +1232,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 50, y: 150, size: 50 }
     ]
   },
-  42: {
-    id: 42,
-    name: '永冻荒原',
+  52: {
+    id: 52,
+    name: '极地深渊',
     difficulty: 'medium',
     optimal: 22,
     par: 22,
@@ -962,9 +1265,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 250, y: 50, size: 50 }
     ]
   },
-  43: {
-    id: 43,
-    name: '窄道推进',
+  53: {
+    id: 53,
+    name: '裂隙迷阵',
     difficulty: 'medium',
     optimal: 23,
     par: 23,
@@ -985,9 +1288,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 400, size: 50 }
     ]
   },
-  44: {
-    id: 44,
-    name: '一线生机',
+  54: {
+    id: 54,
+    name: '三冰排序',
     difficulty: 'medium',
     optimal: 23,
     par: 23,
@@ -1009,9 +1312,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 150, y: 300, size: 50 }
     ]
   },
-  45: {
-    id: 45,
-    name: '三冰排序',
+  55: {
+    id: 55,
+    name: '冰窟险径',
     difficulty: 'medium',
     optimal: 23,
     par: 23,
@@ -1033,9 +1336,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 300, y: 400, size: 50 }
     ]
   },
-  46: {
-    id: 46,
-    name: '冰窟险径',
+  56: {
+    id: 56,
+    name: '一线生机',
     difficulty: 'medium',
     optimal: 23,
     par: 23,
@@ -1059,9 +1362,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 250, y: 150, size: 50 }
     ]
   },
-  47: {
-    id: 47,
-    name: '一线生机',
+  57: {
+    id: 57,
+    name: '三冰排序',
     difficulty: 'medium',
     optimal: 23,
     par: 23,
@@ -1084,9 +1387,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 50, y: 250, size: 50 }
     ]
   },
-  48: {
-    id: 48,
-    name: '极寒试炼',
+  58: {
+    id: 58,
+    name: '死角回廊',
     difficulty: 'medium',
     optimal: 23,
     par: 23,
@@ -1112,9 +1415,38 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 100, y: 150, size: 50 }
     ]
   },
-  49: {
-    id: 49,
-    name: '死角回廊',
+  59: {
+    id: 59,
+    name: '冰原困局',
+    difficulty: 'medium',
+    optimal: 23,
+    par: 23,
+    penguin: { x: 200, y: 400 },
+    stones: [{ x: 200, y: 350, size: 40 }, { x: 50, y: 200, size: 40 }, { x: 250, y: 100, size: 40 }],
+    target: { x: 100, y: 200, width: 150, height: 50 },
+    obstacles: [
+      { type: 'wall', x: 0, y: 350, size: 50 },
+      { type: 'wall', x: 50, y: 350, size: 50 },
+      { type: 'wall', x: 100, y: 350, size: 50 },
+      { type: 'wall', x: 150, y: 350, size: 50 },
+      { type: 'wall', x: 300, y: 0, size: 50 },
+      { type: 'wall', x: 300, y: 50, size: 50 },
+      { type: 'wall', x: 300, y: 100, size: 50 },
+      { type: 'wall', x: 50, y: 100, size: 50 },
+      { type: 'wall', x: 100, y: 100, size: 50 },
+      { type: 'wall', x: 0, y: 300, size: 50 },
+      { type: 'wall', x: 50, y: 300, size: 50 },
+      { type: 'hole', x: 250, y: 300, size: 50 },
+      { type: 'hole', x: 300, y: 400, size: 50 },
+      { type: 'hole', x: 250, y: 0, size: 50 },
+      { type: 'snow', x: 200, y: 0, size: 50 },
+      { type: 'snow', x: 250, y: 400, size: 50 },
+      { type: 'snow', x: 150, y: 100, size: 50 }
+    ]
+  },
+  60: {
+    id: 60,
+    name: '极寒试炼',
     difficulty: 'medium',
     optimal: 23,
     par: 23,
@@ -1141,68 +1473,64 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 0, size: 50 }
     ]
   },
-  50: {
-    id: 50,
+  61: {
+    id: 61,
+    name: '永冻长廊',
+    difficulty: 'medium',
+    optimal: 23,
+    par: 23,
+    penguin: { x: 150, y: 100 },
+    stones: [{ x: 200, y: 50, size: 40 }, { x: 150, y: 150, size: 40 }, { x: 250, y: 350, size: 40 }],
+    target: { x: 250, y: 200, width: 50, height: 150 },
+    obstacles: [
+      { type: 'wall', x: 50, y: 250, size: 50 },
+      { type: 'wall', x: 50, y: 300, size: 50 },
+      { type: 'wall', x: 0, y: 350, size: 50 },
+      { type: 'wall', x: 50, y: 350, size: 50 },
+      { type: 'wall', x: 100, y: 350, size: 50 },
+      { type: 'wall', x: 150, y: 350, size: 50 },
+      { type: 'wall', x: 0, y: 200, size: 50 },
+      { type: 'wall', x: 50, y: 200, size: 50 },
+      { type: 'wall', x: 0, y: 100, size: 50 },
+      { type: 'wall', x: 0, y: 150, size: 50 },
+      { type: 'hole', x: 100, y: 200, size: 50 },
+      { type: 'hole', x: 100, y: 50, size: 50 },
+      { type: 'hole', x: 0, y: 400, size: 50 },
+      { type: 'snow', x: 200, y: 350, size: 50 },
+      { type: 'snow', x: 100, y: 250, size: 50 },
+      { type: 'snow', x: 300, y: 350, size: 50 }
+    ]
+  },
+  62: {
+    id: 62,
     name: '绝境推演',
     difficulty: 'medium',
     optimal: 23,
     par: 23,
-    penguin: { x: 300, y: 200 },
-    stones: [{ x: 150, y: 250, size: 40 }, { x: 250, y: 150, size: 40 }, { x: 250, y: 200, size: 40 }],
-    target: { x: 50, y: 100, width: 100, height: 100 },
+    penguin: { x: 250, y: 200 },
+    stones: [{ x: 50, y: 250, size: 40 }, { x: 250, y: 150, size: 40 }, { x: 50, y: 50, size: 40 }],
+    target: { x: 100, y: 50, width: 50, height: 150 },
     obstacles: [
-      { type: 'wall', x: 50, y: 250, size: 50 },
-      { type: 'wall', x: 50, y: 300, size: 50 },
       { type: 'wall', x: 50, y: 350, size: 50 },
-      { type: 'wall', x: 0, y: 50, size: 50 },
-      { type: 'wall', x: 50, y: 50, size: 50 },
-      { type: 'wall', x: 100, y: 50, size: 50 },
-      { type: 'wall', x: 0, y: 100, size: 50 },
-      { type: 'wall', x: 0, y: 150, size: 50 },
-      { type: 'wall', x: 0, y: 200, size: 50 },
-      { type: 'wall', x: 0, y: 250, size: 50 },
-      { type: 'wall', x: 150, y: 50, size: 50 },
-      { type: 'wall', x: 200, y: 50, size: 50 },
-      { type: 'hole', x: 150, y: 350, size: 50 },
-      { type: 'hole', x: 100, y: 0, size: 50 },
-      { type: 'hole', x: 250, y: 250, size: 50 },
-      { type: 'snow', x: 300, y: 200, size: 50 },
-      { type: 'snow', x: 200, y: 250, size: 50 },
-      { type: 'snow', x: 250, y: 100, size: 50 }
-    ]
-  },
-  51: {
-    id: 51,
-    name: '冰封深渊',
-    difficulty: 'medium',
-    optimal: 23,
-    par: 23,
-    penguin: { x: 0, y: 50 },
-    stones: [{ x: 50, y: 100, size: 40 }, { x: 50, y: 50, size: 40 }, { x: 50, y: 150, size: 40 }],
-    target: { x: 200, y: 100, width: 100, height: 100 },
-    obstacles: [
-      { type: 'wall', x: 50, y: 200, size: 50 },
-      { type: 'wall', x: 50, y: 250, size: 50 },
-      { type: 'wall', x: 50, y: 300, size: 50 },
-      { type: 'wall', x: 250, y: 200, size: 50 },
-      { type: 'wall', x: 300, y: 200, size: 50 },
-      { type: 'wall', x: 300, y: 350, size: 50 },
-      { type: 'wall', x: 300, y: 400, size: 50 },
-      { type: 'wall', x: 200, y: 200, size: 50 },
-      { type: 'wall', x: 200, y: 250, size: 50 },
+      { type: 'wall', x: 100, y: 350, size: 50 },
+      { type: 'wall', x: 150, y: 350, size: 50 },
+      { type: 'wall', x: 250, y: 250, size: 50 },
+      { type: 'wall', x: 300, y: 250, size: 50 },
+      { type: 'wall', x: 150, y: 300, size: 50 },
       { type: 'wall', x: 200, y: 300, size: 50 },
-      { type: 'wall', x: 200, y: 350, size: 50 },
-      { type: 'wall', x: 0, y: 400, size: 50 },
-      { type: 'hole', x: 150, y: 250, size: 50 },
-      { type: 'hole', x: 50, y: 0, size: 50 },
-      { type: 'hole', x: 100, y: 200, size: 50 },
-      { type: 'snow', x: 300, y: 300, size: 50 },
-      { type: 'snow', x: 50, y: 350, size: 50 }
+      { type: 'wall', x: 250, y: 300, size: 50 },
+      { type: 'wall', x: 300, y: 300, size: 50 },
+      { type: 'wall', x: 150, y: 200, size: 50 },
+      { type: 'hole', x: 250, y: 50, size: 50 },
+      { type: 'hole', x: 300, y: 0, size: 50 },
+      { type: 'hole', x: 50, y: 200, size: 50 },
+      { type: 'snow', x: 50, y: 150, size: 50 },
+      { type: 'snow', x: 50, y: 100, size: 50 }
     ]
   },
-  52: {
-    id: 52,
-    name: '极地深渊',
+  63: {
+    id: 63,
+    name: '永冻荒原',
     difficulty: 'medium',
     optimal: 23,
     par: 23,
@@ -1229,39 +1557,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 100, y: 50, size: 50 }
     ]
   },
-  53: {
-    id: 53,
-    name: '无尽寒潮',
-    difficulty: 'medium',
-    optimal: 23,
-    par: 23,
-    penguin: { x: 50, y: 350 },
-    stones: [{ x: 200, y: 150, size: 40 }, { x: 100, y: 350, size: 40 }, { x: 250, y: 200, size: 40 }],
-    target: { x: 150, y: 200, width: 150, height: 50 },
-    obstacles: [
-      { type: 'wall', x: 300, y: 200, size: 50 },
-      { type: 'wall', x: 300, y: 250, size: 50 },
-      { type: 'wall', x: 300, y: 300, size: 50 },
-      { type: 'wall', x: 100, y: 50, size: 50 },
-      { type: 'wall', x: 150, y: 50, size: 50 },
-      { type: 'wall', x: 200, y: 50, size: 50 },
-      { type: 'wall', x: 150, y: 100, size: 50 },
-      { type: 'wall', x: 150, y: 150, size: 50 },
-      { type: 'wall', x: 0, y: 250, size: 50 },
-      { type: 'wall', x: 0, y: 300, size: 50 },
-      { type: 'wall', x: 0, y: 350, size: 50 },
-      { type: 'wall', x: 250, y: 250, size: 50 },
-      { type: 'wall', x: 250, y: 300, size: 50 },
-      { type: 'hole', x: 250, y: 150, size: 50 },
-      { type: 'hole', x: 250, y: 50, size: 50 },
-      { type: 'hole', x: 0, y: 50, size: 50 },
-      { type: 'snow', x: 200, y: 250, size: 50 },
-      { type: 'snow', x: 200, y: 300, size: 50 }
-    ]
-  },
-  54: {
-    id: 54,
-    name: '永冻荒原',
+  64: {
+    id: 64,
+    name: '极地深渊',
     difficulty: 'medium',
     optimal: 23,
     par: 23,
@@ -1289,9 +1587,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 50, y: 200, size: 50 }
     ]
   },
-  55: {
-    id: 55,
-    name: '极地深渊',
+  65: {
+    id: 65,
+    name: '无尽寒潮',
     difficulty: 'medium',
     optimal: 23,
     par: 23,
@@ -1322,9 +1620,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 50, y: 300, size: 50 }
     ]
   },
-  56: {
-    id: 56,
-    name: '裂隙迷阵',
+  66: {
+    id: 66,
+    name: '冰墙回廊',
     difficulty: 'medium',
     optimal: 24,
     par: 24,
@@ -1344,9 +1642,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 50, y: 300, size: 50 }
     ]
   },
-  57: {
-    id: 57,
-    name: '三冰排序',
+  67: {
+    id: 67,
+    name: '冰窟险径',
     difficulty: 'medium',
     optimal: 24,
     par: 24,
@@ -1371,9 +1669,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 100, y: 200, size: 50 }
     ]
   },
-  58: {
-    id: 58,
-    name: '冰窟险径',
+  68: {
+    id: 68,
+    name: '一线生机',
     difficulty: 'medium',
     optimal: 24,
     par: 24,
@@ -1394,9 +1692,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 50, y: 0, size: 50 }
     ]
   },
-  59: {
-    id: 59,
-    name: '冰原困局',
+  69: {
+    id: 69,
+    name: '极寒试炼',
     difficulty: 'medium',
     optimal: 24,
     par: 24,
@@ -1422,9 +1720,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 100, y: 200, size: 50 }
     ]
   },
-  60: {
-    id: 60,
-    name: '极寒试炼',
+  70: {
+    id: 70,
+    name: '死角回廊',
     difficulty: 'medium',
     optimal: 24,
     par: 24,
@@ -1451,124 +1749,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 300, y: 400, size: 50 }
     ]
   },
-  61: {
-    id: 61,
-    name: '永冻长廊',
-    difficulty: 'medium',
-    optimal: 24,
-    par: 24,
-    penguin: { x: 100, y: 150 },
-    stones: [{ x: 50, y: 100, size: 40 }, { x: 250, y: 250, size: 40 }, { x: 100, y: 200, size: 40 }],
-    target: { x: 50, y: 300, width: 100, height: 100 },
-    obstacles: [
-      { type: 'wall', x: 150, y: 400, size: 50 },
-      { type: 'wall', x: 200, y: 400, size: 50 },
-      { type: 'wall', x: 250, y: 400, size: 50 },
-      { type: 'wall', x: 200, y: 0, size: 50 },
-      { type: 'wall', x: 200, y: 50, size: 50 },
-      { type: 'wall', x: 200, y: 100, size: 50 },
-      { type: 'wall', x: 200, y: 150, size: 50 },
-      { type: 'wall', x: 200, y: 350, size: 50 },
-      { type: 'wall', x: 250, y: 350, size: 50 },
-      { type: 'wall', x: 300, y: 150, size: 50 },
-      { type: 'wall', x: 300, y: 200, size: 50 },
-      { type: 'hole', x: 0, y: 150, size: 50 },
-      { type: 'hole', x: 0, y: 300, size: 50 },
-      { type: 'hole', x: 250, y: 150, size: 50 },
-      { type: 'hole', x: 150, y: 200, size: 50 },
-      { type: 'snow', x: 300, y: 400, size: 50 },
-      { type: 'snow', x: 150, y: 350, size: 50 }
-    ]
-  },
-  62: {
-    id: 62,
-    name: '绝境推演',
-    difficulty: 'medium',
-    optimal: 24,
-    par: 24,
-    penguin: { x: 50, y: 0 },
-    stones: [{ x: 100, y: 350, size: 40 }, { x: 50, y: 50, size: 40 }, { x: 200, y: 150, size: 40 }],
-    target: { x: 50, y: 250, width: 100, height: 100 },
-    obstacles: [
-      { type: 'wall', x: 200, y: 350, size: 50 },
-      { type: 'wall', x: 250, y: 350, size: 50 },
-      { type: 'wall', x: 100, y: 0, size: 50 },
-      { type: 'wall', x: 150, y: 0, size: 50 },
-      { type: 'wall', x: 200, y: 0, size: 50 },
-      { type: 'wall', x: 250, y: 0, size: 50 },
-      { type: 'wall', x: 0, y: 50, size: 50 },
-      { type: 'wall', x: 0, y: 100, size: 50 },
-      { type: 'wall', x: 0, y: 150, size: 50 },
-      { type: 'wall', x: 0, y: 200, size: 50 },
-      { type: 'wall', x: 200, y: 250, size: 50 },
-      { type: 'hole', x: 300, y: 250, size: 50 },
-      { type: 'hole', x: 150, y: 350, size: 50 },
-      { type: 'hole', x: 0, y: 250, size: 50 },
-      { type: 'snow', x: 300, y: 350, size: 50 },
-      { type: 'snow', x: 150, y: 100, size: 50 }
-    ]
-  },
-  63: {
-    id: 63,
-    name: '冰封深渊',
-    difficulty: 'medium',
-    optimal: 24,
-    par: 24,
-    penguin: { x: 150, y: 400 },
-    stones: [{ x: 100, y: 100, size: 40 }, { x: 50, y: 350, size: 40 }, { x: 150, y: 350, size: 40 }],
-    target: { x: 100, y: 200, width: 100, height: 100 },
-    obstacles: [
-      { type: 'wall', x: 200, y: 300, size: 50 },
-      { type: 'wall', x: 200, y: 350, size: 50 },
-      { type: 'wall', x: 0, y: 200, size: 50 },
-      { type: 'wall', x: 0, y: 250, size: 50 },
-      { type: 'wall', x: 0, y: 300, size: 50 },
-      { type: 'wall', x: 50, y: 0, size: 50 },
-      { type: 'wall', x: 100, y: 0, size: 50 },
-      { type: 'wall', x: 300, y: 200, size: 50 },
-      { type: 'wall', x: 300, y: 250, size: 50 },
-      { type: 'wall', x: 250, y: 100, size: 50 },
-      { type: 'hole', x: 0, y: 100, size: 50 },
-      { type: 'hole', x: 50, y: 100, size: 50 },
-      { type: 'hole', x: 50, y: 300, size: 50 },
-      { type: 'snow', x: 250, y: 200, size: 50 },
-      { type: 'snow', x: 150, y: 100, size: 50 },
-      { type: 'snow', x: 200, y: 250, size: 50 }
-    ]
-  },
-  64: {
-    id: 64,
-    name: '极地深渊',
-    difficulty: 'medium',
-    optimal: 24,
-    par: 24,
-    penguin: { x: 250, y: 0 },
-    stones: [{ x: 200, y: 50, size: 40 }, { x: 250, y: 50, size: 40 }, { x: 50, y: 250, size: 40 }],
-    target: { x: 50, y: 250, width: 150, height: 50 },
-    obstacles: [
-      { type: 'wall', x: 150, y: 350, size: 50 },
-      { type: 'wall', x: 200, y: 350, size: 50 },
-      { type: 'wall', x: 250, y: 350, size: 50 },
-      { type: 'wall', x: 50, y: 0, size: 50 },
-      { type: 'wall', x: 50, y: 50, size: 50 },
-      { type: 'wall', x: 50, y: 100, size: 50 },
-      { type: 'wall', x: 50, y: 300, size: 50 },
-      { type: 'wall', x: 100, y: 300, size: 50 },
-      { type: 'wall', x: 150, y: 300, size: 50 },
-      { type: 'wall', x: 200, y: 300, size: 50 },
-      { type: 'wall', x: 100, y: 50, size: 50 },
-      { type: 'hole', x: 250, y: 400, size: 50 },
-      { type: 'hole', x: 0, y: 0, size: 50 },
-      { type: 'hole', x: 0, y: 400, size: 50 },
-      { type: 'hole', x: 50, y: 200, size: 50 },
-      { type: 'hole', x: 300, y: 0, size: 50 },
-      { type: 'snow', x: 200, y: 150, size: 50 },
-      { type: 'snow', x: 300, y: 350, size: 50 },
-      { type: 'snow', x: 150, y: 50, size: 50 }
-    ]
-  },
-  65: {
-    id: 65,
+  71: {
+    id: 71,
     name: '无尽寒潮',
     difficulty: 'medium',
     optimal: 24,
@@ -1598,8 +1780,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 50, y: 100, size: 50 }
     ]
   },
-  66: {
-    id: 66,
+  72: {
+    id: 72,
     name: '永冻荒原',
     difficulty: 'medium',
     optimal: 24,
@@ -1628,8 +1810,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 100, y: 400, size: 50 }
     ]
   },
-  67: {
-    id: 67,
+  73: {
+    id: 73,
     name: '极地深渊',
     difficulty: 'medium',
     optimal: 24,
@@ -1659,8 +1841,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 250, y: 50, size: 50 }
     ]
   },
-  68: {
-    id: 68,
+  74: {
+    id: 74,
     name: '无尽寒潮',
     difficulty: 'medium',
     optimal: 24,
@@ -1695,9 +1877,43 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 250, y: 350, size: 50 }
     ]
   },
-  69: {
-    id: 69,
+  75: {
+    id: 75,
     name: '永冻荒原',
+    difficulty: 'medium',
+    optimal: 24,
+    par: 24,
+    penguin: { x: 150, y: 50 },
+    stones: [{ x: 150, y: 100, size: 40 }, { x: 200, y: 350, size: 40 }, { x: 250, y: 100, size: 40 }],
+    target: { x: 150, y: 250, width: 150, height: 50 },
+    obstacles: [
+      { type: 'wall', x: 0, y: 300, size: 50 },
+      { type: 'wall', x: 0, y: 350, size: 50 },
+      { type: 'wall', x: 100, y: 0, size: 50 },
+      { type: 'wall', x: 100, y: 50, size: 50 },
+      { type: 'wall', x: 100, y: 100, size: 50 },
+      { type: 'wall', x: 100, y: 150, size: 50 },
+      { type: 'wall', x: 300, y: 150, size: 50 },
+      { type: 'wall', x: 300, y: 200, size: 50 },
+      { type: 'wall', x: 300, y: 250, size: 50 },
+      { type: 'wall', x: 300, y: 300, size: 50 },
+      { type: 'wall', x: 200, y: 100, size: 50 },
+      { type: 'wall', x: 200, y: 150, size: 50 },
+      { type: 'wall', x: 200, y: 200, size: 50 },
+      { type: 'wall', x: 100, y: 400, size: 50 },
+      { type: 'hole', x: 300, y: 400, size: 50 },
+      { type: 'hole', x: 0, y: 150, size: 50 },
+      { type: 'hole', x: 0, y: 250, size: 50 },
+      { type: 'hole', x: 100, y: 250, size: 50 },
+      { type: 'hole', x: 0, y: 400, size: 50 },
+      { type: 'hole', x: 250, y: 0, size: 50 },
+      { type: 'snow', x: 250, y: 300, size: 50 },
+      { type: 'snow', x: 150, y: 50, size: 50 }
+    ]
+  },
+  76: {
+    id: 76,
+    name: '极地深渊',
     difficulty: 'medium',
     optimal: 24,
     par: 24,
@@ -1725,9 +1941,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 250, y: 50, size: 50 }
     ]
   },
-  70: {
-    id: 70,
-    name: '极地深渊',
+  77: {
+    id: 77,
+    name: '无尽寒潮',
     difficulty: 'medium',
     optimal: 24,
     par: 24,
@@ -1757,9 +1973,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 100, y: 200, size: 50 }
     ]
   },
-  71: {
-    id: 71,
-    name: '无尽寒潮',
+  78: {
+    id: 78,
+    name: '永冻荒原',
     difficulty: 'medium',
     optimal: 24,
     par: 24,
@@ -1789,9 +2005,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 200, y: 100, size: 50 }
     ]
   },
-  72: {
-    id: 72,
-    name: '永冻荒原',
+  79: {
+    id: 79,
+    name: '极地深渊',
     difficulty: 'medium',
     optimal: 24,
     par: 24,
@@ -1823,9 +2039,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 150, y: 300, size: 50 }
     ]
   },
-  73: {
-    id: 73,
-    name: '冰窟险径',
+  80: {
+    id: 80,
+    name: '一线生机',
     difficulty: 'hard',
     optimal: 25,
     par: 25,
@@ -1847,32 +2063,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 50, y: 300, size: 50 }
     ]
   },
-  74: {
-    id: 74,
-    name: '一线生机',
-    difficulty: 'hard',
-    optimal: 25,
-    par: 25,
-    penguin: { x: 50, y: 150 },
-    stones: [{ x: 50, y: 200, size: 40 }, { x: 50, y: 350, size: 40 }, { x: 250, y: 350, size: 40 }],
-    target: { x: 50, y: 350, width: 150, height: 50 },
-    obstacles: [
-      { type: 'wall', x: 100, y: 250, size: 50 },
-      { type: 'wall', x: 150, y: 250, size: 50 },
-      { type: 'wall', x: 100, y: 0, size: 50 },
-      { type: 'wall', x: 150, y: 0, size: 50 },
-      { type: 'wall', x: 200, y: 0, size: 50 },
-      { type: 'wall', x: 50, y: 50, size: 50 },
-      { type: 'wall', x: 50, y: 100, size: 50 },
-      { type: 'wall', x: 0, y: 250, size: 50 },
-      { type: 'hole', x: 150, y: 150, size: 50 },
-      { type: 'hole', x: 100, y: 400, size: 50 },
-      { type: 'snow', x: 250, y: 150, size: 50 },
-      { type: 'snow', x: 0, y: 150, size: 50 }
-    ]
-  },
-  75: {
-    id: 75,
+  81: {
+    id: 81,
     name: '三冰排序',
     difficulty: 'hard',
     optimal: 25,
@@ -1897,8 +2089,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 150, y: 350, size: 50 }
     ]
   },
-  76: {
-    id: 76,
+  82: {
+    id: 82,
     name: '冰窟险径',
     difficulty: 'hard',
     optimal: 25,
@@ -1922,8 +2114,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 150, y: 300, size: 50 }
     ]
   },
-  77: {
-    id: 77,
+  83: {
+    id: 83,
     name: '冰原困局',
     difficulty: 'hard',
     optimal: 25,
@@ -1949,38 +2141,162 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 200, y: 300, size: 50 }
     ]
   },
-  78: {
-    id: 78,
+  84: {
+    id: 84,
     name: '冰封深渊',
     difficulty: 'hard',
     optimal: 25,
     par: 25,
-    penguin: { x: 150, y: 0 },
-    stones: [{ x: 250, y: 50, size: 40 }, { x: 250, y: 350, size: 40 }, { x: 150, y: 50, size: 40 }],
-    target: { x: 200, y: 250, width: 100, height: 100 },
+    penguin: { x: 50, y: 400 },
+    stones: [{ x: 50, y: 350, size: 40 }, { x: 100, y: 50, size: 40 }, { x: 100, y: 350, size: 40 }],
+    target: { x: 50, y: 200, width: 50, height: 150 },
     obstacles: [
-      { type: 'wall', x: 200, y: 50, size: 50 },
-      { type: 'wall', x: 200, y: 100, size: 50 },
-      { type: 'wall', x: 200, y: 150, size: 50 },
-      { type: 'wall', x: 200, y: 200, size: 50 },
+      { type: 'wall', x: 0, y: 0, size: 50 },
       { type: 'wall', x: 0, y: 50, size: 50 },
-      { type: 'wall', x: 50, y: 50, size: 50 },
-      { type: 'wall', x: 100, y: 50, size: 50 },
       { type: 'wall', x: 0, y: 100, size: 50 },
-      { type: 'wall', x: 0, y: 150, size: 50 },
+      { type: 'wall', x: 250, y: 100, size: 50 },
+      { type: 'wall', x: 300, y: 100, size: 50 },
+      { type: 'wall', x: 150, y: 50, size: 50 },
+      { type: 'wall', x: 200, y: 50, size: 50 },
+      { type: 'wall', x: 250, y: 50, size: 50 },
+      { type: 'wall', x: 300, y: 50, size: 50 },
       { type: 'wall', x: 0, y: 200, size: 50 },
+      { type: 'wall', x: 0, y: 250, size: 50 },
+      { type: 'wall', x: 0, y: 300, size: 50 },
+      { type: 'wall', x: 250, y: 250, size: 50 },
+      { type: 'hole', x: 200, y: 350, size: 50 },
+      { type: 'hole', x: 150, y: 200, size: 50 },
+      { type: 'hole', x: 150, y: 250, size: 50 },
+      { type: 'snow', x: 200, y: 0, size: 50 },
+      { type: 'snow', x: 150, y: 400, size: 50 },
+      { type: 'snow', x: 0, y: 400, size: 50 }
+    ]
+  },
+  85: {
+    id: 85,
+    name: '永冻长廊',
+    difficulty: 'hard',
+    optimal: 25,
+    par: 25,
+    penguin: { x: 300, y: 150 },
+    stones: [{ x: 200, y: 350, size: 40 }, { x: 250, y: 150, size: 40 }, { x: 50, y: 300, size: 40 }],
+    target: { x: 150, y: 200, width: 50, height: 150 },
+    obstacles: [
       { type: 'wall', x: 300, y: 50, size: 50 },
       { type: 'wall', x: 300, y: 100, size: 50 },
-      { type: 'hole', x: 0, y: 250, size: 50 },
-      { type: 'hole', x: 50, y: 150, size: 50 },
-      { type: 'hole', x: 0, y: 400, size: 50 },
-      { type: 'snow', x: 200, y: 0, size: 50 },
+      { type: 'wall', x: 300, y: 200, size: 50 },
+      { type: 'wall', x: 300, y: 250, size: 50 },
+      { type: 'wall', x: 300, y: 300, size: 50 },
+      { type: 'wall', x: 300, y: 350, size: 50 },
+      { type: 'wall', x: 50, y: 150, size: 50 },
+      { type: 'wall', x: 100, y: 150, size: 50 },
+      { type: 'wall', x: 200, y: 50, size: 50 },
+      { type: 'wall', x: 250, y: 50, size: 50 },
+      { type: 'wall', x: 250, y: 300, size: 50 },
+      { type: 'hole', x: 100, y: 350, size: 50 },
+      { type: 'hole', x: 200, y: 0, size: 50 },
+      { type: 'hole', x: 100, y: 100, size: 50 },
+      { type: 'hole', x: 300, y: 0, size: 50 },
+      { type: 'snow', x: 250, y: 0, size: 50 },
+      { type: 'snow', x: 0, y: 200, size: 50 },
+      { type: 'snow', x: 250, y: 350, size: 50 }
+    ]
+  },
+  86: {
+    id: 86,
+    name: '绝境推演',
+    difficulty: 'hard',
+    optimal: 25,
+    par: 25,
+    penguin: { x: 50, y: 400 },
+    stones: [{ x: 100, y: 250, size: 40 }, { x: 200, y: 50, size: 40 }, { x: 50, y: 350, size: 40 }],
+    target: { x: 50, y: 100, width: 50, height: 150 },
+    obstacles: [
+      { type: 'wall', x: 100, y: 150, size: 50 },
+      { type: 'wall', x: 150, y: 150, size: 50 },
+      { type: 'wall', x: 200, y: 150, size: 50 },
+      { type: 'wall', x: 200, y: 250, size: 50 },
+      { type: 'wall', x: 200, y: 300, size: 50 },
+      { type: 'wall', x: 200, y: 350, size: 50 },
+      { type: 'wall', x: 0, y: 150, size: 50 },
+      { type: 'wall', x: 0, y: 200, size: 50 },
+      { type: 'wall', x: 0, y: 250, size: 50 },
+      { type: 'wall', x: 50, y: 50, size: 50 },
+      { type: 'wall', x: 100, y: 50, size: 50 },
+      { type: 'wall', x: 300, y: 200, size: 50 },
+      { type: 'wall', x: 300, y: 250, size: 50 },
+      { type: 'hole', x: 250, y: 0, size: 50 },
+      { type: 'hole', x: 250, y: 400, size: 50 },
+      { type: 'hole', x: 0, y: 300, size: 50 },
+      { type: 'hole', x: 0, y: 350, size: 50 },
+      { type: 'snow', x: 100, y: 300, size: 50 },
+      { type: 'snow', x: 150, y: 400, size: 50 },
       { type: 'snow', x: 150, y: 0, size: 50 }
     ]
   },
-  79: {
-    id: 79,
-    name: '极地深渊',
+  87: {
+    id: 87,
+    name: '冰封深渊',
+    difficulty: 'hard',
+    optimal: 25,
+    par: 25,
+    penguin: { x: 150, y: 50 },
+    stones: [{ x: 250, y: 50, size: 40 }, { x: 250, y: 350, size: 40 }, { x: 150, y: 100, size: 40 }],
+    target: { x: 250, y: 150, width: 50, height: 150 },
+    obstacles: [
+      { type: 'wall', x: 50, y: 300, size: 50 },
+      { type: 'wall', x: 100, y: 300, size: 50 },
+      { type: 'wall', x: 150, y: 300, size: 50 },
+      { type: 'wall', x: 300, y: 250, size: 50 },
+      { type: 'wall', x: 300, y: 300, size: 50 },
+      { type: 'wall', x: 300, y: 350, size: 50 },
+      { type: 'wall', x: 0, y: 200, size: 50 },
+      { type: 'wall', x: 50, y: 200, size: 50 },
+      { type: 'wall', x: 100, y: 200, size: 50 },
+      { type: 'wall', x: 200, y: 0, size: 50 },
+      { type: 'wall', x: 200, y: 50, size: 50 },
+      { type: 'wall', x: 50, y: 50, size: 50 },
+      { type: 'wall', x: 50, y: 100, size: 50 },
+      { type: 'hole', x: 100, y: 400, size: 50 },
+      { type: 'hole', x: 300, y: 150, size: 50 },
+      { type: 'hole', x: 0, y: 50, size: 50 },
+      { type: 'hole', x: 150, y: 0, size: 50 },
+      { type: 'snow', x: 300, y: 400, size: 50 },
+      { type: 'snow', x: 200, y: 350, size: 50 }
+    ]
+  },
+  88: {
+    id: 88,
+    name: '永冻长廊',
+    difficulty: 'hard',
+    optimal: 25,
+    par: 25,
+    penguin: { x: 100, y: 400 },
+    stones: [{ x: 200, y: 150, size: 40 }, { x: 100, y: 350, size: 40 }, { x: 50, y: 350, size: 40 }],
+    target: { x: 250, y: 250, width: 50, height: 150 },
+    obstacles: [
+      { type: 'wall', x: 0, y: 200, size: 50 },
+      { type: 'wall', x: 0, y: 250, size: 50 },
+      { type: 'wall', x: 0, y: 300, size: 50 },
+      { type: 'wall', x: 50, y: 250, size: 50 },
+      { type: 'wall', x: 100, y: 250, size: 50 },
+      { type: 'wall', x: 150, y: 250, size: 50 },
+      { type: 'wall', x: 50, y: 150, size: 50 },
+      { type: 'wall', x: 100, y: 150, size: 50 },
+      { type: 'wall', x: 250, y: 0, size: 50 },
+      { type: 'wall', x: 250, y: 50, size: 50 },
+      { type: 'hole', x: 300, y: 150, size: 50 },
+      { type: 'hole', x: 50, y: 200, size: 50 },
+      { type: 'hole', x: 300, y: 350, size: 50 },
+      { type: 'hole', x: 150, y: 100, size: 50 },
+      { type: 'snow', x: 200, y: 100, size: 50 },
+      { type: 'snow', x: 250, y: 400, size: 50 },
+      { type: 'snow', x: 50, y: 300, size: 50 }
+    ]
+  },
+  89: {
+    id: 89,
+    name: '无尽寒潮',
     difficulty: 'hard',
     optimal: 25,
     par: 25,
@@ -2007,9 +2323,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 300, y: 100, size: 50 }
     ]
   },
-  80: {
-    id: 80,
-    name: '无尽寒潮',
+  90: {
+    id: 90,
+    name: '永冻荒原',
     difficulty: 'hard',
     optimal: 25,
     par: 25,
@@ -2038,9 +2354,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 300, size: 50 }
     ]
   },
-  81: {
-    id: 81,
-    name: '永冻荒原',
+  91: {
+    id: 91,
+    name: '极地深渊',
     difficulty: 'hard',
     optimal: 25,
     par: 25,
@@ -2068,9 +2384,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 50, y: 150, size: 50 }
     ]
   },
-  82: {
-    id: 82,
-    name: '极地深渊',
+  92: {
+    id: 92,
+    name: '无尽寒潮',
     difficulty: 'hard',
     optimal: 25,
     par: 25,
@@ -2100,38 +2416,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 50, y: 200, size: 50 }
     ]
   },
-  83: {
-    id: 83,
-    name: '无尽寒潮',
-    difficulty: 'hard',
-    optimal: 25,
-    par: 25,
-    penguin: { x: 50, y: 150 },
-    stones: [{ x: 250, y: 300, size: 40 }, { x: 50, y: 200, size: 40 }, { x: 200, y: 100, size: 40 }],
-    target: { x: 150, y: 300, width: 150, height: 50 },
-    obstacles: [
-      { type: 'wall', x: 150, y: 200, size: 50 },
-      { type: 'wall', x: 150, y: 250, size: 50 },
-      { type: 'wall', x: 0, y: 150, size: 50 },
-      { type: 'wall', x: 0, y: 200, size: 50 },
-      { type: 'wall', x: 0, y: 250, size: 50 },
-      { type: 'wall', x: 250, y: 50, size: 50 },
-      { type: 'wall', x: 250, y: 100, size: 50 },
-      { type: 'wall', x: 150, y: 400, size: 50 },
-      { type: 'wall', x: 200, y: 400, size: 50 },
-      { type: 'wall', x: 100, y: 200, size: 50 },
-      { type: 'wall', x: 100, y: 250, size: 50 },
-      { type: 'hole', x: 300, y: 250, size: 50 },
-      { type: 'hole', x: 200, y: 350, size: 50 },
-      { type: 'hole', x: 250, y: 0, size: 50 },
-      { type: 'hole', x: 300, y: 400, size: 50 },
-      { type: 'snow', x: 50, y: 50, size: 50 },
-      { type: 'snow', x: 50, y: 400, size: 50 },
-      { type: 'snow', x: 250, y: 250, size: 50 }
-    ]
-  },
-  84: {
-    id: 84,
+  93: {
+    id: 93,
     name: '永冻荒原',
     difficulty: 'hard',
     optimal: 25,
@@ -2161,9 +2447,39 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 300, y: 250, size: 50 }
     ]
   },
-  85: {
-    id: 85,
+  94: {
+    id: 94,
     name: '极地深渊',
+    difficulty: 'hard',
+    optimal: 25,
+    par: 25,
+    penguin: { x: 50, y: 350 },
+    stones: [{ x: 150, y: 100, size: 40 }, { x: 100, y: 350, size: 40 }, { x: 250, y: 350, size: 40 }],
+    target: { x: 150, y: 150, width: 150, height: 50 },
+    obstacles: [
+      { type: 'wall', x: 50, y: 100, size: 50 },
+      { type: 'wall', x: 50, y: 150, size: 50 },
+      { type: 'wall', x: 50, y: 200, size: 50 },
+      { type: 'wall', x: 50, y: 250, size: 50 },
+      { type: 'wall', x: 0, y: 350, size: 50 },
+      { type: 'wall', x: 0, y: 400, size: 50 },
+      { type: 'wall', x: 300, y: 300, size: 50 },
+      { type: 'wall', x: 300, y: 350, size: 50 },
+      { type: 'wall', x: 0, y: 100, size: 50 },
+      { type: 'wall', x: 0, y: 150, size: 50 },
+      { type: 'wall', x: 0, y: 200, size: 50 },
+      { type: 'hole', x: 50, y: 400, size: 50 },
+      { type: 'hole', x: 150, y: 0, size: 50 },
+      { type: 'hole', x: 250, y: 100, size: 50 },
+      { type: 'hole', x: 300, y: 200, size: 50 },
+      { type: 'hole', x: 100, y: 0, size: 50 },
+      { type: 'snow', x: 100, y: 200, size: 50 },
+      { type: 'snow', x: 0, y: 300, size: 50 }
+    ]
+  },
+  95: {
+    id: 95,
+    name: '无尽寒潮',
     difficulty: 'hard',
     optimal: 25,
     par: 25,
@@ -2193,9 +2509,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 200, y: 50, size: 50 }
     ]
   },
-  86: {
-    id: 86,
-    name: '无尽寒潮',
+  96: {
+    id: 96,
+    name: '永冻荒原',
     difficulty: 'hard',
     optimal: 25,
     par: 25,
@@ -2225,9 +2541,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 300, y: 100, size: 50 }
     ]
   },
-  87: {
-    id: 87,
-    name: '永冻荒原',
+  97: {
+    id: 97,
+    name: '极地深渊',
     difficulty: 'hard',
     optimal: 25,
     par: 25,
@@ -2257,9 +2573,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 250, size: 50 }
     ]
   },
-  88: {
-    id: 88,
-    name: '极地深渊',
+  98: {
+    id: 98,
+    name: '无尽寒潮',
     difficulty: 'hard',
     optimal: 25,
     par: 25,
@@ -2288,9 +2604,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 250, y: 300, size: 50 }
     ]
   },
-  89: {
-    id: 89,
-    name: '无尽寒潮',
+  99: {
+    id: 99,
+    name: '永冻荒原',
     difficulty: 'hard',
     optimal: 25,
     par: 25,
@@ -2319,9 +2635,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 100, y: 50, size: 50 }
     ]
   },
-  90: {
-    id: 90,
-    name: '三冰排序',
+  100: {
+    id: 100,
+    name: '冰窟险径',
     difficulty: 'hard',
     optimal: 26,
     par: 26,
@@ -2345,9 +2661,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 250, y: 100, size: 50 }
     ]
   },
-  91: {
-    id: 91,
-    name: '死角回廊',
+  101: {
+    id: 101,
+    name: '冰原困局',
     difficulty: 'hard',
     optimal: 26,
     par: 26,
@@ -2375,36 +2691,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 200, size: 50 }
     ]
   },
-  92: {
-    id: 92,
-    name: '冰原困局',
-    difficulty: 'hard',
-    optimal: 26,
-    par: 26,
-    penguin: { x: 300, y: 250 },
-    stones: [{ x: 250, y: 200, size: 40 }, { x: 250, y: 250, size: 40 }, { x: 50, y: 350, size: 40 }],
-    target: { x: 50, y: 350, width: 150, height: 50 },
-    obstacles: [
-      { type: 'wall', x: 100, y: 300, size: 50 },
-      { type: 'wall', x: 150, y: 300, size: 50 },
-      { type: 'wall', x: 100, y: 150, size: 50 },
-      { type: 'wall', x: 150, y: 150, size: 50 },
-      { type: 'wall', x: 200, y: 150, size: 50 },
-      { type: 'wall', x: 50, y: 250, size: 50 },
-      { type: 'wall', x: 50, y: 300, size: 50 },
-      { type: 'wall', x: 0, y: 400, size: 50 },
-      { type: 'wall', x: 50, y: 400, size: 50 },
-      { type: 'wall', x: 250, y: 50, size: 50 },
-      { type: 'hole', x: 100, y: 0, size: 50 },
-      { type: 'hole', x: 200, y: 0, size: 50 },
-      { type: 'hole', x: 300, y: 350, size: 50 },
-      { type: 'snow', x: 150, y: 250, size: 50 },
-      { type: 'snow', x: 250, y: 300, size: 50 },
-      { type: 'snow', x: 150, y: 0, size: 50 }
-    ]
-  },
-  93: {
-    id: 93,
+  102: {
+    id: 102,
     name: '极寒试炼',
     difficulty: 'hard',
     optimal: 26,
@@ -2431,67 +2719,38 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 200, y: 400, size: 50 }
     ]
   },
-  94: {
-    id: 94,
+  103: {
+    id: 103,
     name: '死角回廊',
     difficulty: 'hard',
     optimal: 26,
     par: 26,
-    penguin: { x: 200, y: 350 },
-    stones: [{ x: 250, y: 350, size: 40 }, { x: 150, y: 350, size: 40 }, { x: 50, y: 100, size: 40 }],
-    target: { x: 50, y: 350, width: 150, height: 50 },
+    penguin: { x: 0, y: 100 },
+    stones: [{ x: 150, y: 100, size: 40 }, { x: 50, y: 100, size: 40 }, { x: 250, y: 50, size: 40 }],
+    target: { x: 150, y: 200, width: 150, height: 50 },
     obstacles: [
-      { type: 'wall', x: 200, y: 0, size: 50 },
-      { type: 'wall', x: 200, y: 50, size: 50 },
-      { type: 'wall', x: 200, y: 100, size: 50 },
-      { type: 'wall', x: 200, y: 150, size: 50 },
-      { type: 'wall', x: 150, y: 300, size: 50 },
-      { type: 'wall', x: 200, y: 300, size: 50 },
-      { type: 'wall', x: 100, y: 200, size: 50 },
-      { type: 'wall', x: 150, y: 200, size: 50 },
-      { type: 'wall', x: 0, y: 350, size: 50 },
-      { type: 'wall', x: 0, y: 400, size: 50 },
-      { type: 'hole', x: 100, y: 300, size: 50 },
-      { type: 'hole', x: 250, y: 300, size: 50 },
-      { type: 'hole', x: 0, y: 200, size: 50 },
-      { type: 'hole', x: 150, y: 100, size: 50 },
-      { type: 'snow', x: 300, y: 200, size: 50 },
-      { type: 'snow', x: 300, y: 300, size: 50 },
-      { type: 'snow', x: 100, y: 100, size: 50 }
-    ]
-  },
-  95: {
-    id: 95,
-    name: '绝境推演',
-    difficulty: 'hard',
-    optimal: 26,
-    par: 26,
-    penguin: { x: 150, y: 300 },
-    stones: [{ x: 250, y: 50, size: 40 }, { x: 50, y: 50, size: 40 }, { x: 200, y: 300, size: 40 }],
-    target: { x: 200, y: 100, width: 100, height: 100 },
-    obstacles: [
-      { type: 'wall', x: 0, y: 150, size: 50 },
-      { type: 'wall', x: 50, y: 150, size: 50 },
-      { type: 'wall', x: 150, y: 400, size: 50 },
-      { type: 'wall', x: 200, y: 400, size: 50 },
-      { type: 'wall', x: 250, y: 400, size: 50 },
-      { type: 'wall', x: 300, y: 400, size: 50 },
+      { type: 'wall', x: 0, y: 250, size: 50 },
       { type: 'wall', x: 0, y: 300, size: 50 },
-      { type: 'wall', x: 50, y: 300, size: 50 },
-      { type: 'wall', x: 100, y: 300, size: 50 },
-      { type: 'wall', x: 100, y: 200, size: 50 },
-      { type: 'wall', x: 150, y: 200, size: 50 },
-      { type: 'wall', x: 200, y: 200, size: 50 },
+      { type: 'wall', x: 50, y: 0, size: 50 },
+      { type: 'wall', x: 100, y: 0, size: 50 },
+      { type: 'wall', x: 150, y: 0, size: 50 },
+      { type: 'wall', x: 200, y: 0, size: 50 },
+      { type: 'wall', x: 200, y: 250, size: 50 },
+      { type: 'wall', x: 200, y: 300, size: 50 },
+      { type: 'wall', x: 200, y: 350, size: 50 },
+      { type: 'wall', x: 250, y: 250, size: 50 },
+      { type: 'wall', x: 300, y: 250, size: 50 },
+      { type: 'hole', x: 150, y: 300, size: 50 },
       { type: 'hole', x: 100, y: 350, size: 50 },
-      { type: 'hole', x: 300, y: 0, size: 50 },
-      { type: 'hole', x: 150, y: 0, size: 50 },
-      { type: 'snow', x: 50, y: 350, size: 50 },
+      { type: 'hole', x: 50, y: 150, size: 50 },
+      { type: 'hole', x: 150, y: 250, size: 50 },
+      { type: 'snow', x: 300, y: 0, size: 50 },
       { type: 'snow', x: 200, y: 50, size: 50 }
     ]
   },
-  96: {
-    id: 96,
-    name: '永冻荒原',
+  104: {
+    id: 104,
+    name: '无尽寒潮',
     difficulty: 'hard',
     optimal: 26,
     par: 26,
@@ -2517,8 +2776,41 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 250, y: 50, size: 50 }
     ]
   },
-  97: {
-    id: 97,
+  105: {
+    id: 105,
+    name: '永冻荒原',
+    difficulty: 'hard',
+    optimal: 26,
+    par: 26,
+    penguin: { x: 250, y: 400 },
+    stones: [{ x: 100, y: 300, size: 40 }, { x: 200, y: 350, size: 40 }, { x: 250, y: 350, size: 40 }],
+    target: { x: 100, y: 200, width: 150, height: 50 },
+    obstacles: [
+      { type: 'wall', x: 200, y: 0, size: 50 },
+      { type: 'wall', x: 200, y: 50, size: 50 },
+      { type: 'wall', x: 150, y: 100, size: 50 },
+      { type: 'wall', x: 200, y: 100, size: 50 },
+      { type: 'wall', x: 100, y: 50, size: 50 },
+      { type: 'wall', x: 150, y: 50, size: 50 },
+      { type: 'wall', x: 50, y: 150, size: 50 },
+      { type: 'wall', x: 50, y: 200, size: 50 },
+      { type: 'wall', x: 50, y: 250, size: 50 },
+      { type: 'wall', x: 50, y: 300, size: 50 },
+      { type: 'wall', x: 250, y: 200, size: 50 },
+      { type: 'wall', x: 250, y: 250, size: 50 },
+      { type: 'wall', x: 0, y: 150, size: 50 },
+      { type: 'hole', x: 300, y: 350, size: 50 },
+      { type: 'hole', x: 100, y: 150, size: 50 },
+      { type: 'hole', x: 0, y: 50, size: 50 },
+      { type: 'hole', x: 0, y: 400, size: 50 },
+      { type: 'hole', x: 300, y: 50, size: 50 },
+      { type: 'snow', x: 0, y: 200, size: 50 },
+      { type: 'snow', x: 100, y: 350, size: 50 },
+      { type: 'snow', x: 0, y: 300, size: 50 }
+    ]
+  },
+  106: {
+    id: 106,
     name: '极地深渊',
     difficulty: 'hard',
     optimal: 26,
@@ -2550,8 +2842,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 100, y: 50, size: 50 }
     ]
   },
-  98: {
-    id: 98,
+  107: {
+    id: 107,
     name: '无尽寒潮',
     difficulty: 'hard',
     optimal: 26,
@@ -2580,8 +2872,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 150, size: 50 }
     ]
   },
-  99: {
-    id: 99,
+  108: {
+    id: 108,
     name: '极寒试炼',
     difficulty: 'hard',
     optimal: 27,
@@ -2607,8 +2899,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 150, size: 50 }
     ]
   },
-  100: {
-    id: 100,
+  109: {
+    id: 109,
     name: '死角回廊',
     difficulty: 'hard',
     optimal: 27,
@@ -2637,8 +2929,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 300, size: 50 }
     ]
   },
-  101: {
-    id: 101,
+  110: {
+    id: 110,
     name: '冰原困局',
     difficulty: 'hard',
     optimal: 27,
@@ -2663,8 +2955,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 100, y: 250, size: 50 }
     ]
   },
-  102: {
-    id: 102,
+  111: {
+    id: 111,
     name: '极寒试炼',
     difficulty: 'hard',
     optimal: 27,
@@ -2693,152 +2985,158 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 200, y: 0, size: 50 }
     ]
   },
-  103: {
-    id: 103,
+  112: {
+    id: 112,
     name: '永冻长廊',
     difficulty: 'hard',
     optimal: 27,
     par: 27,
-    penguin: { x: 0, y: 250 },
-    stones: [{ x: 50, y: 250, size: 40 }, { x: 200, y: 250, size: 40 }, { x: 50, y: 150, size: 40 }],
-    target: { x: 50, y: 300, width: 100, height: 100 },
+    penguin: { x: 100, y: 0 },
+    stones: [{ x: 100, y: 50, size: 40 }, { x: 100, y: 250, size: 40 }, { x: 200, y: 350, size: 40 }],
+    target: { x: 250, y: 150, width: 50, height: 150 },
     obstacles: [
-      { type: 'wall', x: 0, y: 0, size: 50 },
-      { type: 'wall', x: 50, y: 0, size: 50 },
-      { type: 'wall', x: 300, y: 150, size: 50 },
+      { type: 'wall', x: 50, y: 350, size: 50 },
+      { type: 'wall', x: 100, y: 350, size: 50 },
+      { type: 'wall', x: 150, y: 350, size: 50 },
+      { type: 'wall', x: 0, y: 250, size: 50 },
+      { type: 'wall', x: 0, y: 300, size: 50 },
+      { type: 'wall', x: 150, y: 50, size: 50 },
+      { type: 'wall', x: 200, y: 50, size: 50 },
+      { type: 'wall', x: 250, y: 50, size: 50 },
       { type: 'wall', x: 300, y: 200, size: 50 },
       { type: 'wall', x: 300, y: 250, size: 50 },
-      { type: 'wall', x: 150, y: 50, size: 50 },
-      { type: 'wall', x: 150, y: 100, size: 50 },
-      { type: 'wall', x: 150, y: 150, size: 50 },
-      { type: 'wall', x: 150, y: 200, size: 50 },
       { type: 'wall', x: 300, y: 300, size: 50 },
-      { type: 'wall', x: 300, y: 350, size: 50 },
-      { type: 'wall', x: 250, y: 200, size: 50 },
-      { type: 'hole', x: 0, y: 200, size: 50 },
-      { type: 'hole', x: 0, y: 300, size: 50 },
-      { type: 'hole', x: 100, y: 150, size: 50 },
-      { type: 'hole', x: 50, y: 400, size: 50 },
-      { type: 'snow', x: 300, y: 100, size: 50 },
-      { type: 'snow', x: 0, y: 250, size: 50 },
-      { type: 'snow', x: 50, y: 50, size: 50 }
+      { type: 'wall', x: 250, y: 100, size: 50 },
+      { type: 'wall', x: 300, y: 100, size: 50 },
+      { type: 'hole', x: 50, y: 50, size: 50 },
+      { type: 'hole', x: 0, y: 0, size: 50 },
+      { type: 'hole', x: 0, y: 50, size: 50 },
+      { type: 'hole', x: 50, y: 100, size: 50 },
+      { type: 'snow', x: 250, y: 0, size: 50 },
+      { type: 'snow', x: 50, y: 250, size: 50 }
     ]
   },
-  104: {
-    id: 104,
+  113: {
+    id: 113,
     name: '绝境推演',
     difficulty: 'hard',
     optimal: 27,
     par: 27,
-    penguin: { x: 150, y: 0 },
-    stones: [{ x: 50, y: 50, size: 40 }, { x: 150, y: 50, size: 40 }, { x: 50, y: 350, size: 40 }],
-    target: { x: 50, y: 150, width: 100, height: 100 },
+    penguin: { x: 50, y: 250 },
+    stones: [{ x: 50, y: 350, size: 40 }, { x: 250, y: 200, size: 40 }, { x: 100, y: 250, size: 40 }],
+    target: { x: 250, y: 250, width: 50, height: 150 },
     obstacles: [
-      { type: 'wall', x: 300, y: 150, size: 50 },
-      { type: 'wall', x: 300, y: 200, size: 50 },
-      { type: 'wall', x: 300, y: 250, size: 50 },
-      { type: 'wall', x: 300, y: 300, size: 50 },
+      { type: 'wall', x: 250, y: 0, size: 50 },
       { type: 'wall', x: 250, y: 50, size: 50 },
       { type: 'wall', x: 250, y: 100, size: 50 },
-      { type: 'wall', x: 250, y: 150, size: 50 },
-      { type: 'wall', x: 250, y: 200, size: 50 },
-      { type: 'wall', x: 100, y: 250, size: 50 },
-      { type: 'wall', x: 150, y: 250, size: 50 },
+      { type: 'wall', x: 200, y: 50, size: 50 },
+      { type: 'wall', x: 200, y: 100, size: 50 },
+      { type: 'wall', x: 200, y: 150, size: 50 },
+      { type: 'wall', x: 150, y: 0, size: 50 },
+      { type: 'wall', x: 150, y: 50, size: 50 },
+      { type: 'wall', x: 0, y: 100, size: 50 },
+      { type: 'wall', x: 50, y: 100, size: 50 },
+      { type: 'wall', x: 200, y: 200, size: 50 },
       { type: 'wall', x: 200, y: 250, size: 50 },
-      { type: 'wall', x: 250, y: 250, size: 50 },
-      { type: 'hole', x: 0, y: 150, size: 50 },
-      { type: 'hole', x: 100, y: 50, size: 50 },
-      { type: 'hole', x: 200, y: 100, size: 50 },
-      { type: 'snow', x: 0, y: 350, size: 50 },
-      { type: 'snow', x: 300, y: 0, size: 50 }
+      { type: 'hole', x: 0, y: 250, size: 50 },
+      { type: 'hole', x: 50, y: 0, size: 50 },
+      { type: 'hole', x: 150, y: 100, size: 50 },
+      { type: 'snow', x: 300, y: 400, size: 50 },
+      { type: 'snow', x: 300, y: 250, size: 50 },
+      { type: 'snow', x: 0, y: 400, size: 50 }
     ]
   },
-  105: {
-    id: 105,
+  114: {
+    id: 114,
     name: '冰封深渊',
     difficulty: 'hard',
     optimal: 27,
     par: 27,
     penguin: { x: 0, y: 50 },
-    stones: [{ x: 200, y: 250, size: 40 }, { x: 50, y: 50, size: 40 }, { x: 50, y: 300, size: 40 }],
-    target: { x: 50, y: 100, width: 100, height: 100 },
+    stones: [{ x: 200, y: 200, size: 40 }, { x: 250, y: 300, size: 40 }, { x: 50, y: 50, size: 40 }],
+    target: { x: 250, y: 100, width: 50, height: 150 },
     obstacles: [
-      { type: 'wall', x: 250, y: 50, size: 50 },
-      { type: 'wall', x: 250, y: 100, size: 50 },
-      { type: 'wall', x: 150, y: 350, size: 50 },
-      { type: 'wall', x: 200, y: 350, size: 50 },
-      { type: 'wall', x: 250, y: 350, size: 50 },
+      { type: 'wall', x: 50, y: 100, size: 50 },
+      { type: 'wall', x: 100, y: 100, size: 50 },
+      { type: 'wall', x: 0, y: 150, size: 50 },
+      { type: 'wall', x: 50, y: 150, size: 50 },
+      { type: 'wall', x: 300, y: 300, size: 50 },
       { type: 'wall', x: 300, y: 350, size: 50 },
-      { type: 'wall', x: 150, y: 50, size: 50 },
-      { type: 'wall', x: 150, y: 100, size: 50 },
-      { type: 'wall', x: 150, y: 150, size: 50 },
-      { type: 'wall', x: 100, y: 350, size: 50 },
-      { type: 'hole', x: 300, y: 400, size: 50 },
-      { type: 'hole', x: 50, y: 400, size: 50 },
-      { type: 'hole', x: 250, y: 150, size: 50 },
-      { type: 'hole', x: 100, y: 300, size: 50 },
-      { type: 'snow', x: 0, y: 0, size: 50 },
-      { type: 'snow', x: 100, y: 250, size: 50 },
-      { type: 'snow', x: 0, y: 50, size: 50 }
+      { type: 'wall', x: 300, y: 400, size: 50 },
+      { type: 'wall', x: 50, y: 400, size: 50 },
+      { type: 'wall', x: 100, y: 400, size: 50 },
+      { type: 'wall', x: 150, y: 400, size: 50 },
+      { type: 'wall', x: 100, y: 0, size: 50 },
+      { type: 'hole', x: 100, y: 350, size: 50 },
+      { type: 'hole', x: 0, y: 300, size: 50 },
+      { type: 'hole', x: 150, y: 100, size: 50 },
+      { type: 'hole', x: 200, y: 0, size: 50 },
+      { type: 'snow', x: 150, y: 150, size: 50 },
+      { type: 'snow', x: 200, y: 350, size: 50 }
     ]
   },
-  106: {
-    id: 106,
+  115: {
+    id: 115,
     name: '永冻长廊',
     difficulty: 'hard',
     optimal: 27,
     par: 27,
-    penguin: { x: 200, y: 100 },
-    stones: [{ x: 200, y: 150, size: 40 }, { x: 200, y: 50, size: 40 }, { x: 50, y: 300, size: 40 }],
-    target: { x: 200, y: 300, width: 100, height: 100 },
+    penguin: { x: 200, y: 250 },
+    stones: [{ x: 150, y: 250, size: 40 }, { x: 250, y: 250, size: 40 }, { x: 50, y: 50, size: 40 }],
+    target: { x: 50, y: 100, width: 50, height: 150 },
     obstacles: [
+      { type: 'wall', x: 0, y: 350, size: 50 },
+      { type: 'wall', x: 50, y: 350, size: 50 },
+      { type: 'wall', x: 100, y: 350, size: 50 },
+      { type: 'wall', x: 150, y: 0, size: 50 },
+      { type: 'wall', x: 150, y: 50, size: 50 },
       { type: 'wall', x: 150, y: 100, size: 50 },
       { type: 'wall', x: 150, y: 150, size: 50 },
+      { type: 'wall', x: 100, y: 0, size: 50 },
+      { type: 'wall', x: 100, y: 50, size: 50 },
       { type: 'wall', x: 100, y: 100, size: 50 },
       { type: 'wall', x: 100, y: 150, size: 50 },
-      { type: 'wall', x: 100, y: 200, size: 50 },
-      { type: 'wall', x: 100, y: 250, size: 50 },
-      { type: 'wall', x: 250, y: 150, size: 50 },
-      { type: 'wall', x: 250, y: 200, size: 50 },
-      { type: 'wall', x: 250, y: 250, size: 50 },
-      { type: 'wall', x: 50, y: 200, size: 50 },
-      { type: 'hole', x: 150, y: 0, size: 50 },
-      { type: 'hole', x: 0, y: 0, size: 50 },
-      { type: 'hole', x: 300, y: 200, size: 50 },
-      { type: 'snow', x: 150, y: 250, size: 50 },
-      { type: 'snow', x: 150, y: 350, size: 50 }
+      { type: 'wall', x: 250, y: 50, size: 50 },
+      { type: 'wall', x: 250, y: 100, size: 50 },
+      { type: 'hole', x: 200, y: 50, size: 50 },
+      { type: 'hole', x: 150, y: 350, size: 50 },
+      { type: 'hole', x: 50, y: 400, size: 50 },
+      { type: 'snow', x: 200, y: 350, size: 50 },
+      { type: 'snow', x: 0, y: 100, size: 50 }
     ]
   },
-  107: {
-    id: 107,
-    name: '绝境推演',
+  116: {
+    id: 116,
+    name: '无尽寒潮',
     difficulty: 'hard',
     optimal: 27,
     par: 27,
-    penguin: { x: 300, y: 100 },
-    stones: [{ x: 50, y: 300, size: 40 }, { x: 50, y: 50, size: 40 }, { x: 250, y: 100, size: 40 }],
-    target: { x: 50, y: 100, width: 100, height: 100 },
+    penguin: { x: 250, y: 150 },
+    stones: [{ x: 250, y: 200, size: 40 }, { x: 250, y: 350, size: 40 }, { x: 50, y: 350, size: 40 }],
+    target: { x: 100, y: 300, width: 150, height: 50 },
     obstacles: [
-      { type: 'wall', x: 150, y: 50, size: 50 },
-      { type: 'wall', x: 200, y: 50, size: 50 },
-      { type: 'wall', x: 250, y: 50, size: 50 },
-      { type: 'wall', x: 200, y: 300, size: 50 },
-      { type: 'wall', x: 250, y: 300, size: 50 },
-      { type: 'wall', x: 300, y: 300, size: 50 },
-      { type: 'wall', x: 150, y: 250, size: 50 },
-      { type: 'wall', x: 150, y: 300, size: 50 },
-      { type: 'wall', x: 150, y: 350, size: 50 },
-      { type: 'wall', x: 150, y: 400, size: 50 },
+      { type: 'wall', x: 100, y: 0, size: 50 },
+      { type: 'wall', x: 150, y: 0, size: 50 },
+      { type: 'wall', x: 200, y: 0, size: 50 },
+      { type: 'wall', x: 250, y: 0, size: 50 },
+      { type: 'wall', x: 300, y: 0, size: 50 },
+      { type: 'wall', x: 300, y: 50, size: 50 },
+      { type: 'wall', x: 300, y: 100, size: 50 },
       { type: 'wall', x: 300, y: 150, size: 50 },
-      { type: 'hole', x: 300, y: 50, size: 50 },
-      { type: 'hole', x: 0, y: 50, size: 50 },
-      { type: 'hole', x: 250, y: 350, size: 50 },
-      { type: 'snow', x: 200, y: 250, size: 50 },
-      { type: 'snow', x: 200, y: 350, size: 50 }
+      { type: 'wall', x: 150, y: 50, size: 50 },
+      { type: 'wall', x: 150, y: 100, size: 50 },
+      { type: 'wall', x: 150, y: 150, size: 50 },
+      { type: 'wall', x: 200, y: 350, size: 50 },
+      { type: 'hole', x: 250, y: 100, size: 50 },
+      { type: 'hole', x: 0, y: 200, size: 50 },
+      { type: 'hole', x: 150, y: 400, size: 50 },
+      { type: 'snow', x: 200, y: 200, size: 50 },
+      { type: 'snow', x: 50, y: 50, size: 50 },
+      { type: 'snow', x: 0, y: 350, size: 50 }
     ]
   },
-  108: {
-    id: 108,
+  117: {
+    id: 117,
     name: '永冻荒原',
     difficulty: 'hard',
     optimal: 27,
@@ -2868,8 +3166,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 300, y: 300, size: 50 }
     ]
   },
-  109: {
-    id: 109,
+  118: {
+    id: 118,
     name: '极地深渊',
     difficulty: 'hard',
     optimal: 27,
@@ -2899,8 +3197,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 100, y: 50, size: 50 }
     ]
   },
-  110: {
-    id: 110,
+  119: {
+    id: 119,
     name: '无尽寒潮',
     difficulty: 'hard',
     optimal: 27,
@@ -2933,8 +3231,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 200, size: 50 }
     ]
   },
-  111: {
-    id: 111,
+  120: {
+    id: 120,
     name: '永冻荒原',
     difficulty: 'hard',
     optimal: 27,
@@ -2964,8 +3262,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 200, y: 350, size: 50 }
     ]
   },
-  112: {
-    id: 112,
+  121: {
+    id: 121,
     name: '极地深渊',
     difficulty: 'hard',
     optimal: 27,
@@ -2994,8 +3292,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 200, y: 350, size: 50 }
     ]
   },
-  113: {
-    id: 113,
+  122: {
+    id: 122,
     name: '无尽寒潮',
     difficulty: 'hard',
     optimal: 27,
@@ -3028,8 +3326,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 250, y: 0, size: 50 }
     ]
   },
-  114: {
-    id: 114,
+  123: {
+    id: 123,
     name: '极寒试炼',
     difficulty: 'hard',
     optimal: 28,
@@ -3057,8 +3355,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 150, y: 300, size: 50 }
     ]
   },
-  115: {
-    id: 115,
+  124: {
+    id: 124,
     name: '死角回廊',
     difficulty: 'hard',
     optimal: 28,
@@ -3084,8 +3382,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 250, y: 200, size: 50 }
     ]
   },
-  116: {
-    id: 116,
+  125: {
+    id: 125,
     name: '冰原困局',
     difficulty: 'hard',
     optimal: 28,
@@ -3114,216 +3412,218 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 250, y: 400, size: 50 }
     ]
   },
-  117: {
-    id: 117,
+  126: {
+    id: 126,
     name: '冰封深渊',
     difficulty: 'hard',
     optimal: 28,
     par: 28,
-    penguin: { x: 50, y: 350 },
-    stones: [{ x: 250, y: 350, size: 40 }, { x: 50, y: 300, size: 40 }, { x: 50, y: 200, size: 40 }],
-    target: { x: 200, y: 250, width: 100, height: 100 },
+    penguin: { x: 100, y: 50 },
+    stones: [{ x: 150, y: 350, size: 40 }, { x: 150, y: 50, size: 40 }, { x: 150, y: 150, size: 40 }],
+    target: { x: 250, y: 150, width: 50, height: 150 },
     obstacles: [
-      { type: 'wall', x: 250, y: 0, size: 50 },
-      { type: 'wall', x: 300, y: 0, size: 50 },
-      { type: 'wall', x: 50, y: 100, size: 50 },
-      { type: 'wall', x: 100, y: 100, size: 50 },
-      { type: 'wall', x: 150, y: 100, size: 50 },
-      { type: 'wall', x: 150, y: 150, size: 50 },
-      { type: 'wall', x: 200, y: 150, size: 50 },
+      { type: 'wall', x: 300, y: 50, size: 50 },
+      { type: 'wall', x: 300, y: 100, size: 50 },
+      { type: 'wall', x: 50, y: 300, size: 50 },
+      { type: 'wall', x: 100, y: 300, size: 50 },
       { type: 'wall', x: 150, y: 300, size: 50 },
-      { type: 'wall', x: 150, y: 350, size: 50 },
-      { type: 'wall', x: 150, y: 400, size: 50 },
-      { type: 'wall', x: 250, y: 200, size: 50 },
-      { type: 'hole', x: 100, y: 150, size: 50 },
-      { type: 'hole', x: 250, y: 50, size: 50 },
-      { type: 'hole', x: 100, y: 50, size: 50 },
-      { type: 'snow', x: 100, y: 300, size: 50 },
-      { type: 'snow', x: 250, y: 400, size: 50 },
-      { type: 'snow', x: 0, y: 150, size: 50 }
+      { type: 'wall', x: 300, y: 350, size: 50 },
+      { type: 'wall', x: 300, y: 400, size: 50 },
+      { type: 'wall', x: 50, y: 0, size: 50 },
+      { type: 'wall', x: 50, y: 50, size: 50 },
+      { type: 'wall', x: 50, y: 100, size: 50 },
+      { type: 'wall', x: 50, y: 150, size: 50 },
+      { type: 'wall', x: 50, y: 250, size: 50 },
+      { type: 'wall', x: 100, y: 250, size: 50 },
+      { type: 'hole', x: 150, y: 0, size: 50 },
+      { type: 'hole', x: 0, y: 300, size: 50 },
+      { type: 'hole', x: 100, y: 200, size: 50 },
+      { type: 'snow', x: 0, y: 200, size: 50 },
+      { type: 'snow', x: 50, y: 200, size: 50 }
     ]
   },
-  118: {
-    id: 118,
+  127: {
+    id: 127,
     name: '永冻长廊',
     difficulty: 'hard',
     optimal: 28,
     par: 28,
-    penguin: { x: 150, y: 400 },
-    stones: [{ x: 250, y: 50, size: 40 }, { x: 150, y: 350, size: 40 }, { x: 100, y: 250, size: 40 }],
-    target: { x: 150, y: 250, width: 100, height: 100 },
+    penguin: { x: 50, y: 0 },
+    stones: [{ x: 250, y: 250, size: 40 }, { x: 100, y: 50, size: 40 }, { x: 50, y: 50, size: 40 }],
+    target: { x: 50, y: 150, width: 50, height: 150 },
     obstacles: [
-      { type: 'wall', x: 100, y: 50, size: 50 },
-      { type: 'wall', x: 150, y: 50, size: 50 },
-      { type: 'wall', x: 50, y: 0, size: 50 },
-      { type: 'wall', x: 50, y: 50, size: 50 },
-      { type: 'wall', x: 200, y: 350, size: 50 },
-      { type: 'wall', x: 250, y: 350, size: 50 },
-      { type: 'wall', x: 300, y: 350, size: 50 },
-      { type: 'wall', x: 100, y: 150, size: 50 },
-      { type: 'wall', x: 100, y: 200, size: 50 },
+      { type: 'wall', x: 200, y: 200, size: 50 },
+      { type: 'wall', x: 250, y: 200, size: 50 },
       { type: 'wall', x: 300, y: 200, size: 50 },
-      { type: 'wall', x: 300, y: 250, size: 50 },
-      { type: 'hole', x: 100, y: 350, size: 50 },
-      { type: 'hole', x: 250, y: 250, size: 50 },
-      { type: 'hole', x: 50, y: 350, size: 50 },
-      { type: 'snow', x: 50, y: 250, size: 50 },
-      { type: 'snow', x: 200, y: 100, size: 50 }
+      { type: 'wall', x: 200, y: 150, size: 50 },
+      { type: 'wall', x: 250, y: 150, size: 50 },
+      { type: 'wall', x: 300, y: 150, size: 50 },
+      { type: 'wall', x: 100, y: 150, size: 50 },
+      { type: 'wall', x: 150, y: 150, size: 50 },
+      { type: 'wall', x: 0, y: 350, size: 50 },
+      { type: 'wall', x: 50, y: 350, size: 50 },
+      { type: 'wall', x: 100, y: 350, size: 50 },
+      { type: 'wall', x: 250, y: 100, size: 50 },
+      { type: 'hole', x: 250, y: 400, size: 50 },
+      { type: 'hole', x: 50, y: 300, size: 50 },
+      { type: 'hole', x: 200, y: 350, size: 50 },
+      { type: 'hole', x: 0, y: 300, size: 50 },
+      { type: 'snow', x: 300, y: 350, size: 50 },
+      { type: 'snow', x: 250, y: 350, size: 50 },
+      { type: 'snow', x: 150, y: 50, size: 50 }
     ]
   },
-  119: {
-    id: 119,
+  128: {
+    id: 128,
     name: '绝境推演',
     difficulty: 'hard',
     optimal: 28,
     par: 28,
-    penguin: { x: 200, y: 200 },
-    stones: [{ x: 100, y: 350, size: 40 }, { x: 150, y: 200, size: 40 }, { x: 100, y: 100, size: 40 }],
-    target: { x: 50, y: 150, width: 100, height: 100 },
+    penguin: { x: 50, y: 50 },
+    stones: [{ x: 100, y: 50, size: 40 }, { x: 100, y: 100, size: 40 }, { x: 250, y: 300, size: 40 }],
+    target: { x: 250, y: 100, width: 50, height: 150 },
     obstacles: [
+      { type: 'wall', x: 100, y: 0, size: 50 },
+      { type: 'wall', x: 150, y: 0, size: 50 },
+      { type: 'wall', x: 200, y: 0, size: 50 },
+      { type: 'wall', x: 0, y: 50, size: 50 },
+      { type: 'wall', x: 0, y: 100, size: 50 },
+      { type: 'wall', x: 0, y: 150, size: 50 },
+      { type: 'wall', x: 0, y: 400, size: 50 },
+      { type: 'wall', x: 50, y: 400, size: 50 },
       { type: 'wall', x: 100, y: 250, size: 50 },
-      { type: 'wall', x: 100, y: 300, size: 50 },
       { type: 'wall', x: 150, y: 250, size: 50 },
       { type: 'wall', x: 200, y: 250, size: 50 },
-      { type: 'wall', x: 250, y: 250, size: 50 },
-      { type: 'wall', x: 300, y: 250, size: 50 },
-      { type: 'wall', x: 200, y: 50, size: 50 },
-      { type: 'wall', x: 200, y: 100, size: 50 },
-      { type: 'wall', x: 200, y: 150, size: 50 },
-      { type: 'wall', x: 0, y: 200, size: 50 },
-      { type: 'wall', x: 0, y: 250, size: 50 },
-      { type: 'wall', x: 0, y: 300, size: 50 },
-      { type: 'wall', x: 50, y: 100, size: 50 },
-      { type: 'hole', x: 250, y: 0, size: 50 },
-      { type: 'hole', x: 300, y: 200, size: 50 },
-      { type: 'hole', x: 50, y: 50, size: 50 },
-      { type: 'snow', x: 200, y: 200, size: 50 },
-      { type: 'snow', x: 200, y: 0, size: 50 },
-      { type: 'snow', x: 150, y: 300, size: 50 }
+      { type: 'hole', x: 200, y: 350, size: 50 },
+      { type: 'hole', x: 50, y: 200, size: 50 },
+      { type: 'hole', x: 100, y: 200, size: 50 },
+      { type: 'hole', x: 250, y: 400, size: 50 },
+      { type: 'snow', x: 250, y: 350, size: 50 },
+      { type: 'snow', x: 300, y: 350, size: 50 },
+      { type: 'snow', x: 300, y: 150, size: 50 }
     ]
   },
-  120: {
-    id: 120,
+  129: {
+    id: 129,
     name: '冰封深渊',
     difficulty: 'hard',
     optimal: 28,
     par: 28,
-    penguin: { x: 100, y: 0 },
-    stones: [{ x: 250, y: 300, size: 40 }, { x: 100, y: 50, size: 40 }, { x: 50, y: 50, size: 40 }],
-    target: { x: 100, y: 150, width: 100, height: 100 },
+    penguin: { x: 0, y: 350 },
+    stones: [{ x: 50, y: 200, size: 40 }, { x: 50, y: 350, size: 40 }, { x: 200, y: 100, size: 40 }],
+    target: { x: 200, y: 200, width: 50, height: 150 },
     obstacles: [
       { type: 'wall', x: 300, y: 0, size: 50 },
       { type: 'wall', x: 300, y: 50, size: 50 },
-      { type: 'wall', x: 0, y: 100, size: 50 },
-      { type: 'wall', x: 50, y: 100, size: 50 },
-      { type: 'wall', x: 0, y: 200, size: 50 },
-      { type: 'wall', x: 0, y: 250, size: 50 },
-      { type: 'wall', x: 0, y: 300, size: 50 },
-      { type: 'wall', x: 0, y: 350, size: 50 },
-      { type: 'wall', x: 100, y: 350, size: 50 },
-      { type: 'wall', x: 150, y: 350, size: 50 },
-      { type: 'wall', x: 200, y: 350, size: 50 },
-      { type: 'hole', x: 100, y: 300, size: 50 },
-      { type: 'hole', x: 200, y: 0, size: 50 },
-      { type: 'hole', x: 0, y: 150, size: 50 },
-      { type: 'hole', x: 200, y: 50, size: 50 },
-      { type: 'snow', x: 300, y: 200, size: 50 },
-      { type: 'snow', x: 300, y: 400, size: 50 }
+      { type: 'wall', x: 300, y: 100, size: 50 },
+      { type: 'wall', x: 300, y: 150, size: 50 },
+      { type: 'wall', x: 250, y: 250, size: 50 },
+      { type: 'wall', x: 250, y: 300, size: 50 },
+      { type: 'wall', x: 250, y: 350, size: 50 },
+      { type: 'wall', x: 250, y: 400, size: 50 },
+      { type: 'wall', x: 150, y: 0, size: 50 },
+      { type: 'wall', x: 200, y: 0, size: 50 },
+      { type: 'wall', x: 100, y: 50, size: 50 },
+      { type: 'wall', x: 100, y: 100, size: 50 },
+      { type: 'wall', x: 100, y: 150, size: 50 },
+      { type: 'hole', x: 250, y: 50, size: 50 },
+      { type: 'hole', x: 50, y: 100, size: 50 },
+      { type: 'hole', x: 250, y: 150, size: 50 },
+      { type: 'snow', x: 100, y: 200, size: 50 },
+      { type: 'snow', x: 250, y: 0, size: 50 }
     ]
   },
-  121: {
-    id: 121,
+  130: {
+    id: 130,
     name: '永冻长廊',
     difficulty: 'hard',
     optimal: 28,
     par: 28,
-    penguin: { x: 250, y: 350 },
-    stones: [{ x: 150, y: 150, size: 40 }, { x: 100, y: 50, size: 40 }, { x: 200, y: 350, size: 40 }],
-    target: { x: 50, y: 200, width: 100, height: 100 },
+    penguin: { x: 300, y: 100 },
+    stones: [{ x: 250, y: 50, size: 40 }, { x: 50, y: 250, size: 40 }, { x: 250, y: 100, size: 40 }],
+    target: { x: 50, y: 100, width: 50, height: 150 },
     obstacles: [
-      { type: 'wall', x: 50, y: 0, size: 50 },
-      { type: 'wall', x: 50, y: 50, size: 50 },
+      { type: 'wall', x: 0, y: 400, size: 50 },
+      { type: 'wall', x: 50, y: 400, size: 50 },
+      { type: 'wall', x: 0, y: 100, size: 50 },
       { type: 'wall', x: 0, y: 150, size: 50 },
-      { type: 'wall', x: 0, y: 200, size: 50 },
-      { type: 'wall', x: 0, y: 250, size: 50 },
-      { type: 'wall', x: 0, y: 300, size: 50 },
-      { type: 'wall', x: 200, y: 250, size: 50 },
-      { type: 'wall', x: 200, y: 300, size: 50 },
-      { type: 'wall', x: 250, y: 50, size: 50 },
-      { type: 'wall', x: 250, y: 100, size: 50 },
+      { type: 'wall', x: 150, y: 0, size: 50 },
+      { type: 'wall', x: 150, y: 50, size: 50 },
+      { type: 'wall', x: 150, y: 150, size: 50 },
+      { type: 'wall', x: 200, y: 150, size: 50 },
       { type: 'wall', x: 250, y: 150, size: 50 },
-      { type: 'wall', x: 300, y: 250, size: 50 },
-      { type: 'hole', x: 0, y: 50, size: 50 },
-      { type: 'hole', x: 150, y: 250, size: 50 },
-      { type: 'hole', x: 250, y: 200, size: 50 },
-      { type: 'hole', x: 150, y: 50, size: 50 },
-      { type: 'snow', x: 200, y: 400, size: 50 },
-      { type: 'snow', x: 250, y: 400, size: 50 }
+      { type: 'wall', x: 300, y: 150, size: 50 },
+      { type: 'wall', x: 150, y: 250, size: 50 },
+      { type: 'wall', x: 200, y: 250, size: 50 },
+      { type: 'hole', x: 150, y: 300, size: 50 },
+      { type: 'hole', x: 200, y: 50, size: 50 },
+      { type: 'hole', x: 150, y: 350, size: 50 },
+      { type: 'hole', x: 250, y: 250, size: 50 },
+      { type: 'snow', x: 100, y: 200, size: 50 },
+      { type: 'snow', x: 300, y: 50, size: 50 },
+      { type: 'snow', x: 200, y: 400, size: 50 }
     ]
   },
-  122: {
-    id: 122,
+  131: {
+    id: 131,
     name: '绝境推演',
     difficulty: 'hard',
     optimal: 28,
     par: 28,
-    penguin: { x: 50, y: 100 },
-    stones: [{ x: 50, y: 50, size: 40 }, { x: 100, y: 50, size: 40 }, { x: 50, y: 150, size: 40 }],
-    target: { x: 50, y: 300, width: 100, height: 100 },
+    penguin: { x: 250, y: 300 },
+    stones: [{ x: 200, y: 50, size: 40 }, { x: 250, y: 250, size: 40 }, { x: 150, y: 250, size: 40 }],
+    target: { x: 250, y: 100, width: 50, height: 150 },
     obstacles: [
-      { type: 'wall', x: 150, y: 0, size: 50 },
-      { type: 'wall', x: 200, y: 0, size: 50 },
-      { type: 'wall', x: 250, y: 0, size: 50 },
-      { type: 'wall', x: 150, y: 50, size: 50 },
-      { type: 'wall', x: 150, y: 100, size: 50 },
-      { type: 'wall', x: 150, y: 150, size: 50 },
-      { type: 'wall', x: 250, y: 250, size: 50 },
-      { type: 'wall', x: 250, y: 300, size: 50 },
-      { type: 'wall', x: 250, y: 350, size: 50 },
+      { type: 'wall', x: 100, y: 100, size: 50 },
+      { type: 'wall', x: 100, y: 150, size: 50 },
+      { type: 'wall', x: 300, y: 300, size: 50 },
+      { type: 'wall', x: 300, y: 350, size: 50 },
+      { type: 'wall', x: 0, y: 350, size: 50 },
+      { type: 'wall', x: 0, y: 400, size: 50 },
+      { type: 'wall', x: 100, y: 0, size: 50 },
+      { type: 'wall', x: 100, y: 50, size: 50 },
+      { type: 'wall', x: 150, y: 200, size: 50 },
       { type: 'wall', x: 200, y: 200, size: 50 },
-      { type: 'wall', x: 200, y: 250, size: 50 },
-      { type: 'wall', x: 200, y: 300, size: 50 },
-      { type: 'wall', x: 200, y: 350, size: 50 },
-      { type: 'hole', x: 300, y: 50, size: 50 },
-      { type: 'hole', x: 0, y: 350, size: 50 },
-      { type: 'hole', x: 250, y: 100, size: 50 },
-      { type: 'snow', x: 0, y: 300, size: 50 },
-      { type: 'snow', x: 250, y: 200, size: 50 }
+      { type: 'wall', x: 50, y: 250, size: 50 },
+      { type: 'wall', x: 50, y: 300, size: 50 },
+      { type: 'hole', x: 150, y: 350, size: 50 },
+      { type: 'hole', x: 0, y: 300, size: 50 },
+      { type: 'hole', x: 150, y: 0, size: 50 },
+      { type: 'hole', x: 300, y: 100, size: 50 },
+      { type: 'snow', x: 250, y: 300, size: 50 },
+      { type: 'snow', x: 200, y: 300, size: 50 }
     ]
   },
-  123: {
-    id: 123,
+  132: {
+    id: 132,
     name: '冰封深渊',
     difficulty: 'hard',
     optimal: 28,
     par: 28,
-    penguin: { x: 150, y: 200 },
-    stones: [{ x: 50, y: 100, size: 40 }, { x: 100, y: 200, size: 40 }, { x: 200, y: 200, size: 40 }],
-    target: { x: 50, y: 100, width: 100, height: 100 },
+    penguin: { x: 150, y: 250 },
+    stones: [{ x: 200, y: 200, size: 40 }, { x: 150, y: 200, size: 40 }, { x: 50, y: 50, size: 40 }],
+    target: { x: 250, y: 50, width: 50, height: 150 },
     obstacles: [
-      { type: 'wall', x: 0, y: 300, size: 50 },
-      { type: 'wall', x: 50, y: 300, size: 50 },
-      { type: 'wall', x: 150, y: 100, size: 50 },
-      { type: 'wall', x: 200, y: 100, size: 50 },
-      { type: 'wall', x: 250, y: 100, size: 50 },
-      { type: 'wall', x: 300, y: 100, size: 50 },
-      { type: 'wall', x: 300, y: 150, size: 50 },
-      { type: 'wall', x: 300, y: 200, size: 50 },
-      { type: 'wall', x: 300, y: 250, size: 50 },
-      { type: 'wall', x: 300, y: 300, size: 50 },
-      { type: 'wall', x: 50, y: 0, size: 50 },
-      { type: 'wall', x: 100, y: 0, size: 50 },
-      { type: 'wall', x: 150, y: 0, size: 50 },
-      { type: 'hole', x: 150, y: 150, size: 50 },
-      { type: 'hole', x: 100, y: 250, size: 50 },
-      { type: 'hole', x: 150, y: 300, size: 50 },
-      { type: 'hole', x: 200, y: 300, size: 50 },
-      { type: 'snow', x: 100, y: 350, size: 50 },
-      { type: 'snow', x: 250, y: 200, size: 50 }
+      { type: 'wall', x: 50, y: 100, size: 50 },
+      { type: 'wall', x: 50, y: 150, size: 50 },
+      { type: 'wall', x: 50, y: 200, size: 50 },
+      { type: 'wall', x: 50, y: 250, size: 50 },
+      { type: 'wall', x: 150, y: 300, size: 50 },
+      { type: 'wall', x: 200, y: 300, size: 50 },
+      { type: 'wall', x: 250, y: 300, size: 50 },
+      { type: 'wall', x: 250, y: 400, size: 50 },
+      { type: 'wall', x: 300, y: 400, size: 50 },
+      { type: 'wall', x: 100, y: 150, size: 50 },
+      { type: 'wall', x: 100, y: 200, size: 50 },
+      { type: 'hole', x: 50, y: 0, size: 50 },
+      { type: 'hole', x: 250, y: 350, size: 50 },
+      { type: 'hole', x: 300, y: 200, size: 50 },
+      { type: 'snow', x: 300, y: 0, size: 50 },
+      { type: 'snow', x: 300, y: 350, size: 50 }
     ]
   },
-  124: {
-    id: 124,
+  133: {
+    id: 133,
     name: '极地深渊',
     difficulty: 'hard',
     optimal: 28,
@@ -3352,8 +3652,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 150, size: 50 }
     ]
   },
-  125: {
-    id: 125,
+  134: {
+    id: 134,
     name: '无尽寒潮',
     difficulty: 'hard',
     optimal: 28,
@@ -3386,8 +3686,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 250, size: 50 }
     ]
   },
-  126: {
-    id: 126,
+  135: {
+    id: 135,
     name: '永冻荒原',
     difficulty: 'hard',
     optimal: 28,
@@ -3417,8 +3717,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 200, y: 350, size: 50 }
     ]
   },
-  127: {
-    id: 127,
+  136: {
+    id: 136,
     name: '极地深渊',
     difficulty: 'hard',
     optimal: 28,
@@ -3450,8 +3750,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 100, y: 100, size: 50 }
     ]
   },
-  128: {
-    id: 128,
+  137: {
+    id: 137,
     name: '无尽寒潮',
     difficulty: 'hard',
     optimal: 28,
@@ -3484,8 +3784,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 400, size: 50 }
     ]
   },
-  129: {
-    id: 129,
+  138: {
+    id: 138,
     name: '永冻荒原',
     difficulty: 'hard',
     optimal: 28,
@@ -3515,8 +3815,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 300, size: 50 }
     ]
   },
-  130: {
-    id: 130,
+  139: {
+    id: 139,
     name: '极地深渊',
     difficulty: 'hard',
     optimal: 28,
@@ -3551,8 +3851,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 250, size: 50 }
     ]
   },
-  131: {
-    id: 131,
+  140: {
+    id: 140,
     name: '无尽寒潮',
     difficulty: 'hard',
     optimal: 28,
@@ -3583,8 +3883,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 200, y: 300, size: 50 }
     ]
   },
-  132: {
-    id: 132,
+  141: {
+    id: 141,
     name: '三冰排序',
     difficulty: 'hard',
     optimal: 29,
@@ -3608,8 +3908,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 250, y: 350, size: 50 }
     ]
   },
-  133: {
-    id: 133,
+  142: {
+    id: 142,
     name: '死角回廊',
     difficulty: 'hard',
     optimal: 29,
@@ -3636,8 +3936,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 150, size: 50 }
     ]
   },
-  134: {
-    id: 134,
+  143: {
+    id: 143,
     name: '冰原困局',
     difficulty: 'hard',
     optimal: 29,
@@ -3664,8 +3964,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 50, size: 50 }
     ]
   },
-  135: {
-    id: 135,
+  144: {
+    id: 144,
     name: '极寒试炼',
     difficulty: 'hard',
     optimal: 29,
@@ -3694,8 +3994,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 200, y: 250, size: 50 }
     ]
   },
-  136: {
-    id: 136,
+  145: {
+    id: 145,
     name: '死角回廊',
     difficulty: 'hard',
     optimal: 29,
@@ -3725,68 +4025,125 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 200, y: 250, size: 50 }
     ]
   },
-  137: {
-    id: 137,
+  146: {
+    id: 146,
     name: '绝境推演',
     difficulty: 'hard',
     optimal: 29,
     par: 29,
-    penguin: { x: 50, y: 50 },
-    stones: [{ x: 200, y: 350, size: 40 }, { x: 100, y: 50, size: 40 }, { x: 150, y: 350, size: 40 }],
-    target: { x: 150, y: 200, width: 100, height: 100 },
+    penguin: { x: 200, y: 250 },
+    stones: [{ x: 200, y: 200, size: 40 }, { x: 50, y: 350, size: 40 }, { x: 100, y: 50, size: 40 }],
+    target: { x: 50, y: 100, width: 50, height: 150 },
     obstacles: [
+      { type: 'wall', x: 100, y: 0, size: 50 },
+      { type: 'wall', x: 150, y: 0, size: 50 },
+      { type: 'wall', x: 200, y: 0, size: 50 },
+      { type: 'wall', x: 200, y: 50, size: 50 },
+      { type: 'wall', x: 250, y: 50, size: 50 },
       { type: 'wall', x: 300, y: 50, size: 50 },
-      { type: 'wall', x: 300, y: 100, size: 50 },
-      { type: 'wall', x: 50, y: 250, size: 50 },
-      { type: 'wall', x: 50, y: 300, size: 50 },
-      { type: 'wall', x: 100, y: 100, size: 50 },
-      { type: 'wall', x: 150, y: 100, size: 50 },
-      { type: 'wall', x: 200, y: 300, size: 50 },
-      { type: 'wall', x: 250, y: 300, size: 50 },
-      { type: 'wall', x: 300, y: 150, size: 50 },
-      { type: 'wall', x: 300, y: 200, size: 50 },
-      { type: 'wall', x: 300, y: 250, size: 50 },
-      { type: 'hole', x: 100, y: 250, size: 50 },
-      { type: 'hole', x: 0, y: 300, size: 50 },
-      { type: 'hole', x: 50, y: 350, size: 50 },
-      { type: 'hole', x: 300, y: 350, size: 50 },
+      { type: 'wall', x: 0, y: 300, size: 50 },
+      { type: 'wall', x: 0, y: 350, size: 50 },
+      { type: 'wall', x: 150, y: 250, size: 50 },
+      { type: 'wall', x: 150, y: 300, size: 50 },
+      { type: 'hole', x: 0, y: 150, size: 50 },
+      { type: 'hole', x: 250, y: 400, size: 50 },
+      { type: 'hole', x: 150, y: 350, size: 50 },
+      { type: 'hole', x: 300, y: 0, size: 50 },
       { type: 'snow', x: 100, y: 300, size: 50 },
+      { type: 'snow', x: 150, y: 100, size: 50 },
       { type: 'snow', x: 0, y: 400, size: 50 }
     ]
   },
-  138: {
-    id: 138,
+  147: {
+    id: 147,
     name: '冰封深渊',
     difficulty: 'hard',
     optimal: 29,
     par: 29,
-    penguin: { x: 200, y: 350 },
-    stones: [{ x: 250, y: 350, size: 40 }, { x: 50, y: 50, size: 40 }, { x: 200, y: 300, size: 40 }],
-    target: { x: 200, y: 150, width: 100, height: 100 },
+    penguin: { x: 100, y: 350 },
+    stones: [{ x: 250, y: 50, size: 40 }, { x: 150, y: 350, size: 40 }, { x: 150, y: 300, size: 40 }],
+    target: { x: 250, y: 100, width: 50, height: 150 },
     obstacles: [
-      { type: 'wall', x: 100, y: 200, size: 50 },
-      { type: 'wall', x: 100, y: 250, size: 50 },
+      { type: 'wall', x: 200, y: 0, size: 50 },
+      { type: 'wall', x: 200, y: 50, size: 50 },
       { type: 'wall', x: 200, y: 100, size: 50 },
-      { type: 'wall', x: 250, y: 100, size: 50 },
+      { type: 'wall', x: 200, y: 150, size: 50 },
+      { type: 'wall', x: 50, y: 250, size: 50 },
+      { type: 'wall', x: 100, y: 250, size: 50 },
       { type: 'wall', x: 300, y: 300, size: 50 },
       { type: 'wall', x: 300, y: 350, size: 50 },
+      { type: 'wall', x: 300, y: 400, size: 50 },
+      { type: 'wall', x: 0, y: 150, size: 50 },
+      { type: 'wall', x: 50, y: 150, size: 50 },
+      { type: 'hole', x: 150, y: 200, size: 50 },
+      { type: 'hole', x: 50, y: 300, size: 50 },
+      { type: 'hole', x: 150, y: 150, size: 50 },
+      { type: 'snow', x: 200, y: 400, size: 50 },
+      { type: 'snow', x: 150, y: 100, size: 50 },
+      { type: 'snow', x: 250, y: 400, size: 50 }
+    ]
+  },
+  148: {
+    id: 148,
+    name: '永冻长廊',
+    difficulty: 'hard',
+    optimal: 29,
+    par: 29,
+    penguin: { x: 300, y: 250 },
+    stones: [{ x: 250, y: 250, size: 40 }, { x: 50, y: 200, size: 40 }, { x: 50, y: 350, size: 40 }],
+    target: { x: 100, y: 250, width: 50, height: 150 },
+    obstacles: [
+      { type: 'wall', x: 0, y: 250, size: 50 },
+      { type: 'wall', x: 50, y: 250, size: 50 },
+      { type: 'wall', x: 200, y: 350, size: 50 },
+      { type: 'wall', x: 250, y: 350, size: 50 },
+      { type: 'wall', x: 300, y: 350, size: 50 },
+      { type: 'wall', x: 150, y: 150, size: 50 },
+      { type: 'wall', x: 150, y: 200, size: 50 },
+      { type: 'wall', x: 100, y: 400, size: 50 },
+      { type: 'wall', x: 150, y: 400, size: 50 },
+      { type: 'wall', x: 200, y: 400, size: 50 },
+      { type: 'wall', x: 300, y: 50, size: 50 },
+      { type: 'wall', x: 300, y: 100, size: 50 },
+      { type: 'hole', x: 100, y: 100, size: 50 },
+      { type: 'hole', x: 250, y: 50, size: 50 },
+      { type: 'hole', x: 250, y: 0, size: 50 },
+      { type: 'snow', x: 50, y: 150, size: 50 },
+      { type: 'snow', x: 300, y: 150, size: 50 }
+    ]
+  },
+  149: {
+    id: 149,
+    name: '绝境推演',
+    difficulty: 'hard',
+    optimal: 29,
+    par: 29,
+    penguin: { x: 150, y: 0 },
+    stones: [{ x: 250, y: 350, size: 40 }, { x: 250, y: 50, size: 40 }, { x: 150, y: 50, size: 40 }],
+    target: { x: 250, y: 200, width: 50, height: 150 },
+    obstacles: [
+      { type: 'wall', x: 200, y: 200, size: 50 },
+      { type: 'wall', x: 200, y: 250, size: 50 },
+      { type: 'wall', x: 200, y: 300, size: 50 },
+      { type: 'wall', x: 200, y: 350, size: 50 },
+      { type: 'wall', x: 0, y: 50, size: 50 },
+      { type: 'wall', x: 50, y: 50, size: 50 },
+      { type: 'wall', x: 100, y: 50, size: 50 },
       { type: 'wall', x: 0, y: 100, size: 50 },
       { type: 'wall', x: 0, y: 150, size: 50 },
       { type: 'wall', x: 0, y: 200, size: 50 },
-      { type: 'wall', x: 100, y: 300, size: 50 },
-      { type: 'wall', x: 150, y: 300, size: 50 },
-      { type: 'wall', x: 200, y: 0, size: 50 },
-      { type: 'wall', x: 250, y: 0, size: 50 },
-      { type: 'hole', x: 50, y: 200, size: 50 },
-      { type: 'hole', x: 0, y: 300, size: 50 },
-      { type: 'hole', x: 0, y: 400, size: 50 },
-      { type: 'snow', x: 200, y: 350, size: 50 },
-      { type: 'snow', x: 50, y: 350, size: 50 }
+      { type: 'wall', x: 300, y: 50, size: 50 },
+      { type: 'wall', x: 300, y: 100, size: 50 },
+      { type: 'hole', x: 200, y: 50, size: 50 },
+      { type: 'hole', x: 0, y: 250, size: 50 },
+      { type: 'hole', x: 50, y: 150, size: 50 },
+      { type: 'snow', x: 300, y: 150, size: 50 },
+      { type: 'snow', x: 200, y: 0, size: 50 }
     ]
   },
-  139: {
-    id: 139,
-    name: '极地深渊',
+  150: {
+    id: 150,
+    name: '永冻荒原',
     difficulty: 'hard',
     optimal: 29,
     par: 29,
@@ -3815,9 +4172,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 150, size: 50 }
     ]
   },
-  140: {
-    id: 140,
-    name: '无尽寒潮',
+  151: {
+    id: 151,
+    name: '极地深渊',
     difficulty: 'hard',
     optimal: 29,
     par: 29,
@@ -3845,9 +4202,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 200, y: 0, size: 50 }
     ]
   },
-  141: {
-    id: 141,
-    name: '永冻荒原',
+  152: {
+    id: 152,
+    name: '无尽寒潮',
     difficulty: 'hard',
     optimal: 29,
     par: 29,
@@ -3877,9 +4234,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 250, y: 150, size: 50 }
     ]
   },
-  142: {
-    id: 142,
-    name: '极地深渊',
+  153: {
+    id: 153,
+    name: '永冻荒原',
     difficulty: 'hard',
     optimal: 29,
     par: 29,
@@ -3910,9 +4267,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 100, y: 100, size: 50 }
     ]
   },
-  143: {
-    id: 143,
-    name: '无尽寒潮',
+  154: {
+    id: 154,
+    name: '极地深渊',
     difficulty: 'hard',
     optimal: 29,
     par: 29,
@@ -3942,9 +4299,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 300, size: 50 }
     ]
   },
-  144: {
-    id: 144,
-    name: '永冻荒原',
+  155: {
+    id: 155,
+    name: '无尽寒潮',
     difficulty: 'hard',
     optimal: 29,
     par: 29,
@@ -3973,9 +4330,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 150, size: 50 }
     ]
   },
-  145: {
-    id: 145,
-    name: '极地深渊',
+  156: {
+    id: 156,
+    name: '永冻荒原',
     difficulty: 'hard',
     optimal: 29,
     par: 29,
@@ -4006,9 +4363,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 250, size: 50 }
     ]
   },
-  146: {
-    id: 146,
-    name: '冰原困局',
+  157: {
+    id: 157,
+    name: '死角回廊',
     difficulty: 'hard',
     optimal: 30,
     par: 30,
@@ -4032,9 +4389,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 200, y: 50, size: 50 }
     ]
   },
-  147: {
-    id: 147,
-    name: '极寒试炼',
+  158: {
+    id: 158,
+    name: '冰原困局',
     difficulty: 'hard',
     optimal: 30,
     par: 30,
@@ -4059,9 +4416,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 200, y: 250, size: 50 }
     ]
   },
-  148: {
-    id: 148,
-    name: '死角回廊',
+  159: {
+    id: 159,
+    name: '极寒试炼',
     difficulty: 'hard',
     optimal: 30,
     par: 30,
@@ -4085,189 +4442,127 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 50, y: 250, size: 50 }
     ]
   },
-  149: {
-    id: 149,
-    name: '绝境推演',
-    difficulty: 'hard',
-    optimal: 30,
-    par: 30,
-    penguin: { x: 200, y: 50 },
-    stones: [{ x: 150, y: 50, size: 40 }, { x: 100, y: 250, size: 40 }, { x: 250, y: 50, size: 40 }],
-    target: { x: 50, y: 150, width: 100, height: 100 },
-    obstacles: [
-      { type: 'wall', x: 200, y: 100, size: 50 },
-      { type: 'wall', x: 250, y: 100, size: 50 },
-      { type: 'wall', x: 100, y: 350, size: 50 },
-      { type: 'wall', x: 150, y: 350, size: 50 },
-      { type: 'wall', x: 200, y: 350, size: 50 },
-      { type: 'wall', x: 250, y: 350, size: 50 },
-      { type: 'wall', x: 0, y: 250, size: 50 },
-      { type: 'wall', x: 50, y: 250, size: 50 },
-      { type: 'wall', x: 0, y: 400, size: 50 },
-      { type: 'wall', x: 50, y: 400, size: 50 },
-      { type: 'wall', x: 100, y: 400, size: 50 },
-      { type: 'wall', x: 150, y: 400, size: 50 },
-      { type: 'wall', x: 250, y: 150, size: 50 },
-      { type: 'hole', x: 0, y: 200, size: 50 },
-      { type: 'hole', x: 150, y: 200, size: 50 },
-      { type: 'hole', x: 250, y: 200, size: 50 },
-      { type: 'snow', x: 150, y: 0, size: 50 },
-      { type: 'snow', x: 0, y: 100, size: 50 },
-      { type: 'snow', x: 150, y: 250, size: 50 }
-    ]
-  },
-  150: {
-    id: 150,
-    name: '冰封深渊',
-    difficulty: 'hard',
-    optimal: 30,
-    par: 30,
-    penguin: { x: 200, y: 150 },
-    stones: [{ x: 250, y: 300, size: 40 }, { x: 250, y: 50, size: 40 }, { x: 150, y: 150, size: 40 }],
-    target: { x: 50, y: 150, width: 100, height: 100 },
-    obstacles: [
-      { type: 'wall', x: 0, y: 300, size: 50 },
-      { type: 'wall', x: 0, y: 350, size: 50 },
-      { type: 'wall', x: 50, y: 250, size: 50 },
-      { type: 'wall', x: 100, y: 250, size: 50 },
-      { type: 'wall', x: 300, y: 350, size: 50 },
-      { type: 'wall', x: 300, y: 400, size: 50 },
-      { type: 'wall', x: 100, y: 100, size: 50 },
-      { type: 'wall', x: 150, y: 100, size: 50 },
-      { type: 'wall', x: 200, y: 100, size: 50 },
-      { type: 'wall', x: 100, y: 400, size: 50 },
-      { type: 'hole', x: 250, y: 400, size: 50 },
-      { type: 'hole', x: 300, y: 300, size: 50 },
-      { type: 'hole', x: 200, y: 300, size: 50 },
-      { type: 'hole', x: 50, y: 50, size: 50 },
-      { type: 'snow', x: 250, y: 0, size: 50 },
-      { type: 'snow', x: 150, y: 300, size: 50 }
-    ]
-  },
-  151: {
-    id: 151,
+  160: {
+    id: 160,
     name: '永冻长廊',
     difficulty: 'hard',
     optimal: 30,
     par: 30,
-    penguin: { x: 200, y: 150 },
-    stones: [{ x: 250, y: 200, size: 40 }, { x: 200, y: 200, size: 40 }, { x: 200, y: 350, size: 40 }],
-    target: { x: 50, y: 250, width: 100, height: 100 },
+    penguin: { x: 0, y: 200 },
+    stones: [{ x: 200, y: 350, size: 40 }, { x: 200, y: 50, size: 40 }, { x: 50, y: 200, size: 40 }],
+    target: { x: 250, y: 200, width: 50, height: 150 },
     obstacles: [
-      { type: 'wall', x: 300, y: 300, size: 50 },
-      { type: 'wall', x: 300, y: 350, size: 50 },
-      { type: 'wall', x: 200, y: 50, size: 50 },
+      { type: 'wall', x: 100, y: 300, size: 50 },
+      { type: 'wall', x: 100, y: 350, size: 50 },
+      { type: 'wall', x: 100, y: 400, size: 50 },
+      { type: 'wall', x: 300, y: 0, size: 50 },
+      { type: 'wall', x: 300, y: 50, size: 50 },
+      { type: 'wall', x: 300, y: 100, size: 50 },
+      { type: 'wall', x: 300, y: 150, size: 50 },
+      { type: 'wall', x: 50, y: 100, size: 50 },
+      { type: 'wall', x: 100, y: 100, size: 50 },
+      { type: 'wall', x: 150, y: 100, size: 50 },
       { type: 'wall', x: 200, y: 100, size: 50 },
+      { type: 'wall', x: 50, y: 250, size: 50 },
+      { type: 'wall', x: 100, y: 250, size: 50 },
+      { type: 'hole', x: 0, y: 150, size: 50 },
+      { type: 'hole', x: 0, y: 400, size: 50 },
+      { type: 'hole', x: 300, y: 250, size: 50 },
+      { type: 'snow', x: 300, y: 350, size: 50 },
+      { type: 'snow', x: 50, y: 50, size: 50 }
+    ]
+  },
+  161: {
+    id: 161,
+    name: '绝境推演',
+    difficulty: 'hard',
+    optimal: 30,
+    par: 30,
+    penguin: { x: 100, y: 100 },
+    stones: [{ x: 150, y: 250, size: 40 }, { x: 150, y: 100, size: 40 }, { x: 100, y: 150, size: 40 }],
+    target: { x: 250, y: 100, width: 50, height: 150 },
+    obstacles: [
+      { type: 'wall', x: 200, y: 50, size: 50 },
+      { type: 'wall', x: 250, y: 50, size: 50 },
+      { type: 'wall', x: 300, y: 50, size: 50 },
       { type: 'wall', x: 0, y: 200, size: 50 },
       { type: 'wall', x: 50, y: 200, size: 50 },
       { type: 'wall', x: 100, y: 200, size: 50 },
-      { type: 'wall', x: 0, y: 400, size: 50 },
-      { type: 'wall', x: 50, y: 400, size: 50 },
-      { type: 'wall', x: 100, y: 400, size: 50 },
-      { type: 'wall', x: 300, y: 50, size: 50 },
-      { type: 'wall', x: 300, y: 100, size: 50 },
-      { type: 'hole', x: 150, y: 350, size: 50 },
-      { type: 'hole', x: 0, y: 250, size: 50 },
-      { type: 'hole', x: 300, y: 250, size: 50 },
-      { type: 'hole', x: 150, y: 100, size: 50 },
-      { type: 'snow', x: 250, y: 150, size: 50 },
-      { type: 'snow', x: 0, y: 300, size: 50 },
-      { type: 'snow', x: 50, y: 150, size: 50 }
-    ]
-  },
-  152: {
-    id: 152,
-    name: '绝境推演',
-    difficulty: 'hard',
-    optimal: 30,
-    par: 30,
-    penguin: { x: 250, y: 150 },
-    stones: [{ x: 200, y: 150, size: 40 }, { x: 250, y: 50, size: 40 }, { x: 150, y: 350, size: 40 }],
-    target: { x: 50, y: 100, width: 100, height: 100 },
-    obstacles: [
-      { type: 'wall', x: 250, y: 0, size: 50 },
-      { type: 'wall', x: 300, y: 0, size: 50 },
-      { type: 'wall', x: 0, y: 200, size: 50 },
-      { type: 'wall', x: 0, y: 250, size: 50 },
-      { type: 'wall', x: 0, y: 300, size: 50 },
-      { type: 'wall', x: 100, y: 200, size: 50 },
-      { type: 'wall', x: 100, y: 250, size: 50 },
+      { type: 'wall', x: 150, y: 200, size: 50 },
+      { type: 'wall', x: 50, y: 0, size: 50 },
+      { type: 'wall', x: 100, y: 0, size: 50 },
+      { type: 'wall', x: 150, y: 0, size: 50 },
       { type: 'wall', x: 100, y: 300, size: 50 },
-      { type: 'wall', x: 100, y: 350, size: 50 },
-      { type: 'wall', x: 200, y: 200, size: 50 },
-      { type: 'wall', x: 200, y: 250, size: 50 },
+      { type: 'wall', x: 150, y: 300, size: 50 },
       { type: 'wall', x: 200, y: 300, size: 50 },
-      { type: 'hole', x: 50, y: 300, size: 50 },
-      { type: 'hole', x: 300, y: 200, size: 50 },
-      { type: 'hole', x: 300, y: 150, size: 50 },
-      { type: 'snow', x: 200, y: 400, size: 50 },
-      { type: 'snow', x: 150, y: 0, size: 50 },
-      { type: 'snow', x: 200, y: 100, size: 50 }
+      { type: 'hole', x: 50, y: 400, size: 50 },
+      { type: 'hole', x: 0, y: 150, size: 50 },
+      { type: 'hole', x: 100, y: 50, size: 50 },
+      { type: 'snow', x: 50, y: 100, size: 50 },
+      { type: 'snow', x: 100, y: 100, size: 50 },
+      { type: 'snow', x: 50, y: 300, size: 50 }
     ]
   },
-  153: {
-    id: 153,
+  162: {
+    id: 162,
     name: '冰封深渊',
     difficulty: 'hard',
     optimal: 30,
     par: 30,
-    penguin: { x: 100, y: 350 },
-    stones: [{ x: 200, y: 150, size: 40 }, { x: 100, y: 300, size: 40 }, { x: 50, y: 300, size: 40 }],
-    target: { x: 200, y: 150, width: 100, height: 100 },
+    penguin: { x: 300, y: 350 },
+    stones: [{ x: 250, y: 350, size: 40 }, { x: 250, y: 150, size: 40 }, { x: 50, y: 50, size: 40 }],
+    target: { x: 150, y: 50, width: 50, height: 150 },
     obstacles: [
-      { type: 'wall', x: 200, y: 250, size: 50 },
-      { type: 'wall', x: 200, y: 300, size: 50 },
-      { type: 'wall', x: 200, y: 350, size: 50 },
-      { type: 'wall', x: 200, y: 400, size: 50 },
-      { type: 'wall', x: 200, y: 100, size: 50 },
-      { type: 'wall', x: 250, y: 100, size: 50 },
-      { type: 'wall', x: 300, y: 100, size: 50 },
-      { type: 'wall', x: 100, y: 100, size: 50 },
-      { type: 'wall', x: 150, y: 100, size: 50 },
-      { type: 'wall', x: 0, y: 150, size: 50 },
+      { type: 'wall', x: 0, y: 0, size: 50 },
+      { type: 'wall', x: 50, y: 0, size: 50 },
+      { type: 'wall', x: 100, y: 0, size: 50 },
       { type: 'wall', x: 50, y: 150, size: 50 },
-      { type: 'wall', x: 100, y: 150, size: 50 },
-      { type: 'wall', x: 300, y: 150, size: 50 },
+      { type: 'wall', x: 50, y: 200, size: 50 },
+      { type: 'wall', x: 50, y: 250, size: 50 },
+      { type: 'wall', x: 50, y: 300, size: 50 },
+      { type: 'wall', x: 200, y: 0, size: 50 },
+      { type: 'wall', x: 250, y: 0, size: 50 },
+      { type: 'wall', x: 250, y: 400, size: 50 },
       { type: 'hole', x: 300, y: 50, size: 50 },
+      { type: 'hole', x: 0, y: 250, size: 50 },
       { type: 'hole', x: 150, y: 350, size: 50 },
-      { type: 'hole', x: 0, y: 50, size: 50 },
-      { type: 'hole', x: 300, y: 300, size: 50 },
-      { type: 'snow', x: 100, y: 50, size: 50 },
-      { type: 'snow', x: 100, y: 200, size: 50 }
+      { type: 'hole', x: 300, y: 200, size: 50 },
+      { type: 'snow', x: 50, y: 350, size: 50 },
+      { type: 'snow', x: 250, y: 200, size: 50 },
+      { type: 'snow', x: 100, y: 100, size: 50 }
     ]
   },
-  154: {
-    id: 154,
+  163: {
+    id: 163,
     name: '永冻长廊',
     difficulty: 'hard',
     optimal: 30,
     par: 30,
-    penguin: { x: 250, y: 300 },
-    stones: [{ x: 200, y: 50, size: 40 }, { x: 50, y: 200, size: 40 }, { x: 250, y: 250, size: 40 }],
-    target: { x: 200, y: 100, width: 100, height: 100 },
+    penguin: { x: 100, y: 400 },
+    stones: [{ x: 100, y: 50, size: 40 }, { x: 100, y: 350, size: 40 }, { x: 200, y: 100, size: 40 }],
+    target: { x: 50, y: 100, width: 50, height: 150 },
     obstacles: [
-      { type: 'wall', x: 50, y: 300, size: 50 },
-      { type: 'wall', x: 100, y: 300, size: 50 },
-      { type: 'wall', x: 150, y: 300, size: 50 },
+      { type: 'wall', x: 200, y: 150, size: 50 },
+      { type: 'wall', x: 200, y: 200, size: 50 },
+      { type: 'wall', x: 200, y: 250, size: 50 },
       { type: 'wall', x: 200, y: 300, size: 50 },
-      { type: 'wall', x: 300, y: 100, size: 50 },
+      { type: 'wall', x: 0, y: 0, size: 50 },
+      { type: 'wall', x: 0, y: 50, size: 50 },
+      { type: 'wall', x: 0, y: 100, size: 50 },
+      { type: 'wall', x: 0, y: 150, size: 50 },
       { type: 'wall', x: 300, y: 150, size: 50 },
-      { type: 'wall', x: 150, y: 0, size: 50 },
-      { type: 'wall', x: 150, y: 50, size: 50 },
-      { type: 'wall', x: 150, y: 100, size: 50 },
-      { type: 'wall', x: 150, y: 150, size: 50 },
-      { type: 'wall', x: 50, y: 400, size: 50 },
-      { type: 'wall', x: 100, y: 400, size: 50 },
-      { type: 'hole', x: 50, y: 350, size: 50 },
-      { type: 'hole', x: 300, y: 300, size: 50 },
-      { type: 'hole', x: 100, y: 100, size: 50 },
-      { type: 'snow', x: 250, y: 300, size: 50 },
-      { type: 'snow', x: 200, y: 0, size: 50 },
-      { type: 'snow', x: 0, y: 300, size: 50 }
+      { type: 'wall', x: 300, y: 200, size: 50 },
+      { type: 'wall', x: 200, y: 50, size: 50 },
+      { type: 'hole', x: 300, y: 100, size: 50 },
+      { type: 'hole', x: 250, y: 350, size: 50 },
+      { type: 'hole', x: 200, y: 350, size: 50 },
+      { type: 'hole', x: 250, y: 200, size: 50 },
+      { type: 'snow', x: 100, y: 200, size: 50 },
+      { type: 'snow', x: 150, y: 400, size: 50 }
     ]
   },
-  155: {
-    id: 155,
+  164: {
+    id: 164,
     name: '无尽寒潮',
     difficulty: 'hard',
     optimal: 30,
@@ -4297,8 +4592,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 200, y: 0, size: 50 }
     ]
   },
-  156: {
-    id: 156,
+  165: {
+    id: 165,
     name: '永冻荒原',
     difficulty: 'hard',
     optimal: 30,
@@ -4327,8 +4622,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 100, y: 350, size: 50 }
     ]
   },
-  157: {
-    id: 157,
+  166: {
+    id: 166,
     name: '极地深渊',
     difficulty: 'hard',
     optimal: 30,
@@ -4361,8 +4656,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 50, size: 50 }
     ]
   },
-  158: {
-    id: 158,
+  167: {
+    id: 167,
     name: '无尽寒潮',
     difficulty: 'hard',
     optimal: 30,
@@ -4391,8 +4686,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 300, y: 250, size: 50 }
     ]
   },
-  159: {
-    id: 159,
+  168: {
+    id: 168,
     name: '永冻荒原',
     difficulty: 'hard',
     optimal: 30,
@@ -4427,8 +4722,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 50, y: 300, size: 50 }
     ]
   },
-  160: {
-    id: 160,
+  169: {
+    id: 169,
     name: '冰窟险径',
     difficulty: 'hard',
     optimal: 31,
@@ -4452,8 +4747,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 100, y: 250, size: 50 }
     ]
   },
-  161: {
-    id: 161,
+  170: {
+    id: 170,
     name: '冰原困局',
     difficulty: 'hard',
     optimal: 31,
@@ -4481,96 +4776,66 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 300, size: 50 }
     ]
   },
-  162: {
-    id: 162,
+  171: {
+    id: 171,
     name: '冰封深渊',
     difficulty: 'hard',
     optimal: 31,
     par: 31,
-    penguin: { x: 300, y: 50 },
-    stones: [{ x: 250, y: 350, size: 40 }, { x: 250, y: 50, size: 40 }, { x: 50, y: 350, size: 40 }],
-    target: { x: 200, y: 250, width: 100, height: 100 },
+    penguin: { x: 200, y: 50 },
+    stones: [{ x: 100, y: 50, size: 40 }, { x: 200, y: 100, size: 40 }, { x: 150, y: 300, size: 40 }],
+    target: { x: 50, y: 200, width: 50, height: 150 },
     obstacles: [
-      { type: 'wall', x: 150, y: 50, size: 50 },
-      { type: 'wall', x: 150, y: 100, size: 50 },
-      { type: 'wall', x: 0, y: 0, size: 50 },
-      { type: 'wall', x: 50, y: 0, size: 50 },
+      { type: 'wall', x: 300, y: 50, size: 50 },
+      { type: 'wall', x: 300, y: 100, size: 50 },
+      { type: 'wall', x: 300, y: 150, size: 50 },
+      { type: 'wall', x: 50, y: 350, size: 50 },
+      { type: 'wall', x: 100, y: 350, size: 50 },
+      { type: 'wall', x: 150, y: 350, size: 50 },
+      { type: 'wall', x: 200, y: 350, size: 50 },
       { type: 'wall', x: 100, y: 0, size: 50 },
       { type: 'wall', x: 150, y: 0, size: 50 },
-      { type: 'wall', x: 50, y: 200, size: 50 },
-      { type: 'wall', x: 50, y: 250, size: 50 },
-      { type: 'wall', x: 50, y: 300, size: 50 },
-      { type: 'wall', x: 250, y: 200, size: 50 },
-      { type: 'wall', x: 300, y: 200, size: 50 },
-      { type: 'hole', x: 250, y: 100, size: 50 },
-      { type: 'hole', x: 150, y: 150, size: 50 },
-      { type: 'hole', x: 200, y: 400, size: 50 },
-      { type: 'snow', x: 100, y: 300, size: 50 },
-      { type: 'snow', x: 200, y: 350, size: 50 }
+      { type: 'wall', x: 250, y: 50, size: 50 },
+      { type: 'wall', x: 250, y: 100, size: 50 },
+      { type: 'hole', x: 100, y: 100, size: 50 },
+      { type: 'hole', x: 100, y: 250, size: 50 },
+      { type: 'hole', x: 250, y: 300, size: 50 },
+      { type: 'snow', x: 0, y: 100, size: 50 },
+      { type: 'snow', x: 250, y: 350, size: 50 }
     ]
   },
-  163: {
-    id: 163,
+  172: {
+    id: 172,
     name: '永冻长廊',
     difficulty: 'hard',
     optimal: 31,
     par: 31,
-    penguin: { x: 200, y: 250 },
-    stones: [{ x: 200, y: 300, size: 40 }, { x: 50, y: 150, size: 40 }, { x: 250, y: 150, size: 40 }],
-    target: { x: 50, y: 300, width: 100, height: 100 },
+    penguin: { x: 250, y: 0 },
+    stones: [{ x: 250, y: 250, size: 40 }, { x: 250, y: 50, size: 40 }, { x: 100, y: 100, size: 40 }],
+    target: { x: 200, y: 150, width: 50, height: 150 },
     obstacles: [
-      { type: 'wall', x: 250, y: 250, size: 50 },
-      { type: 'wall', x: 300, y: 250, size: 50 },
+      { type: 'wall', x: 0, y: 200, size: 50 },
       { type: 'wall', x: 0, y: 250, size: 50 },
-      { type: 'wall', x: 0, y: 300, size: 50 },
-      { type: 'wall', x: 0, y: 350, size: 50 },
-      { type: 'wall', x: 0, y: 400, size: 50 },
-      { type: 'wall', x: 50, y: 50, size: 50 },
-      { type: 'wall', x: 100, y: 50, size: 50 },
-      { type: 'wall', x: 150, y: 50, size: 50 },
       { type: 'wall', x: 200, y: 50, size: 50 },
-      { type: 'wall', x: 0, y: 150, size: 50 },
-      { type: 'hole', x: 200, y: 200, size: 50 },
-      { type: 'hole', x: 150, y: 250, size: 50 },
-      { type: 'hole', x: 0, y: 0, size: 50 },
-      { type: 'snow', x: 250, y: 350, size: 50 },
-      { type: 'snow', x: 300, y: 150, size: 50 },
-      { type: 'snow', x: 200, y: 250, size: 50 }
-    ]
-  },
-  164: {
-    id: 164,
-    name: '绝境推演',
-    difficulty: 'hard',
-    optimal: 31,
-    par: 31,
-    penguin: { x: 150, y: 50 },
-    stones: [{ x: 50, y: 350, size: 40 }, { x: 100, y: 50, size: 40 }, { x: 250, y: 50, size: 40 }],
-    target: { x: 50, y: 100, width: 100, height: 100 },
-    obstacles: [
-      { type: 'wall', x: 200, y: 0, size: 50 },
-      { type: 'wall', x: 200, y: 50, size: 50 },
+      { type: 'wall', x: 200, y: 100, size: 50 },
+      { type: 'wall', x: 100, y: 200, size: 50 },
+      { type: 'wall', x: 150, y: 200, size: 50 },
       { type: 'wall', x: 0, y: 50, size: 50 },
-      { type: 'wall', x: 0, y: 100, size: 50 },
-      { type: 'wall', x: 0, y: 150, size: 50 },
-      { type: 'wall', x: 100, y: 250, size: 50 },
-      { type: 'wall', x: 150, y: 250, size: 50 },
-      { type: 'wall', x: 200, y: 250, size: 50 },
-      { type: 'wall', x: 250, y: 250, size: 50 },
-      { type: 'wall', x: 100, y: 300, size: 50 },
-      { type: 'wall', x: 100, y: 350, size: 50 },
-      { type: 'wall', x: 100, y: 400, size: 50 },
-      { type: 'hole', x: 200, y: 300, size: 50 },
-      { type: 'hole', x: 300, y: 250, size: 50 },
-      { type: 'hole', x: 300, y: 150, size: 50 },
-      { type: 'snow', x: 250, y: 200, size: 50 },
-      { type: 'snow', x: 0, y: 0, size: 50 },
-      { type: 'snow', x: 0, y: 400, size: 50 }
+      { type: 'wall', x: 50, y: 50, size: 50 },
+      { type: 'wall', x: 150, y: 300, size: 50 },
+      { type: 'wall', x: 200, y: 300, size: 50 },
+      { type: 'wall', x: 250, y: 300, size: 50 },
+      { type: 'wall', x: 300, y: 300, size: 50 },
+      { type: 'hole', x: 100, y: 50, size: 50 },
+      { type: 'hole', x: 0, y: 100, size: 50 },
+      { type: 'hole', x: 50, y: 250, size: 50 },
+      { type: 'snow', x: 100, y: 350, size: 50 },
+      { type: 'snow', x: 100, y: 0, size: 50 }
     ]
   },
-  165: {
-    id: 165,
-    name: '永冻荒原',
+  173: {
+    id: 173,
+    name: '无尽寒潮',
     difficulty: 'hard',
     optimal: 31,
     par: 31,
@@ -4600,9 +4865,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 50, y: 350, size: 50 }
     ]
   },
-  166: {
-    id: 166,
-    name: '极地深渊',
+  174: {
+    id: 174,
+    name: '永冻荒原',
     difficulty: 'hard',
     optimal: 31,
     par: 31,
@@ -4630,9 +4895,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 350, size: 50 }
     ]
   },
-  167: {
-    id: 167,
-    name: '无尽寒潮',
+  175: {
+    id: 175,
+    name: '极地深渊',
     difficulty: 'hard',
     optimal: 31,
     par: 31,
@@ -4664,9 +4929,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 300, size: 50 }
     ]
   },
-  168: {
-    id: 168,
-    name: '永冻荒原',
+  176: {
+    id: 176,
+    name: '无尽寒潮',
     difficulty: 'hard',
     optimal: 31,
     par: 31,
@@ -4698,9 +4963,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 350, size: 50 }
     ]
   },
-  169: {
-    id: 169,
-    name: '极地深渊',
+  177: {
+    id: 177,
+    name: '永冻荒原',
     difficulty: 'hard',
     optimal: 32,
     par: 32,
@@ -4730,9 +4995,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 350, size: 50 }
     ]
   },
-  170: {
-    id: 170,
-    name: '无尽寒潮',
+  178: {
+    id: 178,
+    name: '极地深渊',
     difficulty: 'hard',
     optimal: 32,
     par: 32,
@@ -4764,9 +5029,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 200, y: 400, size: 50 }
     ]
   },
-  171: {
-    id: 171,
-    name: '永冻荒原',
+  179: {
+    id: 179,
+    name: '无尽寒潮',
     difficulty: 'hard',
     optimal: 32,
     par: 32,
@@ -4796,42 +5061,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 300, y: 50, size: 50 }
     ]
   },
-  172: {
-    id: 172,
-    name: '极地深渊',
-    difficulty: 'hard',
-    optimal: 32,
-    par: 32,
-    penguin: { x: 300, y: 150 },
-    stones: [{ x: 250, y: 100, size: 40 }, { x: 50, y: 350, size: 40 }, { x: 250, y: 150, size: 40 }],
-    target: { x: 50, y: 350, width: 150, height: 50 },
-    obstacles: [
-      { type: 'wall', x: 50, y: 150, size: 50 },
-      { type: 'wall', x: 50, y: 200, size: 50 },
-      { type: 'wall', x: 50, y: 250, size: 50 },
-      { type: 'wall', x: 50, y: 300, size: 50 },
-      { type: 'wall', x: 250, y: 200, size: 50 },
-      { type: 'wall', x: 250, y: 250, size: 50 },
-      { type: 'wall', x: 250, y: 300, size: 50 },
-      { type: 'wall', x: 250, y: 350, size: 50 },
-      { type: 'wall', x: 250, y: 400, size: 50 },
-      { type: 'wall', x: 100, y: 200, size: 50 },
-      { type: 'wall', x: 100, y: 250, size: 50 },
-      { type: 'wall', x: 100, y: 50, size: 50 },
-      { type: 'wall', x: 100, y: 100, size: 50 },
-      { type: 'hole', x: 50, y: 100, size: 50 },
-      { type: 'hole', x: 300, y: 400, size: 50 },
-      { type: 'hole', x: 0, y: 200, size: 50 },
-      { type: 'hole', x: 300, y: 350, size: 50 },
-      { type: 'hole', x: 200, y: 300, size: 50 },
-      { type: 'hole', x: 200, y: 200, size: 50 },
-      { type: 'snow', x: 100, y: 150, size: 50 },
-      { type: 'snow', x: 150, y: 50, size: 50 }
-    ]
-  },
-  173: {
-    id: 173,
-    name: '无尽寒潮',
+  180: {
+    id: 180,
+    name: '永冻荒原',
     difficulty: 'hard',
     optimal: 32,
     par: 32,
@@ -4862,9 +5094,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 100, y: 300, size: 50 }
     ]
   },
-  174: {
-    id: 174,
-    name: '永冻荒原',
+  181: {
+    id: 181,
+    name: '极地深渊',
     difficulty: 'hard',
     optimal: 32,
     par: 32,
@@ -4892,66 +5124,99 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 100, y: 400, size: 50 }
     ]
   },
-  175: {
-    id: 175,
-    name: '永冻长廊',
-    difficulty: 'hard',
-    optimal: 33,
-    par: 33,
-    penguin: { x: 0, y: 50 },
-    stones: [{ x: 150, y: 350, size: 40 }, { x: 50, y: 50, size: 40 }, { x: 100, y: 350, size: 40 }],
-    target: { x: 50, y: 100, width: 100, height: 100 },
-    obstacles: [
-      { type: 'wall', x: 150, y: 200, size: 50 },
-      { type: 'wall', x: 150, y: 250, size: 50 },
-      { type: 'wall', x: 300, y: 100, size: 50 },
-      { type: 'wall', x: 300, y: 150, size: 50 },
-      { type: 'wall', x: 300, y: 200, size: 50 },
-      { type: 'wall', x: 300, y: 250, size: 50 },
-      { type: 'wall', x: 50, y: 200, size: 50 },
-      { type: 'wall', x: 50, y: 250, size: 50 },
-      { type: 'wall', x: 50, y: 300, size: 50 },
-      { type: 'wall', x: 50, y: 350, size: 50 },
-      { type: 'wall', x: 150, y: 50, size: 50 },
-      { type: 'hole', x: 0, y: 400, size: 50 },
-      { type: 'hole', x: 250, y: 100, size: 50 },
-      { type: 'hole', x: 150, y: 100, size: 50 },
-      { type: 'snow', x: 250, y: 0, size: 50 },
-      { type: 'snow', x: 250, y: 300, size: 50 },
-      { type: 'snow', x: 300, y: 50, size: 50 }
-    ]
-  },
-  176: {
-    id: 176,
+  182: {
+    id: 182,
     name: '绝境推演',
     difficulty: 'hard',
     optimal: 33,
     par: 33,
-    penguin: { x: 150, y: 200 },
-    stones: [{ x: 200, y: 200, size: 40 }, { x: 50, y: 50, size: 40 }, { x: 150, y: 50, size: 40 }],
-    target: { x: 200, y: 100, width: 100, height: 100 },
+    penguin: { x: 300, y: 250 },
+    stones: [{ x: 50, y: 350, size: 40 }, { x: 50, y: 50, size: 40 }, { x: 250, y: 250, size: 40 }],
+    target: { x: 50, y: 100, width: 50, height: 150 },
     obstacles: [
-      { type: 'wall', x: 50, y: 100, size: 50 },
-      { type: 'wall', x: 50, y: 150, size: 50 },
-      { type: 'wall', x: 50, y: 200, size: 50 },
-      { type: 'wall', x: 50, y: 250, size: 50 },
-      { type: 'wall', x: 150, y: 300, size: 50 },
-      { type: 'wall', x: 200, y: 300, size: 50 },
-      { type: 'wall', x: 250, y: 300, size: 50 },
-      { type: 'wall', x: 250, y: 400, size: 50 },
-      { type: 'wall', x: 300, y: 400, size: 50 },
+      { type: 'wall', x: 250, y: 50, size: 50 },
+      { type: 'wall', x: 250, y: 100, size: 50 },
+      { type: 'wall', x: 100, y: 350, size: 50 },
+      { type: 'wall', x: 150, y: 350, size: 50 },
+      { type: 'wall', x: 200, y: 350, size: 50 },
+      { type: 'wall', x: 250, y: 350, size: 50 },
+      { type: 'wall', x: 100, y: 50, size: 50 },
+      { type: 'wall', x: 100, y: 100, size: 50 },
       { type: 'wall', x: 100, y: 150, size: 50 },
-      { type: 'wall', x: 100, y: 200, size: 50 },
-      { type: 'hole', x: 50, y: 0, size: 50 },
-      { type: 'hole', x: 250, y: 350, size: 50 },
-      { type: 'hole', x: 300, y: 200, size: 50 },
-      { type: 'snow', x: 300, y: 0, size: 50 },
-      { type: 'snow', x: 300, y: 350, size: 50 }
+      { type: 'wall', x: 200, y: 0, size: 50 },
+      { type: 'wall', x: 200, y: 50, size: 50 },
+      { type: 'wall', x: 200, y: 100, size: 50 },
+      { type: 'wall', x: 150, y: 0, size: 50 },
+      { type: 'hole', x: 200, y: 150, size: 50 },
+      { type: 'hole', x: 0, y: 200, size: 50 },
+      { type: 'hole', x: 300, y: 0, size: 50 },
+      { type: 'snow', x: 300, y: 350, size: 50 },
+      { type: 'snow', x: 0, y: 400, size: 50 },
+      { type: 'snow', x: 250, y: 200, size: 50 }
     ]
   },
-  177: {
-    id: 177,
-    name: '永冻荒原',
+  183: {
+    id: 183,
+    name: '冰封深渊',
+    difficulty: 'hard',
+    optimal: 33,
+    par: 33,
+    penguin: { x: 100, y: 300 },
+    stones: [{ x: 100, y: 250, size: 40 }, { x: 250, y: 50, size: 40 }, { x: 200, y: 200, size: 40 }],
+    target: { x: 50, y: 50, width: 50, height: 150 },
+    obstacles: [
+      { type: 'wall', x: 0, y: 250, size: 50 },
+      { type: 'wall', x: 0, y: 300, size: 50 },
+      { type: 'wall', x: 0, y: 350, size: 50 },
+      { type: 'wall', x: 200, y: 150, size: 50 },
+      { type: 'wall', x: 250, y: 150, size: 50 },
+      { type: 'wall', x: 300, y: 150, size: 50 },
+      { type: 'wall', x: 100, y: 0, size: 50 },
+      { type: 'wall', x: 150, y: 0, size: 50 },
+      { type: 'wall', x: 200, y: 0, size: 50 },
+      { type: 'wall', x: 250, y: 0, size: 50 },
+      { type: 'wall', x: 100, y: 100, size: 50 },
+      { type: 'hole', x: 0, y: 150, size: 50 },
+      { type: 'hole', x: 250, y: 250, size: 50 },
+      { type: 'hole', x: 0, y: 400, size: 50 },
+      { type: 'snow', x: 0, y: 200, size: 50 },
+      { type: 'snow', x: 50, y: 250, size: 50 }
+    ]
+  },
+  184: {
+    id: 184,
+    name: '永冻长廊',
+    difficulty: 'hard',
+    optimal: 33,
+    par: 33,
+    penguin: { x: 200, y: 400 },
+    stones: [{ x: 200, y: 350, size: 40 }, { x: 50, y: 50, size: 40 }, { x: 150, y: 50, size: 40 }],
+    target: { x: 250, y: 50, width: 50, height: 150 },
+    obstacles: [
+      { type: 'wall', x: 250, y: 300, size: 50 },
+      { type: 'wall', x: 250, y: 350, size: 50 },
+      { type: 'wall', x: 100, y: 200, size: 50 },
+      { type: 'wall', x: 100, y: 250, size: 50 },
+      { type: 'wall', x: 50, y: 400, size: 50 },
+      { type: 'wall', x: 100, y: 400, size: 50 },
+      { type: 'wall', x: 250, y: 250, size: 50 },
+      { type: 'wall', x: 300, y: 250, size: 50 },
+      { type: 'wall', x: 100, y: 100, size: 50 },
+      { type: 'wall', x: 150, y: 100, size: 50 },
+      { type: 'wall', x: 100, y: 300, size: 50 },
+      { type: 'wall', x: 100, y: 350, size: 50 },
+      { type: 'hole', x: 300, y: 100, size: 50 },
+      { type: 'hole', x: 200, y: 100, size: 50 },
+      { type: 'hole', x: 50, y: 300, size: 50 },
+      { type: 'hole', x: 50, y: 200, size: 50 },
+      { type: 'snow', x: 300, y: 400, size: 50 },
+      { type: 'snow', x: 0, y: 350, size: 50 },
+      { type: 'snow', x: 100, y: 150, size: 50 }
+    ]
+  },
+  185: {
+    id: 185,
+    name: '无尽寒潮',
     difficulty: 'hard',
     optimal: 33,
     par: 33,
@@ -4981,9 +5246,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 300, y: 400, size: 50 }
     ]
   },
-  178: {
-    id: 178,
-    name: '极地深渊',
+  186: {
+    id: 186,
+    name: '永冻荒原',
     difficulty: 'hard',
     optimal: 33,
     par: 33,
@@ -5013,9 +5278,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 100, y: 100, size: 50 }
     ]
   },
-  179: {
-    id: 179,
-    name: '无尽寒潮',
+  187: {
+    id: 187,
+    name: '极地深渊',
     difficulty: 'hard',
     optimal: 33,
     par: 33,
@@ -5044,43 +5309,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 200, y: 400, size: 50 }
     ]
   },
-  180: {
-    id: 180,
-    name: '永冻荒原',
-    difficulty: 'hard',
-    optimal: 33,
-    par: 33,
-    penguin: { x: 0, y: 200 },
-    stones: [{ x: 50, y: 200, size: 40 }, { x: 250, y: 350, size: 40 }, { x: 250, y: 250, size: 40 }],
-    target: { x: 150, y: 250, width: 150, height: 50 },
-    obstacles: [
-      { type: 'wall', x: 250, y: 200, size: 50 },
-      { type: 'wall', x: 300, y: 200, size: 50 },
-      { type: 'wall', x: 100, y: 0, size: 50 },
-      { type: 'wall', x: 100, y: 50, size: 50 },
-      { type: 'wall', x: 100, y: 350, size: 50 },
-      { type: 'wall', x: 150, y: 350, size: 50 },
-      { type: 'wall', x: 200, y: 350, size: 50 },
-      { type: 'wall', x: 0, y: 0, size: 50 },
-      { type: 'wall', x: 50, y: 0, size: 50 },
-      { type: 'wall', x: 250, y: 0, size: 50 },
-      { type: 'wall', x: 300, y: 0, size: 50 },
-      { type: 'wall', x: 300, y: 350, size: 50 },
-      { type: 'hole', x: 200, y: 200, size: 50 },
-      { type: 'hole', x: 50, y: 300, size: 50 },
-      { type: 'hole', x: 100, y: 300, size: 50 },
-      { type: 'hole', x: 50, y: 350, size: 50 },
-      { type: 'hole', x: 200, y: 50, size: 50 },
-      { type: 'hole', x: 50, y: 150, size: 50 },
-      { type: 'snow', x: 50, y: 250, size: 50 },
-      { type: 'snow', x: 0, y: 300, size: 50 },
-      { type: 'snow', x: 150, y: 200, size: 50 },
-      { type: 'snow', x: 50, y: 400, size: 50 }
-    ]
-  },
-  181: {
-    id: 181,
-    name: '死角回廊',
+  188: {
+    id: 188,
+    name: '冰原困局',
     difficulty: 'hard',
     optimal: 34,
     par: 34,
@@ -5106,9 +5337,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 250, y: 350, size: 50 }
     ]
   },
-  182: {
-    id: 182,
-    name: '无尽寒潮',
+  189: {
+    id: 189,
+    name: '永冻荒原',
     difficulty: 'hard',
     optimal: 34,
     par: 34,
@@ -5137,39 +5368,8 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 250, y: 200, size: 50 }
     ]
   },
-  183: {
-    id: 183,
-    name: '永冻荒原',
-    difficulty: 'hard',
-    optimal: 34,
-    par: 34,
-    penguin: { x: 0, y: 150 },
-    stones: [{ x: 50, y: 150, size: 40 }, { x: 150, y: 250, size: 40 }, { x: 50, y: 50, size: 40 }],
-    target: { x: 50, y: 150, width: 150, height: 50 },
-    obstacles: [
-      { type: 'wall', x: 100, y: 350, size: 50 },
-      { type: 'wall', x: 150, y: 350, size: 50 },
-      { type: 'wall', x: 200, y: 350, size: 50 },
-      { type: 'wall', x: 200, y: 150, size: 50 },
-      { type: 'wall', x: 200, y: 200, size: 50 },
-      { type: 'wall', x: 200, y: 250, size: 50 },
-      { type: 'wall', x: 100, y: 50, size: 50 },
-      { type: 'wall', x: 150, y: 50, size: 50 },
-      { type: 'wall', x: 50, y: 250, size: 50 },
-      { type: 'wall', x: 100, y: 250, size: 50 },
-      { type: 'wall', x: 0, y: 200, size: 50 },
-      { type: 'hole', x: 0, y: 50, size: 50 },
-      { type: 'hole', x: 250, y: 200, size: 50 },
-      { type: 'hole', x: 200, y: 300, size: 50 },
-      { type: 'hole', x: 300, y: 0, size: 50 },
-      { type: 'snow', x: 150, y: 0, size: 50 },
-      { type: 'snow', x: 300, y: 100, size: 50 },
-      { type: 'snow', x: 50, y: 350, size: 50 },
-      { type: 'snow', x: 300, y: 350, size: 50 }
-    ]
-  },
-  184: {
-    id: 184,
+  190: {
+    id: 190,
     name: '死角回廊',
     difficulty: 'expert',
     optimal: 35,
@@ -5196,100 +5396,40 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 150, y: 100, size: 50 }
     ]
   },
-  185: {
-    id: 185,
-    name: '冰原困局',
+  191: {
+    id: 191,
+    name: '绝境推演',
     difficulty: 'expert',
     optimal: 35,
     par: 35,
-    penguin: { x: 0, y: 350 },
-    stones: [{ x: 50, y: 350, size: 40 }, { x: 250, y: 300, size: 40 }, { x: 250, y: 200, size: 40 }],
-    target: { x: 150, y: 300, width: 150, height: 50 },
+    penguin: { x: 150, y: 50 },
+    stones: [{ x: 250, y: 350, size: 40 }, { x: 100, y: 100, size: 40 }, { x: 150, y: 100, size: 40 }],
+    target: { x: 250, y: 150, width: 50, height: 150 },
     obstacles: [
       { type: 'wall', x: 50, y: 250, size: 50 },
-      { type: 'wall', x: 100, y: 250, size: 50 },
-      { type: 'wall', x: 150, y: 250, size: 50 },
-      { type: 'wall', x: 200, y: 250, size: 50 },
-      { type: 'wall', x: 150, y: 350, size: 50 },
-      { type: 'wall', x: 200, y: 350, size: 50 },
-      { type: 'wall', x: 250, y: 350, size: 50 },
-      { type: 'wall', x: 50, y: 200, size: 50 },
-      { type: 'wall', x: 100, y: 200, size: 50 },
-      { type: 'wall', x: 100, y: 150, size: 50 },
-      { type: 'hole', x: 300, y: 200, size: 50 },
-      { type: 'hole', x: 200, y: 0, size: 50 },
-      { type: 'snow', x: 250, y: 150, size: 50 },
-      { type: 'snow', x: 50, y: 300, size: 50 }
-    ]
-  },
-  186: {
-    id: 186,
-    name: '冰封深渊',
-    difficulty: 'expert',
-    optimal: 35,
-    par: 35,
-    penguin: { x: 100, y: 150 },
-    stones: [{ x: 150, y: 350, size: 40 }, { x: 150, y: 150, size: 40 }, { x: 200, y: 350, size: 40 }],
-    target: { x: 200, y: 200, width: 100, height: 100 },
-    obstacles: [
-      { type: 'wall', x: 250, y: 350, size: 50 },
-      { type: 'wall', x: 300, y: 350, size: 50 },
-      { type: 'wall', x: 50, y: 250, size: 50 },
-      { type: 'wall', x: 100, y: 250, size: 50 },
-      { type: 'wall', x: 50, y: 150, size: 50 },
-      { type: 'wall', x: 50, y: 200, size: 50 },
-      { type: 'wall', x: 200, y: 0, size: 50 },
-      { type: 'wall', x: 250, y: 0, size: 50 },
-      { type: 'wall', x: 300, y: 0, size: 50 },
-      { type: 'wall', x: 300, y: 150, size: 50 },
-      { type: 'wall', x: 300, y: 200, size: 50 },
-      { type: 'wall', x: 300, y: 250, size: 50 },
-      { type: 'wall', x: 250, y: 50, size: 50 },
-      { type: 'hole', x: 150, y: 50, size: 50 },
-      { type: 'hole', x: 100, y: 100, size: 50 },
-      { type: 'hole', x: 0, y: 0, size: 50 },
-      { type: 'hole', x: 100, y: 350, size: 50 },
-      { type: 'snow', x: 200, y: 100, size: 50 },
-      { type: 'snow', x: 250, y: 400, size: 50 },
-      { type: 'snow', x: 150, y: 200, size: 50 }
-    ]
-  },
-  187: {
-    id: 187,
-    name: '极地深渊',
-    difficulty: 'expert',
-    optimal: 35,
-    par: 35,
-    penguin: { x: 250, y: 50 },
-    stones: [{ x: 150, y: 350, size: 40 }, { x: 250, y: 100, size: 40 }, { x: 50, y: 350, size: 40 }],
-    target: { x: 150, y: 350, width: 150, height: 50 },
-    obstacles: [
-      { type: 'wall', x: 50, y: 0, size: 50 },
-      { type: 'wall', x: 50, y: 50, size: 50 },
-      { type: 'wall', x: 0, y: 100, size: 50 },
-      { type: 'wall', x: 50, y: 100, size: 50 },
-      { type: 'wall', x: 100, y: 100, size: 50 },
-      { type: 'wall', x: 150, y: 100, size: 50 },
-      { type: 'wall', x: 250, y: 0, size: 50 },
-      { type: 'wall', x: 300, y: 0, size: 50 },
       { type: 'wall', x: 50, y: 300, size: 50 },
-      { type: 'wall', x: 100, y: 300, size: 50 },
-      { type: 'wall', x: 150, y: 300, size: 50 },
-      { type: 'wall', x: 100, y: 150, size: 50 },
-      { type: 'hole', x: 200, y: 300, size: 50 },
+      { type: 'wall', x: 50, y: 350, size: 50 },
+      { type: 'wall', x: 50, y: 400, size: 50 },
+      { type: 'wall', x: 200, y: 200, size: 50 },
+      { type: 'wall', x: 200, y: 250, size: 50 },
+      { type: 'wall', x: 200, y: 300, size: 50 },
+      { type: 'wall', x: 200, y: 350, size: 50 },
+      { type: 'wall', x: 0, y: 350, size: 50 },
+      { type: 'wall', x: 0, y: 400, size: 50 },
+      { type: 'wall', x: 250, y: 50, size: 50 },
+      { type: 'wall', x: 300, y: 50, size: 50 },
+      { type: 'hole', x: 50, y: 50, size: 50 },
+      { type: 'hole', x: 100, y: 200, size: 50 },
       { type: 'hole', x: 300, y: 400, size: 50 },
-      { type: 'hole', x: 0, y: 400, size: 50 },
-      { type: 'hole', x: 200, y: 150, size: 50 },
-      { type: 'hole', x: 300, y: 350, size: 50 },
-      { type: 'snow', x: 300, y: 250, size: 50 },
-      { type: 'snow', x: 300, y: 50, size: 50 },
-      { type: 'snow', x: 0, y: 300, size: 50 },
-      { type: 'snow', x: 0, y: 350, size: 50 }
+      { type: 'hole', x: 200, y: 100, size: 50 },
+      { type: 'snow', x: 150, y: 300, size: 50 },
+      { type: 'snow', x: 50, y: 0, size: 50 },
+      { type: 'snow', x: 50, y: 150, size: 50 }
     ]
   },
-  188: {
-    id: 188,
-    name: '无尽寒潮',
+  192: {
+    id: 192,
+    name: '永冻荒原',
     difficulty: 'expert',
     optimal: 35,
     par: 35,
@@ -5320,9 +5460,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 400, size: 50 }
     ]
   },
-  189: {
-    id: 189,
-    name: '永冻荒原',
+  193: {
+    id: 193,
+    name: '极地深渊',
     difficulty: 'expert',
     optimal: 35,
     par: 35,
@@ -5351,9 +5491,9 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 250, y: 0, size: 50 }
     ]
   },
-  190: {
-    id: 190,
-    name: '极地深渊',
+  194: {
+    id: 194,
+    name: '无尽寒潮',
     difficulty: 'expert',
     optimal: 35,
     par: 35,
@@ -5386,98 +5526,67 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 300, y: 50, size: 50 }
     ]
   },
-  191: {
-    id: 191,
-    name: '绝境推演',
-    difficulty: 'expert',
-    optimal: 36,
-    par: 36,
-    penguin: { x: 50, y: 50 },
-    stones: [{ x: 100, y: 300, size: 40 }, { x: 50, y: 100, size: 40 }, { x: 250, y: 250, size: 40 }],
-    target: { x: 50, y: 100, width: 100, height: 100 },
-    obstacles: [
-      { type: 'wall', x: 50, y: 0, size: 50 },
-      { type: 'wall', x: 100, y: 0, size: 50 },
-      { type: 'wall', x: 50, y: 250, size: 50 },
-      { type: 'wall', x: 50, y: 300, size: 50 },
-      { type: 'wall', x: 200, y: 300, size: 50 },
-      { type: 'wall', x: 250, y: 300, size: 50 },
-      { type: 'wall', x: 300, y: 300, size: 50 },
-      { type: 'wall', x: 250, y: 350, size: 50 },
-      { type: 'wall', x: 250, y: 400, size: 50 },
-      { type: 'wall', x: 200, y: 100, size: 50 },
-      { type: 'wall', x: 200, y: 150, size: 50 },
-      { type: 'wall', x: 250, y: 50, size: 50 },
-      { type: 'wall', x: 250, y: 100, size: 50 },
-      { type: 'hole', x: 150, y: 350, size: 50 },
-      { type: 'hole', x: 150, y: 150, size: 50 },
-      { type: 'hole', x: 200, y: 200, size: 50 },
-      { type: 'snow', x: 300, y: 150, size: 50 },
-      { type: 'snow', x: 100, y: 350, size: 50 },
-      { type: 'snow', x: 0, y: 300, size: 50 }
-    ]
-  },
-  192: {
-    id: 192,
+  195: {
+    id: 195,
     name: '冰封深渊',
     difficulty: 'expert',
     optimal: 36,
     par: 36,
-    penguin: { x: 100, y: 350 },
-    stones: [{ x: 250, y: 50, size: 40 }, { x: 150, y: 350, size: 40 }, { x: 50, y: 350, size: 40 }],
-    target: { x: 200, y: 250, width: 100, height: 100 },
+    penguin: { x: 300, y: 350 },
+    stones: [{ x: 50, y: 350, size: 40 }, { x: 250, y: 350, size: 40 }, { x: 50, y: 200, size: 40 }],
+    target: { x: 100, y: 250, width: 50, height: 150 },
     obstacles: [
-      { type: 'wall', x: 50, y: 250, size: 50 },
-      { type: 'wall', x: 100, y: 250, size: 50 },
-      { type: 'wall', x: 0, y: 100, size: 50 },
-      { type: 'wall', x: 0, y: 150, size: 50 },
-      { type: 'wall', x: 0, y: 200, size: 50 },
-      { type: 'wall', x: 0, y: 250, size: 50 },
-      { type: 'wall', x: 200, y: 150, size: 50 },
+      { type: 'wall', x: 150, y: 0, size: 50 },
+      { type: 'wall', x: 200, y: 0, size: 50 },
+      { type: 'wall', x: 200, y: 250, size: 50 },
+      { type: 'wall', x: 250, y: 250, size: 50 },
+      { type: 'wall', x: 150, y: 200, size: 50 },
       { type: 'wall', x: 200, y: 200, size: 50 },
-      { type: 'wall', x: 150, y: 100, size: 50 },
-      { type: 'wall', x: 200, y: 100, size: 50 },
-      { type: 'wall', x: 300, y: 0, size: 50 },
-      { type: 'wall', x: 300, y: 50, size: 50 },
-      { type: 'hole', x: 100, y: 300, size: 50 },
-      { type: 'hole', x: 300, y: 100, size: 50 },
-      { type: 'hole', x: 150, y: 400, size: 50 },
-      { type: 'snow', x: 50, y: 100, size: 50 },
+      { type: 'wall', x: 100, y: 100, size: 50 },
+      { type: 'wall', x: 100, y: 150, size: 50 },
+      { type: 'wall', x: 0, y: 350, size: 50 },
+      { type: 'wall', x: 0, y: 400, size: 50 },
+      { type: 'hole', x: 0, y: 200, size: 50 },
+      { type: 'hole', x: 50, y: 100, size: 50 },
+      { type: 'hole', x: 250, y: 100, size: 50 },
       { type: 'snow', x: 0, y: 50, size: 50 },
-      { type: 'snow', x: 0, y: 400, size: 50 }
+      { type: 'snow', x: 150, y: 300, size: 50 },
+      { type: 'snow', x: 300, y: 400, size: 50 }
     ]
   },
-  193: {
-    id: 193,
+  196: {
+    id: 196,
     name: '永冻长廊',
     difficulty: 'expert',
     optimal: 37,
     par: 37,
-    penguin: { x: 100, y: 50 },
-    stones: [{ x: 150, y: 50, size: 40 }, { x: 250, y: 350, size: 40 }, { x: 50, y: 50, size: 40 }],
-    target: { x: 200, y: 250, width: 100, height: 100 },
+    penguin: { x: 250, y: 300 },
+    stones: [{ x: 200, y: 300, size: 40 }, { x: 50, y: 50, size: 40 }, { x: 50, y: 350, size: 40 }],
+    target: { x: 50, y: 200, width: 50, height: 150 },
     obstacles: [
-      { type: 'wall', x: 0, y: 150, size: 50 },
-      { type: 'wall', x: 0, y: 200, size: 50 },
-      { type: 'wall', x: 150, y: 100, size: 50 },
-      { type: 'wall', x: 150, y: 150, size: 50 },
-      { type: 'wall', x: 50, y: 200, size: 50 },
-      { type: 'wall', x: 50, y: 250, size: 50 },
-      { type: 'wall', x: 50, y: 300, size: 50 },
+      { type: 'wall', x: 100, y: 200, size: 50 },
       { type: 'wall', x: 150, y: 200, size: 50 },
+      { type: 'wall', x: 200, y: 200, size: 50 },
+      { type: 'wall', x: 250, y: 200, size: 50 },
+      { type: 'wall', x: 200, y: 0, size: 50 },
+      { type: 'wall', x: 200, y: 50, size: 50 },
+      { type: 'wall', x: 200, y: 100, size: 50 },
+      { type: 'wall', x: 100, y: 350, size: 50 },
+      { type: 'wall', x: 150, y: 350, size: 50 },
+      { type: 'wall', x: 200, y: 350, size: 50 },
+      { type: 'wall', x: 250, y: 350, size: 50 },
       { type: 'wall', x: 150, y: 250, size: 50 },
-      { type: 'wall', x: 150, y: 300, size: 50 },
-      { type: 'hole', x: 200, y: 350, size: 50 },
-      { type: 'hole', x: 100, y: 0, size: 50 },
-      { type: 'hole', x: 250, y: 200, size: 50 },
-      { type: 'hole', x: 50, y: 0, size: 50 },
-      { type: 'snow', x: 0, y: 400, size: 50 },
-      { type: 'snow', x: 250, y: 0, size: 50 },
-      { type: 'snow', x: 300, y: 250, size: 50 }
+      { type: 'wall', x: 200, y: 250, size: 50 },
+      { type: 'hole', x: 300, y: 300, size: 50 },
+      { type: 'hole', x: 150, y: 400, size: 50 },
+      { type: 'hole', x: 150, y: 50, size: 50 },
+      { type: 'snow', x: 0, y: 250, size: 50 },
+      { type: 'snow', x: 300, y: 0, size: 50 },
+      { type: 'snow', x: 100, y: 150, size: 50 }
     ]
   },
-  194: {
-    id: 194,
+  197: {
+    id: 197,
     name: '无尽寒潮',
     difficulty: 'expert',
     optimal: 37,
@@ -5508,130 +5617,71 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 350, size: 50 }
     ]
   },
-  195: {
-    id: 195,
-    name: '冰封深渊',
-    difficulty: 'expert',
-    optimal: 38,
-    par: 38,
-    penguin: { x: 50, y: 400 },
-    stones: [{ x: 250, y: 150, size: 40 }, { x: 250, y: 250, size: 40 }, { x: 50, y: 350, size: 40 }],
-    target: { x: 150, y: 300, width: 100, height: 100 },
-    obstacles: [
-      { type: 'wall', x: 150, y: 0, size: 50 },
-      { type: 'wall', x: 200, y: 0, size: 50 },
-      { type: 'wall', x: 250, y: 0, size: 50 },
-      { type: 'wall', x: 300, y: 0, size: 50 },
-      { type: 'wall', x: 100, y: 150, size: 50 },
-      { type: 'wall', x: 150, y: 150, size: 50 },
-      { type: 'wall', x: 100, y: 200, size: 50 },
-      { type: 'wall', x: 100, y: 250, size: 50 },
-      { type: 'wall', x: 50, y: 50, size: 50 },
-      { type: 'wall', x: 50, y: 100, size: 50 },
-      { type: 'wall', x: 50, y: 150, size: 50 },
-      { type: 'wall', x: 300, y: 150, size: 50 },
-      { type: 'hole', x: 200, y: 50, size: 50 },
-      { type: 'hole', x: 200, y: 150, size: 50 },
-      { type: 'hole', x: 300, y: 350, size: 50 },
-      { type: 'snow', x: 50, y: 250, size: 50 },
-      { type: 'snow', x: 150, y: 200, size: 50 },
-      { type: 'snow', x: 200, y: 200, size: 50 }
-    ]
-  },
-  196: {
-    id: 196,
-    name: '永冻长廊',
-    difficulty: 'expert',
-    optimal: 39,
-    par: 39,
-    penguin: { x: 200, y: 350 },
-    stones: [{ x: 200, y: 200, size: 40 }, { x: 150, y: 350, size: 40 }, { x: 250, y: 350, size: 40 }],
-    target: { x: 50, y: 250, width: 100, height: 100 },
-    obstacles: [
-      { type: 'wall', x: 200, y: 100, size: 50 },
-      { type: 'wall', x: 250, y: 100, size: 50 },
-      { type: 'wall', x: 200, y: 0, size: 50 },
-      { type: 'wall', x: 250, y: 0, size: 50 },
-      { type: 'wall', x: 250, y: 150, size: 50 },
-      { type: 'wall', x: 250, y: 200, size: 50 },
-      { type: 'wall', x: 0, y: 200, size: 50 },
-      { type: 'wall', x: 50, y: 200, size: 50 },
-      { type: 'wall', x: 100, y: 200, size: 50 },
-      { type: 'wall', x: 150, y: 200, size: 50 },
-      { type: 'hole', x: 300, y: 300, size: 50 },
-      { type: 'hole', x: 0, y: 50, size: 50 },
-      { type: 'hole', x: 0, y: 250, size: 50 },
-      { type: 'snow', x: 150, y: 400, size: 50 },
-      { type: 'snow', x: 50, y: 150, size: 50 },
-      { type: 'snow', x: 0, y: 100, size: 50 }
-    ]
-  },
-  197: {
-    id: 197,
-    name: '无尽寒潮',
-    difficulty: 'expert',
-    optimal: 39,
-    par: 39,
-    penguin: { x: 200, y: 50 },
-    stones: [{ x: 150, y: 50, size: 40 }, { x: 250, y: 350, size: 40 }, { x: 50, y: 250, size: 40 }],
-    target: { x: 50, y: 250, width: 150, height: 50 },
-    obstacles: [
-      { type: 'wall', x: 0, y: 350, size: 50 },
-      { type: 'wall', x: 50, y: 350, size: 50 },
-      { type: 'wall', x: 100, y: 350, size: 50 },
-      { type: 'wall', x: 150, y: 350, size: 50 },
-      { type: 'wall', x: 0, y: 0, size: 50 },
-      { type: 'wall', x: 0, y: 50, size: 50 },
-      { type: 'wall', x: 0, y: 100, size: 50 },
-      { type: 'wall', x: 0, y: 150, size: 50 },
-      { type: 'wall', x: 150, y: 400, size: 50 },
-      { type: 'wall', x: 200, y: 400, size: 50 },
-      { type: 'wall', x: 150, y: 200, size: 50 },
-      { type: 'wall', x: 200, y: 200, size: 50 },
-      { type: 'wall', x: 250, y: 200, size: 50 },
-      { type: 'wall', x: 300, y: 250, size: 50 },
-      { type: 'hole', x: 0, y: 300, size: 50 },
-      { type: 'hole', x: 200, y: 100, size: 50 },
-      { type: 'hole', x: 50, y: 200, size: 50 },
-      { type: 'hole', x: 0, y: 250, size: 50 },
-      { type: 'hole', x: 300, y: 150, size: 50 },
-      { type: 'hole', x: 200, y: 150, size: 50 },
-      { type: 'snow', x: 150, y: 100, size: 50 },
-      { type: 'snow', x: 250, y: 0, size: 50 },
-      { type: 'snow', x: 50, y: 100, size: 50 }
-    ]
-  },
   198: {
     id: 198,
     name: '冰封深渊',
     difficulty: 'expert',
-    optimal: 40,
-    par: 40,
-    penguin: { x: 50, y: 400 },
-    stones: [{ x: 50, y: 200, size: 40 }, { x: 50, y: 350, size: 40 }, { x: 250, y: 350, size: 40 }],
-    target: { x: 100, y: 300, width: 100, height: 100 },
+    optimal: 38,
+    par: 38,
+    penguin: { x: 200, y: 400 },
+    stones: [{ x: 200, y: 350, size: 40 }, { x: 250, y: 50, size: 40 }, { x: 100, y: 350, size: 40 }],
+    target: { x: 250, y: 100, width: 50, height: 150 },
     obstacles: [
-      { type: 'wall', x: 150, y: 0, size: 50 },
+      { type: 'wall', x: 100, y: 200, size: 50 },
+      { type: 'wall', x: 100, y: 250, size: 50 },
+      { type: 'wall', x: 300, y: 300, size: 50 },
+      { type: 'wall', x: 300, y: 350, size: 50 },
+      { type: 'wall', x: 0, y: 100, size: 50 },
+      { type: 'wall', x: 0, y: 150, size: 50 },
+      { type: 'wall', x: 0, y: 200, size: 50 },
       { type: 'wall', x: 200, y: 0, size: 50 },
-      { type: 'wall', x: 200, y: 250, size: 50 },
-      { type: 'wall', x: 250, y: 250, size: 50 },
-      { type: 'wall', x: 150, y: 200, size: 50 },
-      { type: 'wall', x: 200, y: 200, size: 50 },
-      { type: 'wall', x: 100, y: 100, size: 50 },
-      { type: 'wall', x: 100, y: 150, size: 50 },
-      { type: 'wall', x: 0, y: 350, size: 50 },
-      { type: 'wall', x: 0, y: 400, size: 50 },
-      { type: 'hole', x: 0, y: 200, size: 50 },
-      { type: 'hole', x: 50, y: 100, size: 50 },
-      { type: 'hole', x: 250, y: 100, size: 50 },
-      { type: 'snow', x: 0, y: 50, size: 50 },
-      { type: 'snow', x: 300, y: 400, size: 50 },
-      { type: 'snow', x: 50, y: 0, size: 50 }
+      { type: 'wall', x: 200, y: 50, size: 50 },
+      { type: 'wall', x: 200, y: 100, size: 50 },
+      { type: 'wall', x: 200, y: 150, size: 50 },
+      { type: 'wall', x: 100, y: 300, size: 50 },
+      { type: 'wall', x: 150, y: 300, size: 50 },
+      { type: 'hole', x: 50, y: 50, size: 50 },
+      { type: 'hole', x: 0, y: 300, size: 50 },
+      { type: 'hole', x: 0, y: 50, size: 50 },
+      { type: 'hole', x: 50, y: 200, size: 50 },
+      { type: 'snow', x: 250, y: 300, size: 50 },
+      { type: 'snow', x: 100, y: 0, size: 50 }
     ]
   },
   199: {
     id: 199,
-    name: '极地深渊',
+    name: '永冻长廊',
+    difficulty: 'expert',
+    optimal: 40,
+    par: 40,
+    penguin: { x: 150, y: 200 },
+    stones: [{ x: 250, y: 50, size: 40 }, { x: 200, y: 200, size: 40 }, { x: 100, y: 200, size: 40 }],
+    target: { x: 50, y: 50, width: 50, height: 150 },
+    obstacles: [
+      { type: 'wall', x: 0, y: 300, size: 50 },
+      { type: 'wall', x: 50, y: 300, size: 50 },
+      { type: 'wall', x: 150, y: 100, size: 50 },
+      { type: 'wall', x: 200, y: 100, size: 50 },
+      { type: 'wall', x: 250, y: 100, size: 50 },
+      { type: 'wall', x: 300, y: 100, size: 50 },
+      { type: 'wall', x: 300, y: 150, size: 50 },
+      { type: 'wall', x: 300, y: 200, size: 50 },
+      { type: 'wall', x: 300, y: 250, size: 50 },
+      { type: 'wall', x: 300, y: 300, size: 50 },
+      { type: 'wall', x: 50, y: 0, size: 50 },
+      { type: 'wall', x: 100, y: 0, size: 50 },
+      { type: 'wall', x: 150, y: 0, size: 50 },
+      { type: 'hole', x: 150, y: 150, size: 50 },
+      { type: 'hole', x: 100, y: 250, size: 50 },
+      { type: 'hole', x: 150, y: 300, size: 50 },
+      { type: 'hole', x: 200, y: 300, size: 50 },
+      { type: 'snow', x: 100, y: 350, size: 50 },
+      { type: 'snow', x: 250, y: 200, size: 50 }
+    ]
+  },
+  200: {
+    id: 200,
+    name: '无尽寒潮',
     difficulty: 'expert',
     optimal: 41,
     par: 41,
@@ -5662,35 +5712,6 @@ export const GENERATED_LEVELS = {
       { type: 'snow', x: 0, y: 400, size: 50 },
       { type: 'snow', x: 0, y: 100, size: 50 },
       { type: 'snow', x: 300, y: 200, size: 50 }
-    ]
-  },
-  200: {
-    id: 200,
-    name: '绝境推演',
-    difficulty: 'expert',
-    optimal: 42,
-    par: 42,
-    penguin: { x: 150, y: 300 },
-    stones: [{ x: 50, y: 50, size: 40 }, { x: 150, y: 250, size: 40 }, { x: 100, y: 50, size: 40 }],
-    target: { x: 200, y: 100, width: 100, height: 100 },
-    obstacles: [
-      { type: 'wall', x: 150, y: 0, size: 50 },
-      { type: 'wall', x: 150, y: 50, size: 50 },
-      { type: 'wall', x: 0, y: 250, size: 50 },
-      { type: 'wall', x: 0, y: 300, size: 50 },
-      { type: 'wall', x: 0, y: 350, size: 50 },
-      { type: 'wall', x: 150, y: 350, size: 50 },
-      { type: 'wall', x: 200, y: 350, size: 50 },
-      { type: 'wall', x: 250, y: 0, size: 50 },
-      { type: 'wall', x: 300, y: 0, size: 50 },
-      { type: 'wall', x: 100, y: 150, size: 50 },
-      { type: 'hole', x: 100, y: 250, size: 50 },
-      { type: 'hole', x: 300, y: 150, size: 50 },
-      { type: 'hole', x: 250, y: 300, size: 50 },
-      { type: 'hole', x: 200, y: 50, size: 50 },
-      { type: 'snow', x: 50, y: 400, size: 50 },
-      { type: 'snow', x: 50, y: 100, size: 50 },
-      { type: 'snow', x: 250, y: 350, size: 50 }
     ]
   },
 }

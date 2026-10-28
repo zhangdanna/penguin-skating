@@ -40,6 +40,9 @@ export default class ResultScene {
     // 动画参数
     this.titleScale = 0
     this.starScales = [0, 0, 0]
+    // 每颗星"亮起的那一帧"只回调一次，供音频层给一声叮
+    this.starRevealed = [false, false, false]
+    this.onStarReveal = null
 
     this.init()
   }
@@ -155,6 +158,7 @@ export default class ResultScene {
     this.isVisible = true
     this.titleScale = 0
     this.starScales = [0, 0, 0]
+    this.starRevealed = [false, false, false]
   }
 
   hide() {
@@ -188,6 +192,18 @@ export default class ResultScene {
         if (this.starScales[i] < 1) {
           this.starScales[i] += 0.15
           if (this.starScales[i] > 1) this.starScales[i] = 1
+
+          // 亮起的那一帧回调一次（音频层据此给一声"叮"，音高逐颗升高）
+          if (!this.starRevealed[i]) {
+            this.starRevealed[i] = true
+            if (this.onStarReveal) {
+              try {
+                this.onStarReveal(i)
+              } catch (e) {
+                console.warn('[Result] 星级音效回调失败:', e)
+              }
+            }
+          }
         }
       }
     }

@@ -39,6 +39,10 @@
         "type": "folder"
       },
       {
+        "value": "design-preview",
+        "type": "folder"
+      },
+      {
         "value": "README.md",
         "type": "file"
       },

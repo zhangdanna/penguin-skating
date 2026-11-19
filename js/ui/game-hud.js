@@ -46,6 +46,10 @@ export default class GameHUD {
     this.undoSteps = 0
     this.foodTotal = 0
 
+    // 本关重玩的入场费（由 game.js 每次加载关卡时同步）
+    // 0 表示本关免费（教程关），角标显示「免费」，否则显示 -N🐟
+    this.restartCost = 0
+
     // 纵向锚点，未传入时退回默认（贴屏幕边缘）
     this.panelY = 6
     this.buttonY = null
@@ -105,6 +109,9 @@ export default class GameHUD {
         label: '重玩',
         color: COLORS.lavender,
         deepColor: COLORS.lavenderDeep,
+        // 消耗必须可见：重玩会重新扣入场费，0 费关卡直接写「免费」
+        // （不写角标时，玩家在教程关重玩看不出任何扣费信号，会以为是 bug）
+        badge: this.getRestartBadge(),
         onClick: () => this.onRestartClick && this.onRestartClick()
       }
     ]
@@ -138,6 +145,32 @@ export default class GameHUD {
     if (typeof state.steps === 'number') this.undoSteps = state.steps
     if (typeof state.food === 'number') this.foodTotal = state.food
     this.refreshActionButtons()
+  }
+
+  /**
+   * 重玩角标文案
+   * @returns {string}
+   */
+  getRestartBadge() {
+    const cost = this.restartCost
+    if (!cost || cost <= 0) return '免费'
+    return `-${cost}🐟`
+  }
+
+  /**
+   * 同步本关重玩的入场费（含 0 费教程关）
+   *
+   * 只改角标文案、不重建按钮：重建会丢掉按压态，也会在关卡切换时闪一下。
+   * @param {number} cost
+   */
+  setRestartCost(cost) {
+    const next = Math.max(0, Math.round(cost) || 0)
+    if (next === this.restartCost) return
+    this.restartCost = next
+
+    if (!this.actionButtons) return
+    const restart = this.actionButtons.find(item => item.id === 'restart')
+    if (restart) restart.badge = this.getRestartBadge()
   }
 
   /**

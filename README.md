@@ -49,7 +49,7 @@
 | 社交 | 微信开放数据域 `open-data/` 好友排行榜；分享纯传播、不绑定奖励 |
 | 平台能力 | 隐私授权、热更新、`wx.onError` / `wx.onUnhandledRejection` |
 | 构建 / 发布 | Node.js ESM 脚本；`miniprogram-ci` 上传；H5 自带补后缀静态服务器 |
-| 测试 | `tools/regression/run.mjs` 用 `node:vm` 加载真实模块做离线断言（380 项） |
+| 测试 | `tools/regression/run.mjs` 用 `node:vm` 加载真实模块做离线断言（382 项） |
 | 后端 | 无后端；进度、食物、成就在本地，排行榜依赖微信开放数据域 |
 
 补充说明：
@@ -75,7 +75,7 @@ npm install
 | 上传小游戏 | `npm run upload -- 1.0.1 "版本说明"` |
 | 构建并上传 | `npm run release -- 1.0.1 "版本说明"` |
 | 生成真机预览二维码 | `npm run preview -- 1.0.0 "预览说明"` |
-| 回归测试 | `npm test`（380 项） |
+| 回归测试 | `npm test`（382 项） |
 | 验证画布环境 | `npm run verify:env` |
 | 重新烘焙关卡 | `node tools/gen-levels.mjs 200` |
 | 重新生成分享图 / 图标 | `python tools/gen-share-image.py` / `python tools/gen-icon.py`（需 Pillow） |

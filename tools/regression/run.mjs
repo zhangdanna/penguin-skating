@@ -2016,6 +2016,16 @@ if (entryCost > 0) {
 game.loadLevel = originalLoadLevel
 game.moves = 0
 
+// 重玩的消耗必须可见：0 费关卡写「免费」，收费关卡写 -N🐟
+// （没有角标时，玩家在教程关重玩看不到任何扣费信号，会误以为重玩不花钱）
+game.gameHUD.setRestartCost(0)
+check('入场费 0 的关卡，重玩角标显示「免费」',
+  restartBtn.badge === '免费', `${restartBtn.badge}`)
+game.gameHUD.setRestartCost(3)
+check('入场费 3 的关卡，重玩角标显示 -3🐟',
+  restartBtn.badge === '-3🐟', `${restartBtn.badge}`)
+game.gameHUD.setRestartCost(0)
+
 // 排行榜补同步：没有通关记录时不该发上报
 check('syncLocalRecord 返回布尔值且不抛异常',
   typeof game.wechatService.syncLocalRecord() === 'boolean')

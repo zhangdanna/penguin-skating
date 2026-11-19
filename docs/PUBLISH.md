@@ -14,7 +14,7 @@
 | 上传微信小游戏 | `npm run upload -- 1.0.1 "版本说明"` |
 | 构建并上传 | `npm run release -- 1.0.1 "版本说明"` |
 | 生成真机预览二维码 | `npm run preview -- 1.0.0 "预览说明"` |
-| 回归测试 | `npm test`（当前 380 项） |
+| 回归测试 | `npm test`（当前 382 项） |
 | 验证画布环境 | `npm run verify:env` |
 | 重新烘焙关卡 | `node tools/gen-levels.mjs 200` |
 
@@ -251,7 +251,7 @@ penguin-skating-game/
 
 ## 4. 发布前 30 秒检查
 
-- [ ] `npm test` 全绿（380 项，0 失败）
+- [ ] `npm test` 全绿（382 项，0 失败）
 - [ ] `npm run verify:env` 三种环境全部通过
 - [ ] `npm run build:weapp` 成功，包体 < 4MB
 - [ ] `project.config.json` 的 `appid` 是正式号

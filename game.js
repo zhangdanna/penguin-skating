@@ -859,6 +859,8 @@ export default class Main {
       // 更新HUD
       this.gameHUD.setLevelInfo(levelNum, levelData.par)
       this.gameHUD.setMoves(0)
+      // 重玩的入场费和本关一致：0 费教程关显示「免费」，其余显示 -N🐟
+      this.gameHUD.setRestartCost(cost)
       this.syncUndoButton()
 
       // 通知结算管理器开始关卡

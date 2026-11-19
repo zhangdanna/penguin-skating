@@ -691,6 +691,56 @@ const watchQuit = adOn.showRewardedVideoAd()
 adCloseCb({ isEnded: false })
 check('中途关闭 → resolve(false)', (await watchQuit) === false)
 
+// 广告位不可用（未开通流量主 / 广告位不存在）时平台会回致命错误码：
+// 必须自断并通知外部收回入口，否则玩家看到的是「点了没反应」的死按钮
+let adErrCb = null
+let adDestroyed = 0
+wxBase.createRewardedVideoAd = () => ({
+  load: () => Promise.resolve(),
+  show: () => Promise.resolve(),
+  onLoad() {},
+  onError(cb) { adErrCb = cb },
+  onClose() {},
+  destroy() { adDestroyed++ }
+})
+
+const adFatal = new AdManager({ rewardedVideo: 'adunit-1234567890abcdef' })
+const invalidCalls = []
+adFatal.onInvalid = (reason) => invalidCalls.push(reason)
+adFatal.init()
+check('广告实例创建后默认可用', adFatal.isRewardedVideoAvailable() === true)
+
+adErrCb({ errCode: 1008, errMsg: 'adunit not found' })
+check('收到 1008（广告位不存在 / 未开通流量主）→ 永久关闭',
+  adFatal.isRewardedVideoAvailable() === false && adFatal.isInvalid() === true)
+check('致命错误销毁实例并回调 onInvalid（带原因标签）',
+  adDestroyed === 1 && invalidCalls.length === 1 && invalidCalls[0] === 'ad-unit-not-found',
+  `destroyed=${adDestroyed} calls=${JSON.stringify(invalidCalls)}`)
+
+adErrCb({ errCode: 1008, errMsg: 'again' })
+check('连续回致命错误 → onInvalid 只触发一次（幂等）', invalidCalls.length === 1)
+check('永久关闭后 showRewardedVideoAd 直接 resolve(false)',
+  (await adFatal.showRewardedVideoAd()) === false)
+
+// 非致命错误不能收回入口：素材没就绪是常态，一次没广告不该让入口永久消失
+let adSoftErrCb = null
+wxBase.createRewardedVideoAd = () => ({
+  load: () => Promise.resolve(),
+  show: () => Promise.resolve(),
+  onLoad() {},
+  onError(cb) { adSoftErrCb = cb },
+  onClose() {},
+  destroy() {}
+})
+const adSoft = new AdManager({ rewardedVideo: 'adunit-1234567890abcdef' })
+let softInvalid = 0
+adSoft.onInvalid = () => { softInvalid++ }
+adSoft.init()
+adSoftErrCb({ errCode: 1003, errMsg: 'no suitable ad' })
+check('非致命错误（1003 无合适素材）保留入口，不回调 onInvalid',
+  adSoft.isRewardedVideoAvailable() === true && softInvalid === 0,
+  `available=${adSoft.isRewardedVideoAvailable()} invalid=${softInvalid}`)
+
 console.log('\n[15] B3 资源补齐')
 const shareImage = path.join(ROOT, 'images/share-image.png')
 const bgmFile = path.join(ROOT, 'audio/bgm.wav')

@@ -201,8 +201,9 @@ npm test          # node --experimental-vm-modules tools/regression/run.mjs
 npm run verify:env
 ```
 
-- 当前 **318 项**，分组 `[1]`~`[26]`（布局自适应、坐标映射、通关结算、状态复位、开放数据域、
-  合规项、广告、隐私、包体排除、奖励与成就、退一步、底部按钮、体力恢复等）。
+- 当前 **380 项**，分组 `[1]`~`[29]`（布局自适应、坐标映射、通关结算、状态复位、开放数据域、
+  合规项、广告（含致命错误码自断）、隐私、包体排除、奖励与成就、退一步、底部按钮、体力恢复、
+  新手引导、排行榜授权等）。
 - 加载器是「静态建图 → 按依赖顺序 link → 按依赖顺序 evaluate」三段式，不要改回递归 link
   （会触发 V8 `not been linked`）。`loadModule()` 返回 `vm.SourceTextModule`，默认导出在 `mod.namespace.default`。
 - **断言不要写死关卡编号 / par / 解法**：关卡重编号过两次，现在整批由生成器产出，

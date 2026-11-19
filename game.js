@@ -304,8 +304,15 @@ export default class Main {
     }
 
     // 广告实例可能在后台被回收，回前台重新探测
+    // （已因致命错误关闭的不会被重新打开：isRewardedVideoAvailable 会返回 false）
     if (this.adManager) {
+      const wasAvailable = this.adAvailable
       this.adAvailable = this.adManager.isRewardedVideoAvailable()
+      if (wasAvailable !== this.adAvailable) {
+        this.applyAdAvailability()
+      }
+      // 后台期间素材缓存可能已过期，顺手补拉一次，缩短下次点击的等待
+      if (this.adAvailable) this.adManager.preload()
     }
   }
 
@@ -530,10 +537,35 @@ export default class Main {
    */
   initAds() {
     this.adManager = new AdManager(AD_UNITS)
+
+    // 广告位配置有误（未开通流量主 / 广告位不存在）时平台会回致命错误码。
+    // 此时必须把入口一并收回，否则玩家看到的是「点了没反应」的死按钮。
+    this.adManager.onInvalid = (reason) => {
+      console.warn(`[Ad] 广告位不可用（${reason}），隐藏所有广告入口`)
+      this.adAvailable = false
+      this.applyAdAvailability()
+    }
+
     this.adManager.init()
     this.adAvailable = this.adManager.isRewardedVideoAvailable()
 
     console.log(`[Ad] 激励视频可用: ${this.adAvailable}`)
+  }
+
+  /**
+   * 把广告可用性同步到所有广告入口
+   *
+   * 三个入口：复活面板「看视频复活」/ 失败结算「看广告复活」/
+   * 食物不足时「看广告换食物」（后者直接读 this.adAvailable，不需要同步）。
+   * 场景尚未创建时跳过 —— initAds 早于 initRevive / initSettlement 执行。
+   */
+  applyAdAvailability() {
+    if (this.reviveScene) {
+      this.reviveScene.setOptionVisible('watchAd', this.adAvailable)
+    }
+    if (this.gameOverScene) {
+      this.gameOverScene.setWatchAdVisible(this.adAvailable)
+    }
   }
 
   /**
@@ -657,7 +689,7 @@ export default class Main {
     this.reviveScene.onGiveUp = () => this.onReviveGiveUp()
 
     // 广告未接入时隐藏"看视频复活"入口
-    this.reviveScene.setOptionVisible('watchAd', this.adAvailable)
+    this.applyAdAvailability()
   }
 
   /**
@@ -670,8 +702,8 @@ export default class Main {
     this.gameOverScene.onBackToMenu = () => this.onGameOverBackToMenu()
     this.gameOverScene.onWatchAd = () => this.onGameOverWatchAd()
 
-    // 广告位未接入前隐藏"看广告复活"，避免玩家点到未实现的入口（B 批次接入真实广告位）
-    this.gameOverScene.setWatchAdVisible(this.adAvailable)
+    // 广告位未接入 / 已失效时隐藏"看广告复活"，避免玩家点到未实现的入口
+    this.applyAdAvailability()
   }
 
   /**

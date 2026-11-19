@@ -213,7 +213,7 @@ export default class MenuScene {
    * 旧文案只说「推到目标区域」，而目标区当时画得和冰块同色，玩家找不到。
    */
   renderInstructions(ctx) {
-    drawStickerText(ctx, '滑动屏幕 · 把冰块推到小鱼展台', CENTER_X, 634, {
+    drawStickerText(ctx, '滑动屏幕 · 用最短路径把冰块推到小鱼展台', CENTER_X, 634, {
       size: 13,
       color: COLORS.white,
       stroke: COLORS.navyDeep,

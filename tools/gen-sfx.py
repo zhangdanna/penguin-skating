@@ -206,39 +206,42 @@ def build_back():
 
 
 def build_slide():
-    """企鹅滑行一格：冰刀擦冰面。中高频带通噪声上扫 + 颗粒调制，短促不刺耳"""
-    dur = 0.26
+    """企鹅滑行一格：冰刀擦冰面。比 push 更高频、更轻、更短，区分"自己走"和"推东西"。
+    落地"嗒"减到很小，原版 0.28 会让人觉得每步都敲一下。"""
+    dur = 0.22
     t = tt(dur)
-    body = sweep_noise(dur, [(700, 1600, 0.9), (1600, 3400, 1.0), (3400, 6500, 0.55)], 1.0)
+    body = sweep_noise(dur, [(900, 1800, 0.9), (1800, 3800, 1.0), (3800, 7000, 0.50)], 1.0)
     # 颗粒感：8~14Hz 的随机幅度起伏，模拟冰面碎屑
     grit = 0.75 + 0.25 * np.sin(2 * np.pi * 11 * t + RNG.uniform(0, 6.28))
-    body *= grit * np.exp(-t / 0.075)
-    # 落地"嗒"：极短的木质触感，让移动有终点
-    click = marimba(392.0, 0.09, 0.28, tau=0.03)
+    body *= grit * np.exp(-t / 0.060)
+    # 落地"嗒"：减到极轻，只是让移动有终点，不是"敲"
+    click = marimba(523.0, 0.06, 0.12, tau=0.025)
     x = body * 1.0
-    x[-len(click):] += click[: len(click)] * 0.9
-    x = fade(x, 0.002, 0.02)
-    return normalize(x, -18.0)
+    x[-len(click):] += click[: len(x)] * 0.5
+    x = fade(x, 0.002, 0.018)
+    return normalize(x, -19.0)
 
 
 def build_push():
-    """推冰块：低频"咕"的体感 + 冰面摩擦 + 冰块位移的颗粒。比滑行更重、更长"""
-    dur = 0.30
+    """推冰块：冰块在冰面上滑动的摩擦 + 颗粒感 + 轻微木质位移感。
+    原版有 85Hz 低频 thump（"咚"），太重了，玩家每次推冰都像敲鼓。
+    thump 只留给 build_bump（撞墙），推冰应该是"嚓——"的摩擦，不是"咚"。"""
+    dur = 0.28
     t = tt(dur)
-    # 低频体感：85Hz 下滑到 55Hz
-    f = 85 * np.exp(-t / 0.09) + 55
-    thump = np.sin(2 * np.pi * np.cumsum(f) / SR_SFX) * np.exp(-t / 0.085) * 0.9
-    # 冰块在冰面上滑：中低频噪声，慢衰减
-    rub = ice_noise(dur, 500, 2200, 0.55, tau=0.13)
-    # 冰块启动的"咯"：两个短脉冲
-    ticks = np.zeros_like(t)
-    for at, g in ((0.0, 0.35), (0.055, 0.22)):
-        i = ns(at)
-        seg = marimba(220.0, 0.06, g, tau=0.022)
-        ticks[i:i + len(seg)] += seg[: len(ticks) - i]
-    x = thump + rub + ticks
-    x = fade(x, 0.002, 0.03)
-    return normalize(x, -17.0)
+    # 主体：中高频带通噪声上扫，模拟冰块在冰面被推着走
+    body = sweep_noise(dur, [(400, 1200, 0.7), (1200, 2800, 1.0), (2800, 5200, 0.45)], 1.0)
+    # 颗粒调制：6~10Hz 随机起伏，冰面碎屑的颗粒感
+    grit = 0.70 + 0.30 * np.sin(2 * np.pi * 8 * t + RNG.uniform(0, 6.28))
+    body *= grit * np.exp(-t / 0.10)
+    # 冰块启动的"咯"：一个短脉冲（不是两个），轻一点
+    click = marimba(280.0, 0.05, 0.18, tau=0.018)
+    x = body * 1.0
+    x[:len(click)] += click[:len(x)] * 0.6
+    # 收尾：极轻的高频"嚓"，让冰块停下来的感觉
+    tail = ice_noise(0.06, 3000, 6000, 0.15, tau=0.03)
+    x[-len(tail):] += tail[:len(x)] * 0.5
+    x = fade(x, 0.002, 0.025)
+    return normalize(x, -19.0)
 
 
 def build_bump():
@@ -382,38 +385,79 @@ def build_level_start():
 
 
 # ---------------------------------------------------------------- BGM
+#
+# 设计意图：糖果海洋馆 —— 明亮、跳跃、充满活力。
+# 原版（90BPM 空灵版）的问题：铺底 pad 低通到 2.2k、旋律稀疏留白多、
+# 1.4s 长混响 → 听感像教堂 / 水族馆走廊，和"色彩显眼的快乐"完全不搭。
+#
+# 改版要点：
+# 1. BPM 90→112，每拍 0.536s，节奏更弹。
+# 2. 和声 C-G-Am-F（流行欢快四和弦循环），不是 C-Am-F-G（民谣抒情）。
+# 3. 旋律密集化：每小节 5~8 个音，短促跳跃的木琴 + 冰晶铃，有明确的记忆点。
+# 4. 贝斯改为断奏 bounce bass（反拍弹），去掉"拖尾 pad"。
+# 5. 打击层：正拍木制 thump + 反拍气泡弹跳，形成"蹦蹦"律动感。
+# 6. 混响从 1.4s → 0.5s，去掉空间感，保持贴脸的明亮。
+# 7. 去掉高空冰晶点缀（那是空灵的核心来源）。
 
-BPM = 90.0
-BEAT = 60.0 / BPM          # 0.667s
-BAR = BEAT * 4             # 2.667s
-BARS = 6
-TOTAL = BAR * BARS         # 16s
+BPM = 112.0
+BEAT = 60.0 / BPM          # ~0.536s
+BAR = BEAT * 4             # ~2.143s
+BARS = 8                   # 8 小节 → 约 17.1s
+TOTAL = BAR * BARS         # ~17.1s
 
 NOTES = {
     'C3': 130.81, 'D3': 146.83, 'E3': 164.81, 'F3': 174.61, 'G3': 196.00, 'A3': 220.00, 'B3': 246.94,
     'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'F4': 349.23, 'G4': 392.00, 'A4': 440.00, 'B4': 493.88,
     'C5': 523.25, 'D5': 587.33, 'E5': 659.25, 'F5': 698.46, 'G5': 783.99, 'A5': 880.00, 'B5': 987.77,
-    'C6': 1046.50, 'D6': 1174.66, 'E6': 1318.51,
+    'C6': 1046.50, 'D6': 1174.66, 'E6': 1318.51, 'F6': 1396.91, 'G6': 1567.98,
 }
 
-# 和声：C - Am - F - G - Am - G，末小节停在 G，回环到 C 是自然的半终止
+# 和声走向：C - G - Am - F × 2（经典流行欢快循环，每两小节一组）
+# C 大调，I-V-vi-IV，末尾 F→C 回环是自然解决
 PROGRESSION = [
-    ('C3', ['C4', 'E4', 'G4']),
-    ('A3', ['A3', 'C4', 'E4']),
-    ('F3', ['F3', 'A3', 'C4']),
-    ('G3', ['G3', 'B3', 'D4']),
-    ('A3', ['A3', 'C4', 'E4']),
-    ('G3', ['G3', 'B3', 'D4']),
+    ('C3', ['C4', 'E4', 'G4']),     # I  C
+    ('G3', ['G3', 'B3', 'D4']),     # V  G
+    ('A3', ['A3', 'C4', 'E4']),     # vi Am
+    ('F3', ['F3', 'A3', 'C4']),     # IV F
+    ('C3', ['C4', 'E4', 'G4']),     # I  C
+    ('G3', ['G3', 'B3', 'D4']),     # V  G
+    ('A3', ['A3', 'C4', 'E4']),     # vi Am
+    ('F3', ['F3', 'A3', 'C4']),     # IV F  → 回 C
 ]
 
-# 主旋律：稀疏，留白多。每小节 2~3 个音，避免"琶音轰炸"
+# 主旋律：密集、跳跃、有记忆点。
+# 设计为"问答式"：前 4 小节是主题陈述（A 段），后 4 小节是变奏加花（B 段）。
+# 每个音时值单位 = 拍数（BEAT）。0.5 = 八分音符，0.25 = 十六分音符。
+# 第 3 参数是时长（拍），不是秒。
 MELODY = [
-    [(0.0, 'E5', 1.5), (1.5, 'G5', 0.9), (2.5, 'E5', 1.0)],
-    [(0.0, 'A5', 1.4), (1.5, 'G5', 0.8), (2.5, 'E5', 1.2)],
-    [(0.0, 'F5', 1.6), (1.75, 'A5', 0.8), (2.75, 'C6', 1.0)],
-    [(0.0, 'D6', 1.4), (1.5, 'B5', 1.0), (2.75, 'G5', 1.0)],
-    [(0.0, 'A5', 1.5), (1.5, 'C6', 1.2)],
-    [(0.0, 'B5', 1.6), (1.75, 'D6', 0.9), (2.75, 'B5', 1.0)],
+    # ---- A 段：主题 ----
+    # 小节 1 (C)：E5 G5 E5 G5 + C6 跳上去 → 明亮开场
+    [(0.0, 'E5', 0.5), (0.5, 'G5', 0.5), (1.0, 'E5', 0.5), (1.5, 'G5', 0.5),
+     (2.0, 'C6', 0.75), (2.75, 'G5', 0.5), (3.25, 'E5', 0.5)],
+    # 小节 2 (G)：D5 B4 D5 G5 → 下行再上行，像水草摇摆
+    [(0.0, 'D5', 0.5), (0.5, 'B4', 0.5), (1.0, 'D5', 0.5), (1.5, 'G5', 0.5),
+     (2.0, 'A5', 0.75), (2.75, 'G5', 0.5), (3.25, 'D5', 0.5)],
+    # 小节 3 (Am)：C5 E5 A5 + 高音点缀 → Am 的柔和感但旋律往高走
+    [(0.0, 'C5', 0.5), (0.5, 'E5', 0.5), (1.0, 'A5', 0.75), (1.75, 'G5', 0.25),
+     (2.0, 'E5', 0.5), (2.5, 'C5', 0.5), (3.0, 'E5', 0.75)],
+    # 小节 4 (F)：F5 A5 C6 F5 → F 大调上行琶音感，收尾回 E5 悬接到 C
+    [(0.0, 'F5', 0.5), (0.5, 'A5', 0.5), (1.0, 'C6', 0.75), (1.75, 'A5', 0.25),
+     (2.0, 'F5', 0.5), (2.5, 'E5', 0.5), (3.0, 'D5', 0.75)],
+    # ---- B 段：变奏加花，情绪推高 ----
+    # 小节 5 (C)：十六分音符跑动 E5-G5-C6-E6 + 跳下来
+    [(0.0, 'E5', 0.25), (0.25, 'G5', 0.25), (0.5, 'C6', 0.25), (0.75, 'E6', 0.5),
+     (1.25, 'D6', 0.25), (1.5, 'C6', 0.25), (1.75, 'G5', 0.5),
+     (2.25, 'E5', 0.5), (2.75, 'G5', 0.5), (3.25, 'C6', 0.5)],
+    # 小节 6 (G)：B5 D6 G6 + 下行瀑布音
+    [(0.0, 'B5', 0.5), (0.5, 'D6', 0.5), (1.0, 'G6', 0.5),
+     (1.5, 'F6', 0.25), (1.75, 'E6', 0.25), (2.0, 'D6', 0.25), (2.25, 'B5', 0.25),
+     (2.5, 'G5', 0.5), (3.0, 'A5', 0.5), (3.5, 'B5', 0.5)],
+    # 小节 7 (Am)：A5 C6 E6 + 回落，Am 的柔和但保持亮度
+    [(0.0, 'A5', 0.5), (0.5, 'C6', 0.5), (1.0, 'E6', 0.75), (1.75, 'C6', 0.25),
+     (2.0, 'A5', 0.5), (2.5, 'G5', 0.5), (3.0, 'E5', 0.75)],
+    # 小节 8 (F)：F5 A5 C6 + 下行收尾回 C5，为循环接缝做准备
+    [(0.0, 'F5', 0.5), (0.5, 'A5', 0.5), (1.0, 'C6', 0.5), (1.5, 'A5', 0.5),
+     (2.0, 'G5', 0.5), (2.5, 'E5', 0.5), (3.0, 'C5', 1.0)],
 ]
 
 
@@ -431,71 +475,132 @@ def add(buf, seg, at, sr):
     return buf
 
 
+def _bgm_melody_voice(freq, dur, sr=SR_BGM):
+    """BGM 旋律音色：木琴 + 冰晶铃混合，明亮跳跃，快衰减"""
+    t = np.arange(int(round(dur * sr))) / sr
+    # 木琴主体
+    x = np.sin(2 * np.pi * freq * t) * np.exp(-t / 0.14)
+    x += 0.30 * np.sin(2 * np.pi * freq * 3.93 * t) * np.exp(-t / 0.045)
+    x += 0.08 * np.sin(2 * np.pi * freq * 9.2 * t) * np.exp(-t / 0.018)
+    # 冰晶铃点缀（高频 FM，短）
+    mod = 1.2 * np.exp(-t / 0.04) * np.sin(2 * np.pi * freq * 2.0 * t)
+    x += 0.15 * np.sin(2 * np.pi * freq * t + mod) * np.exp(-t / 0.10)
+    # 极短木质 click（起音触感）
+    click = fft_filter(noise(dur, sr), sr, lo=2000, hi=8000) * np.exp(-t / 0.004) * 0.12
+    x += click
+    x *= np.clip(t / 0.003, 0, 1)
+    return x
+
+
+def _bgm_bounce_bass(freq, sr=SR_BGM):
+    """断奏 bounce bass：正拍短弹 + 反拍短弹，制造蹦蹦跳跳的律动"""
+    dur = BEAT * 0.45
+    t = np.arange(int(round(dur * sr))) / sr
+    # 基频 + 少量二次谐波，快衰减 = 弹性感
+    x = np.sin(2 * np.pi * freq * t) * np.exp(-t / 0.06)
+    x += 0.25 * np.sin(2 * np.pi * freq * 2 * t) * np.exp(-t / 0.03)
+    x *= np.clip(t / 0.004, 0, 1)
+    return x
+
+
 def build_bgm():
     n = ns(TOTAL, SR_BGM)
     buf = np.zeros(n)
 
-    # 1) 铺底 pad：每小节一个和弦，慢起音，长衰减
+    # 1) 和弦垫：短起音 + 中衰减，不高通（保持温暖但不空灵）
+    #    低通 3.5k（原版 2.2k 太闷），用三角波加柔和度
     for bar, (bass, chord) in enumerate(PROGRESSION):
         start = bar * BAR
         for note in chord:
             f = NOTES[note]
-            seg = np.zeros(ns(BAR * 1.25, SR_BGM))
-            t = np.arange(len(seg)) / SR_BGM
-            # 两个微失谐正弦 → 轻微合唱感，纯正弦太"干"
-            wave_ = np.sin(2 * np.pi * f * t) + 0.55 * np.sin(2 * np.pi * f * 1.003 * t)
-            env = np.clip(t / 0.35, 0, 1) * np.exp(-t / 1.6)
-            seg = fft_filter(wave_ * env, SR_BGM, hi=2200) * 0.11
+            seg_len = ns(BAR * 0.95, SR_BGM)
+            t = np.arange(seg_len) / SR_BGM
+            # 三角波 + 微失谐正弦 → 比纯正弦有"肉"但不糊
+            tri = 2 / np.pi * np.arcsin(np.sin(2 * np.pi * f * t))
+            sine = np.sin(2 * np.pi * f * 1.004 * t)
+            wave_ = tri * 0.6 + sine * 0.4
+            # 比原版快得多的起音和衰减
+            env = np.clip(t / 0.04, 0, 1) * np.exp(-t / 0.55)
+            seg = fft_filter(wave_ * env, SR_BGM, hi=3500) * 0.09
             add(buf, seg, start, SR_BGM)
-        # 低音
-        seg = np.zeros(ns(BAR * 1.2, SR_BGM))
-        t = np.arange(len(seg)) / SR_BGM
-        seg = np.sin(2 * np.pi * NOTES[bass] * t) * np.clip(t / 0.05, 0, 1) * np.exp(-t / 1.3) * 0.26
-        add(buf, seg, start, SR_BGM)
 
-    # 2) 主旋律：音乐盒音色（基频 + 2/3 次泛音，快衰减）
+    # 2) Bounce bass：正拍 + 反拍，每拍都有短弹
+    for bar, (bass_note, _) in enumerate(PROGRESSION):
+        f = NOTES[bass_note]
+        # 正拍
+        seg = _bgm_bounce_bass(f, SR_BGM)
+        add(buf, seg * 0.30, bar * BAR + 0.0, SR_BGM)
+        add(buf, seg * 0.30, bar * BAR + 2.0 * BEAT, SR_BGM)
+        # 反拍（稍弱）
+        seg2 = _bgm_bounce_bass(f, SR_BGM)
+        add(buf, seg2 * 0.20, bar * BAR + 1.0 * BEAT, SR_BGM)
+        add(buf, seg2 * 0.20, bar * BAR + 3.0 * BEAT, SR_BGM)
+        # 高八度贝斯在反拍的后半（"蹦-蹦"感）
+        seg3 = _bgm_bounce_bass(f * 2, SR_BGM)
+        add(buf, seg3 * 0.12, bar * BAR + 1.5 * BEAT, SR_BGM)
+        add(buf, seg3 * 0.12, bar * BAR + 3.5 * BEAT, SR_BGM)
+
+    # 3) 主旋律：木琴 + 冰晶铃混合音色，密集跳跃
     for bar, phrase in enumerate(MELODY):
         for beat, note, length in phrase:
             f = NOTES[note]
-            dur = min(length * BEAT * 1.8, 2.2)
-            t = tt(dur, SR_BGM)
-            seg = np.sin(2 * np.pi * f * t) * np.exp(-t / 0.55)
-            seg += 0.30 * np.sin(2 * np.pi * f * 2 * t) * np.exp(-t / 0.28)
-            seg += 0.12 * np.sin(2 * np.pi * f * 3 * t) * np.exp(-t / 0.16)
-            seg += 0.05 * np.sin(2 * np.pi * f * 4.2 * t) * np.exp(-t / 0.08)
-            seg *= np.clip(t / 0.006, 0, 1)
-            add(buf, seg * 0.20, bar * BAR + beat * BEAT, SR_BGM)
+            dur = min(length * BEAT * 1.3, 0.8)
+            seg = _bgm_melody_voice(f, dur, SR_BGM)
+            add(buf, seg * 0.24, bar * BAR + beat * BEAT, SR_BGM)
 
-    # 3) 雪沙打击：反拍轻噪声，很轻，只做律动
+    # 4) 打击层：正拍木质 thump（像小鼓但更软）+ 反拍气泡弹跳
     for bar in range(BARS):
+        # 正拍 thump：低频短脉冲
+        thump_t = tt(0.06, SR_BGM)
+        thump = np.sin(2 * np.pi * 150 * thump_t) * np.exp(-thump_t / 0.025) * 0.10
+        thump += fft_filter(noise(0.06, SR_BGM), SR_BGM, lo=800, hi=3000) * np.exp(-thump_t / 0.015) * 0.06
+        add(buf, thump, bar * BAR + 0.0, SR_BGM)
+        add(buf, thump, bar * BAR + 2.0 * BEAT, SR_BGM)
+        # 反拍气泡弹跳：上滑正弦，"啵"一声
         for k in (1, 3):
-            at = bar * BAR + k * BEAT + BEAT * 0.5
-            seg = fft_filter(noise(0.10, SR_BGM), SR_BGM, lo=5000, hi=9500)
-            t = tt(0.10, SR_BGM)
-            seg *= np.exp(-t / 0.022) * 0.055
-            add(buf, seg, at, SR_BGM)
+            bub_dur = 0.08
+            bt = tt(bub_dur, SR_BGM)
+            bf = 400 + (600 - 400) * (1 - np.exp(-bt / (bub_dur * 0.3)))
+            phase = 2 * np.pi * np.cumsum(bf) / SR_BGM
+            bub = np.sin(phase) * np.exp(-bt / 0.04) * 0.08
+            add(buf, bub, bar * BAR + k * BEAT, SR_BGM)
 
-    # 4) 高空冰晶点缀：每 2 小节一颗，制造"空间"
-    for bar in (1, 4):
-        seg = fm_bell(NOTES['C6'], 1.2, 0.07, ratio=3.0, index=1.6, tau=0.35, tau_m=0.08, sr=SR_BGM)
-        add(buf, seg, bar * BAR + BEAT * 2.5, SR_BGM)
+    # 5) 副旋律：比主旋律低一个八度的应答，每 2 小节一句，填充中频
+    counter_melody = [
+        # 小节 3-4：C5→A4→G4，应答小节 1-2 的高音
+        (2, [(0.0, 'C5', 1.0), (1.0, 'A4', 0.5), (1.5, 'G4', 0.5), (2.5, 'A4', 1.0)]),
+        (3, [(0.0, 'F4', 0.75), (0.75, 'A4', 0.5), (1.25, 'C5', 0.75), (2.5, 'G4', 1.0)]),
+        # 小节 7-8：E5→C5→A4，应答 B 段
+        (6, [(0.0, 'E5', 0.75), (0.75, 'C5', 0.5), (1.25, 'A4', 0.75), (2.5, 'C5', 1.0)]),
+        (7, [(0.0, 'A4', 0.5), (0.5, 'C5', 0.5), (1.0, 'F4', 0.75), (2.25, 'E4', 0.75)]),
+    ]
+    for bar, phrase in counter_melody:
+        for beat, note, length in phrase:
+            f = NOTES[note]
+            dur = min(length * BEAT * 1.2, 0.6)
+            # 用木琴但更柔和（低通到 2.8k，衰减更慢）
+            t = tt(dur, SR_BGM)
+            seg = np.sin(2 * np.pi * f * t) * np.exp(-t / 0.20)
+            seg += 0.25 * np.sin(2 * np.pi * f * 3.93 * t) * np.exp(-t / 0.08)
+            seg = fft_filter(seg, SR_BGM, hi=2800) * 0.13
+            add(buf, seg, bar * BAR + beat * BEAT, SR_BGM)
 
-    # 5) 混响：IR 尾部折回开头 → 循环接缝处混响连续，不需要淡出
-    n_ir = ns(1.4, SR_BGM)
+    # 6) 混响：短（0.5s RT），只做贴脸的润色，不要空间感
+    #    IR 尾部折回开头 → 循环接缝处混响连续，不需要淡出
+    n_ir = ns(0.5, SR_BGM)
     t = np.arange(n_ir) / SR_BGM
-    ir = RNG.standard_normal(n_ir) * np.exp(-t / (1.4 / 6.9))
-    ir = fft_filter(ir, SR_BGM, lo=250, hi=5200)
+    ir = RNG.standard_normal(n_ir) * np.exp(-t / (0.5 / 6.9))
+    ir = fft_filter(ir, SR_BGM, lo=400, hi=6000)
     ir /= np.sqrt(np.sum(ir ** 2)) + 1e-9
     wet = conv(buf, ir)
     loop = wet[:n]
     tail = wet[n:]
-    # 关键：把超出循环长度的混响尾音加回开头，而不是切掉/淡出
     m = min(len(tail), n)
     loop[:m] += tail[:m]
-    buf = buf * 0.75 + loop * 0.42
+    buf = buf * 0.82 + loop * 0.22
 
     buf = dc_block(buf, SR_BGM, 30)
-    return normalize(buf, -21.0, -2.5)
+    return normalize(buf, -19.0, -2.0)
 
 
 # ---------------------------------------------------------------- 体检

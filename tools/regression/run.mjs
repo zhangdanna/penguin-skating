@@ -590,7 +590,11 @@ check('冰墙连通：没带 col/row 时退化为独立方块（不猜位置）'
   })())
 
 console.log('\n[11] 排行榜走开放数据域（A6）')
+// 排行榜现在是「先授权、再拉数据」：getFriendCloudStorage 需要
+// scope.WxFriendInteraction，测试沙箱没有小游戏环境，必须先模拟已授权。
+game.wechatService.ensureFriendAuth = () => Promise.resolve(true)
 game.sceneManager.switchTo('rank')
+await new Promise(resolve => setTimeout(resolve, 0))
 check('切换排行榜后下发了 SHOW_RANK',
   openDataMessages.some(m => m.type === 'SHOW_RANK'),
   JSON.stringify(openDataMessages.map(m => m.type)))
@@ -2110,6 +2114,216 @@ amgr.suspended = true
 const suspendedPlay = amgr.playCue('tap', { force: true })
 amgr.suspended = false
 check('后台挂起时拒绝播放（不碰音频实例）', suspendedPlay === false)
+
+console.log('\n[28] 新手引导：3 个手写教学关 + 引导气泡')
+const tutorialMod = await loadModule(path.join(ROOT, 'js/levels/tutorial-levels.js'))
+const TUTORIAL_LEVELS = tutorialMod.namespace.TUTORIAL_LEVELS
+const getTutorialHint = tutorialMod.namespace.getTutorialHint
+const tutorialIds = [1, 2, 3]
+
+check('第 1~3 关是手写教学盘面',
+  tutorialIds.every(id => !!TUTORIAL_LEVELS[id]),
+  tutorialIds.map(id => (TUTORIAL_LEVELS[id] ? 'ok' : 'missing')).join(','))
+
+let tutorialMatch = true
+let tutorialDetail = ''
+tutorialIds.forEach((id) => {
+  const lv = game.levelManager.getLevel(id)
+  const solved = solveBoard(levelToBoard(lv))
+  if (!solved.solvable || solved.optimal !== lv.optimal || lv.par !== lv.optimal) {
+    tutorialMatch = false
+    tutorialDetail += `L${id} 数据=${lv.optimal} par=${lv.par} BFS=${solved.optimal}; `
+  }
+})
+check('教学关可解，optimal / par 与 BFS 一致', tutorialMatch, tutorialDetail)
+
+const tutorialOptimals = tutorialIds.map(id => game.levelManager.getLevel(id).optimal)
+const level4Optimal = game.levelManager.getLevel(4).optimal
+check(`教学关不难过第 4 关（${tutorialOptimals.join('/')} ≤ ${level4Optimal}）`,
+  Math.max(...tutorialOptimals) <= level4Optimal,
+  `教学关 ${tutorialOptimals.join('/')} vs L4 ${level4Optimal}`)
+
+check('教学关都是 tutorial 档（入场费 0）',
+  tutorialIds.every(id => game.levelManager.getLevel(id).difficulty === 'tutorial'))
+
+// 概念覆盖：每关只多教一个概念，第 1 关除了「把冰推到展台」什么都不该出现
+const obstacleTypes = (id) => new Set(game.levelManager.getLevel(id).obstacles.map(o => o.type))
+check('第 1 关没有任何障碍物（只教「目标展台」）', obstacleTypes(1).size === 0,
+  [...obstacleTypes(1)].join(','))
+check('第 2 关同时出现冰墙与冰洞',
+  obstacleTypes(2).has('wall') && obstacleTypes(2).has('hole'),
+  [...obstacleTypes(2)].join(','))
+check('第 3 关出现雪堆', obstacleTypes(3).has('snow'), [...obstacleTypes(3)].join(','))
+
+let hintOk = true
+let hintDetail = ''
+tutorialIds.forEach((id) => {
+  const def = TUTORIAL_LEVELS[id]
+  if (!def.hints || !def.hints.length) {
+    hintOk = false
+    hintDetail += `L${id} 无提示; `
+    return
+  }
+  def.hints.forEach((hint) => {
+    const kind = hint.anchor && hint.anchor.kind
+    if (!hint.text || ['target', 'penguin', 'cell'].indexOf(kind) < 0) {
+      hintOk = false
+      hintDetail += `L${id} 锚点=${kind}; `
+    }
+    // 格子锚点必须真的落在本关的障碍上，否则会圈住一片空地
+    if (kind === 'cell') {
+      const lv = game.levelManager.getLevel(id)
+      const hit = lv.obstacles.some(o =>
+        Math.round(o.x / 50) === hint.anchor.col && Math.round(o.y / 50) === hint.anchor.row)
+      if (!hit) {
+        hintOk = false
+        hintDetail += `L${id} 锚点(${hint.anchor.col},${hint.anchor.row}) 无对应障碍; `
+      }
+    }
+  })
+})
+check('每关都有引导文案，锚点类型合法且指向真实存在的格子', hintOk, hintDetail)
+
+check('引导随步数推进（第 1 关先教滑动，再教推箱）',
+  getTutorialHint(1, 0).text !== getTutorialHint(1, 1).text,
+  `${getTutorialHint(1, 0).text} / ${getTutorialHint(1, 1).text}`)
+
+check('第 4 关起不再有引导', getTutorialHint(4, 0) === null)
+
+const targetSrc = fs.readFileSync(path.join(ROOT, 'js/runtime/target.js'), 'utf8')
+check('目标区带「目标」二字（不能只有一条小鱼）', /'目标'/.test(targetSrc))
+check('目标区用暖色展台 + 虚线（与冰块同色系会读成冰块）',
+  /setLineDash/.test(targetSrc) && /FFE3B9|FFF4DD/.test(targetSrc))
+
+// 小鱼随难度档成长：5 个阶段对应 5 个 difficulty，判定逻辑不参与
+const targetMod = await loadModule(path.join(ROOT, 'js/runtime/target.js'))
+const StageTargetClass = targetMod.namespace.default
+const stageForDifficulty = targetMod.namespace.stageForDifficulty
+const TARGET_STAGE_COUNT = targetMod.namespace.TARGET_STAGE_COUNT
+
+check('成长阶段数 = 5（对 5 个难度档）', TARGET_STAGE_COUNT === 5, String(TARGET_STAGE_COUNT))
+check('difficulty → 成长阶段一一对应',
+  stageForDifficulty('tutorial') === 0 &&
+  stageForDifficulty('easy') === 1 &&
+  stageForDifficulty('medium') === 2 &&
+  stageForDifficulty('hard') === 3 &&
+  stageForDifficulty('expert') === 4,
+  ['tutorial', 'easy', 'medium', 'hard', 'expert'].map(d => stageForDifficulty(d)).join(','))
+check('未知难度退回第 1 阶段，不会画成空白', stageForDifficulty('unknown') === 1)
+
+const clampedTarget = new StageTargetClass({ x: 0, y: 0, width: 50, height: 50, cellSize: 50, stage: 99 })
+check('stage 越界会被夹到最后一档', clampedTarget.stage === 4, String(clampedTarget.stage))
+
+// 5 个阶段必须都是暖色（R > G > B）：一旦有蓝色/绿色，
+// 「冷蓝棋盘 + 暖橙展台」的对比就废了，玩家又会找不到目标
+const stageBodies = targetSrc.match(/body: '(#[0-9A-Fa-f]{6})'/g) || []
+const warmEnough = stageBodies.length === 5 && stageBodies.every((entry) => {
+  const hex = entry.match(/#([0-9A-Fa-f]{6})/)[1]
+  const r = parseInt(hex.slice(0, 2), 16)
+  const g = parseInt(hex.slice(2, 4), 16)
+  const b = parseInt(hex.slice(4, 6), 16)
+  return r > g && g > b && r - b > 40
+})
+check('5 个成长阶段的鱼都是暖色（R > G > B）', warmEnough, stageBodies.join(' '))
+
+// 进关时目标区要拿到正确的阶段
+const lvStageCheck = [1, 9, 22, 80, 190].map((id) => {
+  const lv = game.levelManager.getLevel(id)
+  return stageForDifficulty(lv.difficulty)
+})
+check('按关卡难度取阶段（教程最幼、专家最华丽）',
+  lvStageCheck[0] === 0 && lvStageCheck[4] === 4 &&
+  lvStageCheck.every((v, i) => i === 0 || v >= lvStageCheck[i - 1]),
+  lvStageCheck.join(','))
+
+console.log('\n[29] 排行榜：授权门禁 / 排序口径 / 自己的成绩')
+const WechatServiceClass = (await loadModule(path.join(ROOT, 'js/utils/wechat-service.js'))).namespace.default
+const RankSceneClass = (await loadModule(path.join(ROOT, 'js/ui/rank-scene.js'))).namespace.default
+
+// 旧编码 level*10000 + stars*100 在星数超过 100 后串位：
+// 第 99 关 297 星会压过第 100 关 3 星。星数上限是 3×关卡，权重必须差两个量级。
+const scoreLowLevel = WechatServiceClass.computeScore({ level: 99, stars: 297, moves: 1 })
+const scoreHighLevel = WechatServiceClass.computeScore({ level: 100, stars: 3, moves: 40 })
+check('星数再多也压不过关卡进度（旧编码会串位）',
+  scoreHighLevel > scoreLowLevel,
+  `${scoreLowLevel} vs ${scoreHighLevel}`)
+check('同关同星时步数少的排前面',
+  WechatServiceClass.computeScore({ level: 50, stars: 60, moves: 20 }) >
+  WechatServiceClass.computeScore({ level: 50, stars: 60, moves: 35 }))
+
+// 授权门禁：未授权时绝不能去拉好友数据（拉了就是一片空白）
+const makeService = (granted, opts = {}) => ({
+  friendAuthUnsupported: false,
+  friendAuthPreviouslyDenied: !!opts.previouslyDenied,
+  ensureFriendAuth: () => Promise.resolve(granted),
+  openFriendAuthSetting: () => Promise.resolve(false),
+  syncLocalRecord: () => false,
+  getLocalRecord: () => ({ level: 12, stars: 30, moves: 41 })
+})
+const tick = () => new Promise(resolve => setTimeout(resolve, 0))
+
+const deniedScene = new RankSceneClass({ switchTo() {} }, makeService(false))
+const messagesBefore = openDataMessages.length
+deniedScene.show()
+await tick()
+check('未授权时不去请求好友数据，改画授权引导',
+  openDataMessages.length === messagesBefore && deniedScene.authDenied === true,
+  `messages=${openDataMessages.length - messagesBefore} denied=${deniedScene.authDenied}`)
+
+// 「刚被拒」不该马上再弹一个我们自己的框（纠缠），「之前拒过」才主动问
+check('玩家刚点掉系统授权框时不追加弹窗',
+  deniedScene.authPrompted === false, String(deniedScene.authPrompted))
+
+const againScene = new RankSceneClass({ switchTo() {} }, makeService(false, { previouslyDenied: true }))
+againScene.show()
+await tick()
+check('之前拒绝过 → 进排行榜主动弹一次「去开启」，省掉一次点击',
+  againScene.authPrompted === true)
+
+// 拒绝授权也要上报自己的成绩：好友榜看不到你，但你得能被好友看到
+let syncedWhileDenied = false
+const deniedSyncScene = new RankSceneClass({ switchTo() {} }, {
+  ...makeService(false),
+  syncLocalRecord: () => { syncedWhileDenied = true; return true }
+})
+deniedSyncScene.show()
+await tick()
+check('拒绝授权后仍然上报自己的成绩（好友才看得到我）', syncedWhileDenied)
+
+const grantedScene = new RankSceneClass({ switchTo() {} }, makeService(true))
+grantedScene.show()
+await tick()
+const lastMessage = openDataMessages[openDataMessages.length - 1]
+check('已授权后请求排行，并把自己的记录一起传过去',
+  lastMessage && lastMessage.type === 'SHOW_RANK' &&
+  lastMessage.self && lastMessage.self.level === 12,
+  JSON.stringify(lastMessage && lastMessage.self))
+
+// 环境没有授权能力时（H5）不能弹「授权被拒」，要退回「请在小游戏中打开」
+const unsupportedScene = new RankSceneClass({ switchTo() {} }, {
+  ...makeService(false),
+  friendAuthUnsupported: true
+})
+unsupportedScene.show()
+await tick()
+check('H5 等无授权能力的环境走「暂不可用」而不是「去开启」',
+  unsupportedScene.unsupported === true && unsupportedScene.authDenied === false)
+
+// 总星数按历史最高星累计（重玩打差的一把不能把星数拉下来）
+storage.set('gameProgress', { unlockedLevel: 3, currentLevel: 3 })
+storage.set('level_1', { stars: 1, bestStars: 3 })
+storage.set('level_2', { stars: 2 })
+const starService = new WechatServiceClass()
+check('getTotalStars 读历史最高星（bestStars 优先）',
+  starService.getTotalStars() === 5, String(starService.getTotalStars()))
+
+const openDataRankSrc = fs.readFileSync(path.join(ROOT, 'open-data/index.js'), 'utf8')
+check('开放数据域按 level → stars → moves 三级排序（不按单值 score）',
+  /b\.level - a\.level/.test(openDataRankSrc) &&
+  /b\.stars - a\.stars/.test(openDataRankSrc) &&
+  !/b\.score - a\.score/.test(openDataRankSrc))
+check('未授权与加载失败分开提示（玩家能自己修的那种要说清）',
+  /auth|deny|permission/.test(openDataRankSrc) && /还没有开启好友排行/.test(openDataRankSrc))
 
 console.log(`\n===== 结果：${passed} 通过 / ${failed} 失败 =====`)
 process.exit(failed === 0 ? 0 : 1)

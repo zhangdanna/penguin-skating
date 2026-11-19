@@ -33,6 +33,7 @@ let layout = {
 
 // 排行榜数据
 let rankList = []
+let selfRecord = null
 let status = 'idle'   // idle | loading | ready | error
 
 // 视觉样式：与主域糖果海洋馆风格保持一致
@@ -51,6 +52,8 @@ const STYLE = {
 
 const ROW_HEIGHT = 46
 const HEADER_HEIGHT = 34
+/** 底部「我的成绩」固定行 */
+const SELF_HEIGHT = 44
 
 // 监听主域消息
 wx.onMessage((data) => {
@@ -61,6 +64,7 @@ wx.onMessage((data) => {
       if (data.layout && data.layout.width > 0) {
         layout = data.layout
       }
+      selfRecord = data.self || null
       loadRankData()
       break
     case 'HIDE_RANK':
@@ -71,6 +75,26 @@ wx.onMessage((data) => {
 })
 
 /**
+ * 排行榜排序口径
+ *
+ *   1. 通关关卡（高 → 低）—— 主口径，进度就是实力
+ *   2. 总星数（多 → 少）—— 同进度比质量
+ *   3. 最高关步数（少 → 多）—— 前两项都相同时比效率
+ *
+ * 不按 `score` 单值排序：关卡无上限、星数上限是 3×关卡，任何固定权重
+ * 的编码在关卡够高时都会串位。三级比较永远不会溢出。
+ */
+function compareRank(a, b) {
+  if (b.level !== a.level) return b.level - a.level
+  if (b.stars !== a.stars) return b.stars - a.stars
+
+  // moves = 0 表示还没记录过步数，排在有记录的后面
+  const am = a.moves > 0 ? a.moves : Number.MAX_SAFE_INTEGER
+  const bm = b.moves > 0 ? b.moves : Number.MAX_SAFE_INTEGER
+  return am - bm
+}
+
+/**
  * 加载排行数据
  */
 function loadRankData() {
@@ -79,7 +103,7 @@ function loadRankData() {
   drawMessage('加载中...')
 
   wx.getFriendCloudStorage({
-    keyList: ['level', 'moves', 'stars', 'score'],
+    keyList: ['level', 'moves', 'stars'],
     success: (res) => {
       rankList = (res.data || [])
         .map(item => {
@@ -91,22 +115,28 @@ function loadRankData() {
             nickName: item.nickname || '微信用户',
             level: parseInt(kv.level, 10) || 0,
             moves: parseInt(kv.moves, 10) || 0,
-            stars: parseInt(kv.stars, 10) || 0,
-            score: parseInt(kv.score, 10) || 0
+            stars: parseInt(kv.stars, 10) || 0
           }
         })
         // 只要玩过的（level > 0），避免 0 分玩家被过滤掉
         .filter(item => item.level > 0)
-        .sort((a, b) => b.score - a.score)
+        .sort(compareRank)
 
       status = 'ready'
       renderRankList()
     },
     fail: (err) => {
-      console.error('获取排行数据失败:', err)
+      const msg = (err && err.errMsg) || ''
+      console.warn('获取排行数据失败:', msg)
       status = 'error'
       clearCanvas()
-      drawMessage('排行榜加载失败', '请稍后重试')
+
+      // 未授权和网络失败要分开说：前者玩家能自己修，后者只能重试
+      if (/auth|deny|denied|permission|scope/i.test(msg)) {
+        drawMessage('还没有开启好友排行', '需要授权「微信朋友关系」后才能看到好友成绩')
+      } else {
+        drawMessage('排行榜加载失败', '请稍后重试')
+      }
     }
   })
 }
@@ -119,17 +149,24 @@ function renderRankList() {
 
   if (!rankList.length) {
     drawMessage('还没有好友上榜', '通关后成绩会自动同步，快邀请好友一起挑战')
+    drawSelfRow()
     return
   }
 
   drawHeader()
 
-  const maxRows = Math.max(1, Math.floor((layout.height - HEADER_HEIGHT - 8) / ROW_HEIGHT))
+  // 底部固定留出「我的成绩」一行
+  const maxRows = Math.max(
+    1,
+    Math.floor((layout.height - HEADER_HEIGHT - 8 - SELF_HEIGHT - 10) / ROW_HEIGHT)
+  )
   const rows = rankList.slice(0, maxRows)
 
   rows.forEach((item, index) => {
     drawRow(item, index, index * ROW_HEIGHT)
   })
+
+  drawSelfRow()
 }
 
 /**
@@ -160,11 +197,11 @@ function drawHeader() {
   ctx.fillText('昵称', layout.x + 62, y + HEADER_HEIGHT / 2)
 
   ctx.textAlign = 'center'
-  ctx.fillText('关卡', layout.x + layout.width - 132, y + HEADER_HEIGHT / 2)
-  ctx.fillText('星星', layout.x + layout.width - 84, y + HEADER_HEIGHT / 2)
+  ctx.fillText('关卡', layout.x + layout.width - 122, y + HEADER_HEIGHT / 2)
+  ctx.fillText('星星', layout.x + layout.width - 74, y + HEADER_HEIGHT / 2)
 
   ctx.textAlign = 'right'
-  ctx.fillText('分数', layout.x + layout.width - 14, y + HEADER_HEIGHT / 2)
+  ctx.fillText('步数', layout.x + layout.width - 14, y + HEADER_HEIGHT / 2)
 }
 
 /**
@@ -204,19 +241,94 @@ function drawRow(item, index, offsetY) {
   ctx.fillStyle = STYLE.textSoft
   ctx.font = `12px ${STYLE.font}`
   ctx.textAlign = 'center'
-  ctx.fillText(`Lv.${item.level}`, layout.x + layout.width - 132, centerY)
+  ctx.fillText(`Lv.${item.level}`, layout.x + layout.width - 122, centerY)
 
-  // 总星数（C6：上报口径改为"累计总星数"，不再是单关 0-3 星）
+  // 总星数（口径：各关历史最高星之和）
   ctx.fillStyle = STYLE.gold
   ctx.font = `12px ${STYLE.font}`
   ctx.textAlign = 'center'
-  ctx.fillText(`★${item.stars}`, layout.x + layout.width - 84, centerY)
+  ctx.fillText(`★${item.stars}`, layout.x + layout.width - 74, centerY)
 
-  // 分数
+  // 最高关步数（越少越好，没记录就显示 -）
   ctx.fillStyle = STYLE.mint
-  ctx.font = `bold 15px ${STYLE.font}`
+  ctx.font = `bold 14px ${STYLE.font}`
   ctx.textAlign = 'right'
-  ctx.fillText(String(item.score), layout.x + layout.width - 14, centerY)
+  ctx.fillText(item.moves > 0 ? String(item.moves) : '-', layout.x + layout.width - 14, centerY)
+}
+
+/**
+ * 底部「我的成绩」
+ *
+ * getFriendCloudStorage 只返回好友，不含自己；主域把自己的记录一并传进来，
+ * 固定钉在列表底部，玩家打开排行榜至少能看到自己的进度。
+ */
+function drawSelfRow() {
+  if (!selfRecord || !selfRecord.level) return
+
+  const y = layout.y + layout.height - SELF_HEIGHT
+  const height = SELF_HEIGHT - 6
+
+  roundRect(layout.x, y, layout.width, height, 12)
+  ctx.fillStyle = 'rgba(47, 191, 155, 0.16)'
+  ctx.fill()
+  ctx.strokeStyle = 'rgba(47, 191, 155, 0.55)'
+  ctx.lineWidth = 1.4
+  ctx.stroke()
+
+  const centerY = y + height / 2
+
+  // 「我」标签
+  roundRect(layout.x + 12, centerY - 11, 34, 22, 11)
+  ctx.fillStyle = STYLE.mint
+  ctx.fill()
+  ctx.fillStyle = '#FFFFFF'
+  ctx.font = `bold 12px ${STYLE.font}`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('我', layout.x + 29, centerY)
+
+  ctx.fillStyle = STYLE.text
+  ctx.font = `bold 13px ${STYLE.font}`
+  ctx.textAlign = 'left'
+  ctx.fillText('我的成绩', layout.x + 56, centerY)
+
+  // 在好友里的名次：自己不在 getFriendCloudStorage 的返回里，
+  // 只能按「比我强的有几个」算出来
+  const rank = selfRankAmongFriends()
+  if (rank > 0) {
+    ctx.fillStyle = STYLE.textSoft
+    ctx.font = `11px ${STYLE.font}`
+    ctx.fillText(`· 第${rank}名`, layout.x + 56 + 58, centerY)
+  }
+
+  ctx.fillStyle = STYLE.textSoft
+  ctx.font = `12px ${STYLE.font}`
+  ctx.textAlign = 'center'
+  ctx.fillText(`Lv.${selfRecord.level}`, layout.x + layout.width - 122, centerY)
+
+  ctx.fillStyle = STYLE.gold
+  ctx.fillText(`★${selfRecord.stars || 0}`, layout.x + layout.width - 74, centerY)
+
+  ctx.fillStyle = STYLE.mint
+  ctx.font = `bold 14px ${STYLE.font}`
+  ctx.textAlign = 'right'
+  ctx.fillText(selfRecord.moves > 0 ? String(selfRecord.moves) : '-', layout.x + layout.width - 14, centerY)
+}
+
+/**
+ * 自己在好友里的名次
+ *
+ * getFriendCloudStorage 不含自己，只能数「比我排得靠前的有几个」。
+ * 一个好友都没玩过时返回 1（自己就是第一）。
+ */
+function selfRankAmongFriends() {
+  if (!selfRecord || !selfRecord.level) return 0
+
+  let better = 0
+  rankList.forEach((item) => {
+    if (compareRank(item, selfRecord) < 0) better++
+  })
+  return better + 1
 }
 
 /**

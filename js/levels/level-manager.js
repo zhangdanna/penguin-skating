@@ -14,6 +14,7 @@
  */
 
 import { GENERATED_LEVELS } from './generated-levels'
+import { TUTORIAL_LEVELS, buildTutorialLevel } from './tutorial-levels'
 import {
   COLS,
   ROWS,
@@ -95,11 +96,19 @@ function normalize(raw, levelNum) {
 
 /**
  * 烘焙关卡（已按 optimal 升序编号）
+ *
+ * 第 1~3 关用 tutorial-levels.js 里手写的教学盘面覆盖生成结果：
+ * 教程要的是「这一关只出现一个概念」，生成器给不了。覆盖而不是新增，
+ * 是为了不动关卡号 —— 关卡号是存档 / 成就 / 排行榜的主键。
  */
 const CAMPAIGN = Object.keys(GENERATED_LEVELS)
   .map(Number)
   .sort((a, b) => a - b)
-  .map(id => normalize(GENERATED_LEVELS[id], id))
+  .map(id => {
+    const tutorial = TUTORIAL_LEVELS[id]
+    if (tutorial) return normalize(buildTutorialLevel(id, tutorial), id)
+    return normalize(GENERATED_LEVELS[id], id)
+  })
 
 /** 烘焙关卡里的最高最优步数，作为无尽关卡的难度起点 */
 const BAKED_MAX_OPTIMAL = CAMPAIGN.length > 0

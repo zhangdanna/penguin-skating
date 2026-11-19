@@ -208,9 +208,12 @@ export default class MenuScene {
 
   /**
    * 渲染操作说明
+   *
+   * 这句话是玩家进游戏前唯一看到的玩法介绍，必须点明「目标是谁」：
+   * 旧文案只说「推到目标区域」，而目标区当时画得和冰块同色，玩家找不到。
    */
   renderInstructions(ctx) {
-    drawStickerText(ctx, '滑动屏幕控制企鹅 · 推动冰块到目标区域', CENTER_X, 634, {
+    drawStickerText(ctx, '滑动屏幕 · 把冰块推到小鱼展台', CENTER_X, 634, {
       size: 13,
       color: COLORS.white,
       stroke: COLORS.navyDeep,

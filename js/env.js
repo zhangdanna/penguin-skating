@@ -166,4 +166,18 @@ export function viewport() {
 }
 
 export { DPR }
+
+/**
+ * 是否运行在微信小游戏里
+ *
+ * 小游戏有 GameGlobal，浏览器（本地预览 / H5 包）没有。
+ *
+ * 为什么要这个标记：H5 适配层的 `wx` 是个 Proxy，**任何未实现的 API 都会
+ * 返回一个空函数**，所以 `wx.getSetting` / `wx.authorize` 在浏览器里
+ * 「存在但永远不回调」。依赖平台能力的逻辑（排行榜授权）如果只靠
+ * 「等回调 / 等超时」来猜环境，就会一直卡在加载态，页面上什么都不显示。
+ * 这类分支必须先判断环境。
+ */
+export const IS_WEAPP = typeof GameGlobal !== 'undefined'
+
 export default screenCanvas

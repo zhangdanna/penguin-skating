@@ -8,6 +8,16 @@
  *   - 分享（纯传播，无奖励）
  *   - 好友排行榜数据上报（wx.setUserCloudStorage，绑定 openid，无需登录）
  */
+import { IS_WEAPP } from '../env'
+
+/**
+ * 关系链授权 scope
+ *
+ * `wx.getFriendCloudStorage` 是「需要用户授权」的接口，scope 就是它。
+ * 没授权时调用不会报错弹窗，而是直接进 fail 回调 —— 表现为「排行榜一直空白」。
+ */
+const FRIEND_SCOPE = 'scope.WxFriendInteraction'
+
 export default class WechatService {
   constructor() {
     // 是否已初始化分享菜单
@@ -177,8 +187,106 @@ export default class WechatService {
   }
 
   /**
+   * 查询「微信朋友关系」授权状态
+   *
+   * 排行榜能出数据的前置条件。authSetting 里没有这个 key 表示「还没问过」，
+   * 与「拒绝过」要区分处理：没问过 → 直接 wx.authorize 会弹系统框；
+   * 拒绝过 → wx.authorize 直接 fail，只能引导去设置页开。
+   *
+   * @returns {Promise<boolean>}
+   */
+  checkFriendAuth() {
+    return new Promise((resolve) => {
+      // 浏览器里 wx 是适配层的 Proxy，getSetting 是个永不回调的空函数，
+      // 不先判断环境的话这个 promise 会一直挂着，排行榜卡在空白态
+      if (!IS_WEAPP || typeof wx === 'undefined' || typeof wx.getSetting !== 'function') {
+        resolve(false)
+        return
+      }
+      wx.getSetting({
+        success: (res) => {
+          const setting = (res && res.authSetting) || {}
+          const raw = setting[FRIEND_SCOPE]
+          // 区分「从没问过」（key 不存在）与「明确拒绝过」（key === false）：
+          // 前者调 authorize 会弹系统框；后者只会直接 fail，得去设置页。
+          // 拒绝后是否主动弹说明也靠这个判断，避免刚被拒就再弹一次。
+          this.friendAuthPreviouslyDenied = raw === false
+          resolve(raw === true)
+        },
+        fail: () => resolve(false)
+      })
+    })
+  }
+
+  /**
+   * 确保拿到关系链授权（进排行榜前调用）
+   *
+   * 必须由玩家点击「排行榜」按钮的手势链触发 —— wx.authorize 会弹系统授权框，
+   * 没有用户手势的授权请求会被平台静默拒绝。
+   *
+   * @returns {Promise<boolean>} 是否已授权
+   */
+  ensureFriendAuth() {
+    return this.checkFriendAuth().then((granted) => {
+      if (granted) {
+        this.friendAuthDenied = false
+        return true
+      }
+      if (!IS_WEAPP || typeof wx === 'undefined' || typeof wx.authorize !== 'function') {
+        // H5 预览等环境根本没有授权能力：不是「玩家拒绝」，不能弹引导
+        this.friendAuthUnsupported = true
+        return false
+      }
+
+      return new Promise((resolve) => {
+        wx.authorize({
+          scope: FRIEND_SCOPE,
+          success: () => {
+            this.friendAuthDenied = false
+            resolve(true)
+          },
+          fail: (err) => {
+            this.friendAuthDenied = true
+            console.warn('[Rank] 关系链授权被拒绝:', err && err.errMsg)
+            resolve(false)
+          }
+        })
+      })
+    })
+  }
+
+  /**
+   * 引导玩家去设置页重新开启「微信朋友关系」
+   *
+   * 注意：wx.openSetting 只有在用户**拒绝过**授权后才能打开设置页，
+   * 从没问过时调用会失败，所以入口只放在「已拒绝」的空态里。
+   *
+   * @returns {Promise<boolean>} 是否已开启
+   */
+  openFriendAuthSetting() {
+    return new Promise((resolve) => {
+      if (typeof wx === 'undefined' || typeof wx.openSetting !== 'function') {
+        resolve(false)
+        return
+      }
+      wx.openSetting({
+        success: (res) => {
+          const ok = !!(res && res.authSetting && res.authSetting[FRIEND_SCOPE])
+          this.friendAuthDenied = !ok
+          resolve(ok)
+        },
+        fail: () => resolve(false)
+      })
+    })
+  }
+
+  /**
    * 获取总星星数
    * 关卡是无限的，所以按"已解锁关卡"遍历，而不是写死 30
+   *
+   * 口径：每关取**历史最高星**（`bestStars`），与成就系统的「星星按各关
+   * 历史最高星累计」保持一致。早期只读 `stars`（最近一次成绩），重玩一关
+   * 打得差就会让总星数掉下来，排行榜上的星数会莫名其妙变少。
    */
   getTotalStars() {
     let totalStars = 0
@@ -186,9 +294,9 @@ export default class WechatService {
       const cleared = Math.max(0, (parseInt(this.getCurrentLevel(), 10) || 1) - 1)
       for (let i = 1; i <= cleared; i++) {
         const data = wx.getStorageSync(`level_${i}`)
-        if (data && data.stars) {
-          totalStars += data.stars
-        }
+        if (!data) continue
+        const stars = typeof data.bestStars === 'number' ? data.bestStars : data.stars
+        if (stars) totalStars += stars
       }
     } catch (e) {
       console.error('获取星星数失败:', e)
@@ -229,16 +337,46 @@ export default class WechatService {
   }
 
   /**
+   * 本地记录（关卡 / 总星数 / 最高关步数），按「只升不降」合并
+   *
+   * 排行榜里要显示玩家自己的成绩，但开放数据域的 getFriendCloudStorage
+   * **只返回好友、不含自己**，所以自己这一行必须由主域算好传过去。
+   *
+   * @returns {{level:number, stars:number, moves:number}}
+   */
+  getLocalRecord() {
+    const unlocked = parseInt(this.getCurrentLevel(), 10) || 1
+    const cleared = Math.max(0, unlocked - 1)
+    const mirror = this.loadCloudRecord()
+
+    return {
+      level: Math.max(mirror.level || 0, cleared),
+      stars: Math.max(mirror.stars || 0, this.getTotalStars()),
+      moves: mirror.moves || 0
+    }
+  }
+
+  /**
    * 综合分：关卡优先，其次总星数，最后步数越少越高
+   *
+   * 排序口径见 `open-data/index.js`（好友榜按 level → stars → moves 三级排），
+   * 这个编码只是给「后台排行榜配置 / 搜索与社交组件」留的兼容字段。
+   *
+   * 权重必须是 1e9 / 1e5 / 1：
+   *   星数上限是 3 × 关卡（每关最多 3 星），旧版用 10000 / 100 的权重，
+   *   星数超过 100 之后就会串位 —— 第 99 关 297 星的玩家会压过第 100 关 3 星
+   *   的玩家，也就是「关卡优先」这个约定在高关卡直接失效。
+   *   取 stars 权重 1e5（3e5 × level < 1e9 × level 恒成立）、moves 权重 1
+   *   之后，任何关卡数下都不会串位。
+   *
    * @param {{level:number, stars:number, moves:number}} record
    * @returns {number}
    */
   static computeScore(record) {
-    const level = Math.max(0, record.level)
-    const stars = Math.max(0, record.stars)
-    const moves = Math.max(0, record.moves)
-    const moveBonus = Math.max(0, 99 - Math.min(moves, 99))
-    return level * 10000 + stars * 100 + moveBonus
+    const level = Math.max(0, Math.floor(record.level) || 0)
+    const stars = Math.max(0, Math.floor(record.stars) || 0)
+    const moves = Math.max(0, Math.floor(record.moves) || 0)
+    return level * 1e9 + stars * 1e5 + (99999 - Math.min(moves, 99999))
   }
 
   /**

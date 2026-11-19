@@ -34,6 +34,14 @@ export default class RankScene {
     this.buttons = []
     this.isVisible = false
 
+    /** 关系链授权被拒：主域自己画引导面板，不去碰开放数据域 */
+    this.authDenied = false
+    /** 当前环境没有授权能力（H5 预览）：只显示「请在小游戏中打开」 */
+    this.unsupported = false
+    /** 拒绝后是否已经主动问过（本会话只问一次，避免反复打扰） */
+    this.authPrompted = false
+    this.authButton = null
+
     // 开放数据域
     this.openDataContext = null
     this.sharedCanvas = null
@@ -85,6 +93,55 @@ export default class RankScene {
         this.sceneManager.switchTo('menu')
       }
     }))
+
+    // 未授权空态里的「去开启」按钮（只有 authDenied 时才渲染与响应）
+    this.authButton = new Button({
+      x: Math.round(vp.width / 2 - 62),
+      y: this.listTop + 148,
+      width: 124,
+      height: 40,
+      text: '去开启',
+      fontSize: 15,
+      bgColor: COLORS.mint,
+      hoverColor: COLORS.mintDeep,
+      borderColor: '#17876C',
+      onClick: () => this.openAuthSetting()
+    })
+  }
+
+  /**
+   * 打开设置页重新授权
+   *
+   * 先再试一次 `wx.authorize`：正常情况下拒绝过就会直接 fail，但如果玩家
+   * 刚在设置页里打开、本地 authSetting 还是旧值（getSetting 有缓存/延迟），
+   * authorize 会直接 success 而不弹框 —— 这样能少跳一次设置页。
+   * 失败再走 openSetting，两层层层兜底。
+   */
+  openAuthSetting() {
+    if (!this.wechatService || typeof this.wechatService.openFriendAuthSetting !== 'function') return
+
+    const service = this.wechatService
+    const retryAuthorize = typeof service.ensureFriendAuth === 'function'
+      ? service.ensureFriendAuth()
+      : Promise.resolve(false)
+
+    retryAuthorize.then((granted) => {
+      if (!this.isVisible) return
+
+      if (granted) {
+        this.authDenied = false
+        this.ensureAuthThenRank()
+        return
+      }
+
+      service.openFriendAuthSetting().then((ok) => {
+        if (!this.isVisible) return
+        if (ok) {
+          this.authDenied = false
+          this.ensureAuthThenRank()
+        }
+      })
+    })
   }
 
   /**
@@ -92,7 +149,7 @@ export default class RankScene {
    */
   relayout() {
     this.buildLayout()
-    if (this.isVisible) this.requestRank()
+    if (this.isVisible && !this.authDenied) this.requestRank()
   }
 
   /**
@@ -129,24 +186,97 @@ export default class RankScene {
         y: top,
         width: vp.width - 32,
         height: Math.max(120, vp.height - top - bottom)
+      },
+      // 自己的成绩：getFriendCloudStorage 只返回好友，不含自己，
+      // 不传过去的话玩家永远在榜上看不到自己
+      self: this.wechatService && this.wechatService.getLocalRecord
+        ? this.wechatService.getLocalRecord()
+        : null
+    })
+  }
+
+  /**
+   * 先要授权，再拉数据
+   *
+   * 顺序不能反：wx.getFriendCloudStorage 是「需要 scope.WxFriendInteraction
+   * 授权」的接口，未授权时直接进 fail，开放数据域只会画一句「加载失败」。
+   * 之前少了这一步，所以排行榜一直是空的。
+   */
+  ensureAuthThenRank() {
+    const service = this.wechatService
+    if (!service || typeof service.ensureFriendAuth !== 'function') {
+      this.requestRank()
+      return
+    }
+
+    service.ensureFriendAuth().then((granted) => {
+      if (!this.isVisible) return
+
+      if (!granted) {
+        // 环境不支持授权（H5）→ 走「请在小游戏中打开」；玩家拒绝 → 走引导面板
+        this.unsupported = !!service.friendAuthUnsupported
+        this.authDenied = !this.unsupported
+
+        // 就算不看榜，自己的成绩也要留在云端好友才能看到。
+        // setUserCloudStorage 不需要关系链授权，拒绝授权不影响上报。
+        if (!this.unsupported && typeof service.syncLocalRecord === 'function') {
+          service.syncLocalRecord()
+        }
+
+        // 拒绝态不要只留一张空面板让玩家自己找按钮：
+        // 直接把「去开启」弹出来，省掉一次点击。
+        // 但只在「之前就拒绝过」时弹 —— 玩家刚刚点掉系统框里的「拒绝」，
+        // 马上再弹一个我们自己的框就是纠缠，等下次进来再说。
+        if (this.authDenied && service.friendAuthPreviouslyDenied) this.promptAuthOnce()
+        return
+      }
+
+      this.authDenied = false
+      this.unsupported = false
+      this.requestRank()
+
+      // 本地存档补一次上报，等云端落库后再刷一次列表
+      if (service.syncLocalRecord()) {
+        setTimeout(() => {
+          if (this.isVisible) this.requestRank()
+        }, 1000)
+      }
+    })
+  }
+
+  /**
+   * 拒绝授权后主动弹一次说明
+   *
+   * 微信规则：玩家拒绝过某个 scope 之后，`wx.authorize` 不再弹系统框、
+   * 直接 fail，只能去 `wx.openSetting` 里手动打开。这一步绕不过去，
+   * 但可以不让玩家"进到一个空页面、再自己找按钮" —— 直接问。
+   *
+   * 只弹一次：本会话内重复进排行榜不再打扰，面板上的「去开启」按钮仍在。
+   */
+  promptAuthOnce() {
+    if (this.authPrompted) return
+    this.authPrompted = true
+
+    if (typeof wx === 'undefined' || typeof wx.showModal !== 'function') return
+
+    wx.showModal({
+      title: '开启好友排行榜',
+      content: '排行榜需要读取好友的通关进度，要授权「微信朋友关系」。\n只用于排行，不会读取聊天等其它信息。',
+      confirmText: '去开启',
+      cancelText: '算了',
+      success: (res) => {
+        if (!res || !res.confirm || !this.isVisible) return
+        this.openAuthSetting()
       }
     })
   }
 
   show() {
     this.isVisible = true
+    this.authDenied = false
+    this.unsupported = false
 
-    // 先出列表，同时补一次自己的成绩上报 ——
-    // 之前只有「通关那一刻」才上报，一旦那次失败（断网 / 拒绝授权），
-    // 玩家自己都不会出现在好友榜里，打开就是一片空白。
-    this.requestRank()
-
-    if (this.wechatService && this.wechatService.syncLocalRecord()) {
-      // setUserCloudStorage 是异步的，等云端落库后再刷一次
-      setTimeout(() => {
-        if (this.isVisible) this.requestRank()
-      }, 1000)
-    }
+    this.ensureAuthThenRank()
   }
 
   hide() {
@@ -175,10 +305,51 @@ export default class RankScene {
     this.renderBackground(ctx)
 
     // 开放数据域画布先画，标题与返回按钮后画，保证按钮永远在可见层
-    this.renderSharedCanvas(ctx)
+    if (this.authDenied) {
+      this.renderAuthDenied(ctx)
+    } else if (this.unsupported) {
+      this.renderFallback(ctx)
+    } else {
+      this.renderSharedCanvas(ctx)
+    }
 
     this.renderTitle(ctx)
     this.buttons[0].render(ctx)
+
+    if (this.authDenied && this.authButton) {
+      this.authButton.render(ctx)
+    }
+  }
+
+  /**
+   * 未授权空态
+   *
+   * 不能只写一句「加载失败」：玩家不知道失败原因，也不知道怎么修。
+   * 这里把「缺什么授权 / 用来做什么 / 去哪开」三件事说清楚，并给一个按钮。
+   */
+  renderAuthDenied(ctx) {
+    const vp = viewport()
+    const x = 24
+    const width = vp.width - 48
+    const y = this.listTop + 8
+    const height = 196
+
+    drawGlassPanel(ctx, x, y, width, height, 22, {
+      fill: 'rgba(255, 249, 238, 0.96)'
+    })
+
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+
+    ctx.fillStyle = COLORS.navy
+    ctx.font = font(16)
+    ctx.fillText('开启好友排行榜', vp.width / 2, y + 38)
+
+    ctx.fillStyle = COLORS.navySoft
+    ctx.font = font(12, 'normal')
+    ctx.fillText('需要授权「微信朋友关系」', vp.width / 2, y + 72)
+    ctx.fillText('只用于读取好友的通关进度，', vp.width / 2, y + 96)
+    ctx.fillText('不会读取聊天等其它信息', vp.width / 2, y + 116)
   }
 
   renderBackground(ctx) {
@@ -239,19 +410,33 @@ export default class RankScene {
   onTouchStart(touch) {
     if (!this.isVisible) return
 
+    if (this.authDenied) {
+      if (this.authButton) this.authButton.onTouchStart(touch)
+      this.buttons.forEach(btn => btn.onTouchStart(touch))
+      return
+    }
+
     this.buttons.forEach(btn => btn.onTouchStart(touch))
   }
 
   onTouchMove(touch) {
     if (!this.isVisible) return
 
-    this.buttons.forEach(btn => {
+    const buttons = this.authDenied && this.authButton
+      ? [...this.buttons, this.authButton]
+      : this.buttons
+
+    buttons.forEach(btn => {
       btn.isHovered = btn.contains(touch.clientX, touch.clientY)
     })
   }
 
   onTouchEnd(touch) {
     if (!this.isVisible) return
+
+    if (this.authDenied && this.authButton) {
+      this.authButton.onTouchEnd(touch)
+    }
 
     this.buttons.forEach(btn => btn.onTouchEnd(touch))
   }

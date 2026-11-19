@@ -20,6 +20,7 @@ const raw = fs.readFileSync(path.join(ROOT, 'js/env.js'), 'utf8')
 // 把 ESM 语法改写成可在 vm 里直接执行的脚本
 const source = raw
   .replace(/export function viewport\s*\(/g, 'function viewport(')
+  .replace(/export const IS_WEAPP\s*=/g, 'const IS_WEAPP =')
   .replace(/export \{ DPR \}\s*/g, '')
   .replace(/export default screenCanvas\s*$/, '__result = screenCanvas')
 

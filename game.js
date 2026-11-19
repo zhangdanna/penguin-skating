@@ -5,7 +5,7 @@ import screenCanvas, { viewport, DPR } from './js/env'
 import Background from './js/runtime/background'
 import Penguin from './js/runtime/penguin'
 import Stone from './js/runtime/stone'
-import Target from './js/runtime/target'
+import Target, { stageForDifficulty } from './js/runtime/target'
 import LevelManager from './js/levels/level-manager'
 import { ObstacleFactory } from './js/runtime/obstacle'
 import AudioManager from './js/utils/audio-manager'
@@ -37,6 +37,8 @@ import {
   GRID_ROWS
 } from './js/ui/layout'
 import FoodDisplay from './js/ui/food-display'
+import TutorialHint from './js/ui/tutorial-hint'
+import { getTutorialHint } from './js/levels/tutorial-levels'
 import GameScene from './js/ui/game-scene'
 
 // 关卡数据使用的网格单位：levels/*.json 里的坐标按 50px 一格书写
@@ -715,6 +717,9 @@ export default class Main {
     this.gameHUD.onRestartClick = () => this.restartLevel()
     this.gameHUD.onUndoClick = () => this.undoMove()
 
+    // 新手引导气泡（只在第 1~3 关、且该关还没看过时出现）
+    this.tutorialHint = new TutorialHint()
+
     // 用棋盘布局算出的锚点摆好 HUD（此时 HUD 才刚创建）
     this.syncHudLayout()
     
@@ -784,7 +789,10 @@ export default class Main {
         ...this.toBoardPixel(levelData.target),
         width: this.scaleLevelSize(levelData.target.width),
         height: this.scaleLevelSize(levelData.target.height),
-        cellSize: this.cellSize
+        cellSize: this.cellSize,
+        // 展台上的小鱼随难度档长大（鱼苗 → 小鱼 → 河豚 → 剑鱼 → 神仙鱼），
+        // 纯视觉，不参与任何判定
+        stage: stageForDifficulty(difficulty)
       })
 
       // 创建障碍物：关卡坐标（50px 网格）换算到当前棋盘，尺寸对齐一格
@@ -810,6 +818,11 @@ export default class Main {
       this.pauseStartedAt = 0
       this.gameState = 'playing'
       this.isPaused = false
+
+      // 新手引导：只在第 1~3 关、且这一关还没看过时出现
+      if (this.tutorialHint) {
+        this.tutorialHint.setLevel(levelNum, !this.hasSeenTutorial(levelNum))
+      }
 
       // 更新HUD
       this.gameHUD.setLevelInfo(levelNum, levelData.par)
@@ -1512,6 +1525,11 @@ export default class Main {
    * 游戏更新
    */
   update() {
+    // 帧间隔（引导气泡的淡入淡出与停留计时都用它）
+    const now = Date.now()
+    const dt = this.lastFrameAt ? Math.min(64, now - this.lastFrameAt) : 16
+    this.lastFrameAt = now
+
     // 更新当前场景
     this.sceneManager.update()
 
@@ -1546,6 +1564,14 @@ export default class Main {
     this.stones.forEach(stone => stone.update())
     this.target.update()
     this.obstacles.forEach(obstacle => obstacle.update())
+
+    // 新手引导：跟步数联动（滑一步之后再教推箱），收起了就记成「已看过」
+    if (this.tutorialHint) {
+      this.tutorialHint.update(this.moves, dt)
+      if (this.tutorialHint.enabled && this.tutorialHint.dismissed) {
+        this.markTutorialSeen(this.tutorialHint.levelNum)
+      }
+    }
 
     // 胜利检测
     this.checkWinCondition()
@@ -1929,6 +1955,81 @@ export default class Main {
   }
 
   /**
+   * 该关的新手引导是否已经看过
+   * @param {number} levelNum
+   * @returns {boolean}
+   */
+  hasSeenTutorial(levelNum) {
+    try {
+      const seen = wx.getStorageSync('tutorialSeen')
+      return !!(seen && seen[levelNum])
+    } catch (e) {
+      return false
+    }
+  }
+
+  /**
+   * 标记该关的引导已看过（同一关只出现一次）
+   *
+   * 只记录真正有引导的关卡：否则每通一关就往 storage 里多加一个 key，
+   * 几百关下来白占空间。有没有引导由 tutorial-levels 的数据决定，
+   * 这里不写死关卡号。
+   *
+   * @param {number} levelNum
+   */
+  markTutorialSeen(levelNum) {
+    if (!levelNum || !getTutorialHint(levelNum, 0)) return
+    try {
+      const seen = wx.getStorageSync('tutorialSeen') || {}
+      if (seen[levelNum]) return
+      seen[levelNum] = true
+      wx.setStorageSync('tutorialSeen', seen)
+    } catch (e) {
+      console.warn('[Tutorial] 保存引导状态失败:', e)
+    }
+  }
+
+  /**
+   * 引导锚点 → 棋盘像素矩形
+   *
+   * 锚点在关卡数据里是格子坐标（`{ kind:'cell', col, row }`）或语义锚点
+   * （`target` / `penguin`），这里统一换成当前布局下的像素矩形。
+   * 必须用 boardOffsetX + col * cellSize 换算，不能拿关卡数据的 x 直接乘。
+   *
+   * @param {Object} anchor
+   * @returns {{x:number,y:number,width:number,height:number}|null}
+   */
+  resolveTutorialAnchor(anchor) {
+    if (!anchor) return null
+
+    const cs = this.cellSize
+
+    if (anchor.kind === 'target' && this.target) {
+      return {
+        x: this.target.x,
+        y: this.target.y,
+        width: this.target.width,
+        height: this.target.height
+      }
+    }
+
+    if (anchor.kind === 'penguin' && this.penguin) {
+      return { x: this.penguin.x, y: this.penguin.y, width: cs, height: cs }
+    }
+
+    if (anchor.kind === 'cell') {
+      return {
+        x: this.boardOffsetX + anchor.col * cs,
+        y: this.boardOffsetY + anchor.row * cs,
+        width: cs,
+        height: cs
+      }
+    }
+
+    return null
+  }
+
+  /**
    * 保存关卡进度
    */
   saveLevelProgress() {
@@ -1939,8 +2040,14 @@ export default class Main {
       const stars = calcStars(this.moves, par)
 
       // 保存当前关卡星级
+      // stars = 本次成绩（结算面板用），bestStars = 历史最高（成就与排行榜用）。
+      // 只存「最近一次」会让重玩打差的一把把总星数拉低，和成就系统的
+      // 「星星按各关历史最高累计」口径对不上。
+      const prev = wx.getStorageSync(`level_${this.currentLevel}`) || {}
+      const bestStars = Math.max(prev.bestStars || prev.stars || 0, stars)
       wx.setStorageSync(`level_${this.currentLevel}`, {
         stars: stars,
+        bestStars: bestStars,
         moves: this.moves,
         timestamp: Date.now()
       })
@@ -1952,6 +2059,11 @@ export default class Main {
       }
       progress.currentLevel = this.currentLevel
       wx.setStorageSync('gameProgress', progress)
+
+      // 通关即视为「这关的引导看过了」。
+      // 不能只靠 update() 里的收起逻辑：通关后 gameState 变 win，
+      // 主循环在更新引导之前就 return 了，引导永远不会走到收起那一步。
+      this.markTutorialSeen(this.currentLevel)
 
     } catch (e) {
       console.error('保存进度失败:', e)
@@ -2056,7 +2168,7 @@ export default class Main {
 
     // 渲染目标
     if (this.target) {
-      this.target.render(this.ctx)
+      this.target.render(this.ctx, this.stones)
     }
 
     // 渲染障碍物
@@ -2078,6 +2190,17 @@ export default class Main {
     // 渲染食物显示
     if (this.foodDisplay && (this.gameState === 'playing' || this.gameState === 'win')) {
       this.foodDisplay.render(this.ctx)
+    }
+
+    // 新手引导气泡：压在棋盘之上、暂停/结算覆盖层之下
+    if (this.tutorialHint && this.gameState === 'playing') {
+      this.tutorialHint.render(this.ctx, {
+        anchor: this.resolveTutorialAnchor(this.tutorialHint.hint && this.tutorialHint.hint.anchor),
+        x: this.boardOffsetX,
+        y: this.boardOffsetY,
+        width: this.boardWidth,
+        height: this.boardHeight
+      })
     }
   }
 

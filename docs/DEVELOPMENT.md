@@ -39,6 +39,7 @@ game.js
 |---|---|
 | `js/levels/level-generator.js` | `LEVEL_BANDS` 难度分档、逆向构造生成器、BFS 求解器、`boardSignature` / `levelDataSignature` |
 | `js/levels/generated-levels.js` | 200 关烘焙产物，**由脚本生成，禁止手改** |
+| `js/levels/tutorial-levels.js` | 第 1~3 关手写教学盘面 + 引导文案（覆盖烘焙结果，不动关卡号） |
 | `js/levels/level-manager.js` | 取关、`calcPar`、201 关起运行时生成、`getOptimalFloor` 下界、跨段去重 |
 
 ### 运行时实体
@@ -60,6 +61,7 @@ game.js
 | `js/ui/achievement-scene.js` | 成就列表 + 详情弹层（`POPUP` 常量是版式唯一数据源） |
 | `js/ui/achievement-notification.js` | 成就浮层通知，**串行队列**，只渲染队首 |
 | `js/ui/food-display.js` | 食物数量与飘字 |
+| `js/ui/tutorial-hint.js` | 新手引导气泡（圈住锚点 + 文案，只在第 1~3 关首次出现） |
 | `js/ui/privacy-scene.js` | 隐私授权弹窗（`wx.onNeedPrivacyAuthorization` 驱动） |
 
 ### 系统
@@ -140,7 +142,8 @@ game.js
 | 键 | 写入方 | 内容 |
 |---|---|---|
 | `gameProgress` | `game.js` | `{ unlockedLevel, currentLevel }` |
-| `level_N` | `game.js` | `{ stars, moves, timestamp }`，**每次通关覆盖** |
+| `level_N` | `game.js` | `{ stars, bestStars, moves, timestamp }`；`stars` 是本次成绩，`bestStars` 是历史最高（会覆盖写，但 `bestStars` 只增） |
+| `tutorialSeen` | `game.js` | `{ [关卡号]: true }`，只记录真正有引导的关卡（当前 1~3） |
 | `levelReward_N` | `game.js` | `{ firstClear, threeStar }`，首通与三星首通只发一次 |
 | `playerFood` | `food-manager.js` | `{ fish, shrimp, squid, goldfish }` |
 | `lastRecoveryTime` | `food-manager.js` | 恢复计时基准（每次启动重置为当前时刻） |
@@ -152,9 +155,9 @@ game.js
 | `totalStats` / `bestRecords` | `settlement-manager.js` | 累计统计与最佳记录 |
 | `cloudRecord` | `wechat-service.js` | 云端上报的本地镜像，用于「只升不降」比较 |
 
-> **已知口径差异**：排行榜的 `stars` 走 `getTotalStars()`，读的是 `level_N` 的**最近一次**成绩；
-> 成就的星数走 `achievementStats.levelStars`，是**历史最高星**。重玩低星会拉低前者，
-> 但 `reportScore()` 用 `Math.max(prev.stars, …)` 兜底，所以云端不会回退。
+> **口径已统一**：排行榜与成就的星数现在都取 `level_N.bestStars`（历史最高）。
+> 早期 `getTotalStars()` 读的是「最近一次」成绩，重玩打差会把总星数拉低；
+> `reportScore()` 的 `Math.max(prev.stars, …)` 只是兜住了云端，本地仍会漂。
 
 ---
 
@@ -181,7 +184,11 @@ game.js
 | 成就条件与奖励 | `js/utils/achievement-manager.js` → `achievements` 数组 |
 | 成就里程碑关数 | `js/utils/achievement-manager.js` → `CAMPAIGN_SIZE`（当前 60） |
 | 广告位 | `js/config.js` → `AD_UNITS.rewardedVideo` |
-| 排行榜分数权重 | `js/utils/wechat-service.js` → `computeScore()`（开放数据域按 `score` 排序，两处要一起改） |
+| 教学关盘面与引导文案 | `js/levels/tutorial-levels.js`（改盘面后必须用 `solveBoard` 核对 `optimal`，且不能超过第 4 关） |
+| 小鱼成长阶段（造型 / 配色 / 体型） | `js/runtime/target.js` → `STAGES` + `drawFins` / `drawBody`（**只能暖色**，回归会查 R>G>B） |
+| 引导气泡停留时长 / 位置 | `js/ui/tutorial-hint.js` → `HOLD_MS` / `BUBBLE_*` |
+| 排行榜排序口径 | `open-data/index.js` → `compareRank()`（level → stars → moves 三级比较） |
+| 排行榜分数编码（仅兼容字段） | `js/utils/wechat-service.js` → `computeScore()`（权重 1e9 / 1e5 / 1，改前先看注释里的溢出推导） |
 
 ---
 

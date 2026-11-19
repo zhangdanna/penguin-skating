@@ -42,25 +42,25 @@ export const SfxCues = {
   slide: {
     file: 'audio/slide.wav',
     bus: 'sfx',
-    gain: 0.72,
+    gain: 0.68,
     voices: 3,
     cooldown: 55,
     rate: [0.94, 1.07],
-    durMs: 260
+    durMs: 220
   },
   push: {
     file: 'audio/push.wav',
     bus: 'sfx',
-    gain: 0.85,
+    gain: 0.72,
     voices: 3,
     cooldown: 70,
     rate: [0.95, 1.05],
-    durMs: 300
+    durMs: 280
   },
   bump: {
     file: 'audio/collision.wav',
     bus: 'sfx',
-    gain: 0.70,
+    gain: 0.78,
     voices: 2,
     cooldown: 110,
     rate: [0.96, 1.04],
@@ -151,7 +151,7 @@ export const CUE_ALIASES = {
  */
 export const BgmConfig = {
   sources: ['audio/bgm.wav'],
-  defaultVolume: 0.6,
+  defaultVolume: 0.42,
   stateVolume: {
     menu: 1.0,
     game: 0.7,

@@ -54,7 +54,7 @@ game.js
 | `js/ui/menu-scene.js` | 主菜单：`第N关` 主按钮 + 音效 / 排行榜 / 成就 / 分享 四个次级按钮 |
 | `js/ui/game-hud.js` | 顶部信息面板 + 底部暂停 / 退一步 / 重玩三张卡片 |
 | `js/ui/pause-scene.js` | 继续游戏 / 重新开始 / 返回菜单 |
-| `js/ui/result-scene.js` | 通关结算（含本关解锁的成就） |
+| `js/ui/result-scene.js` | 通关结算：丝带标题 + 关卡徽章（共 200 关）+ 状态卡（差几步到三星）+ 奖励 + 下一关 / 重玩 / 返回首页 + 本关解锁的成就 |
 | `js/ui/gameover-scene.js` | 失败结算（重新挑战 / 看广告复活 / 返回菜单） |
 | `js/ui/revive-scene.js` | 复活选择（看视频 / 10 食物 / 放弃重玩） |
 | `js/ui/rank-scene.js` | 好友排行榜（把开放数据域画布贴到主域） |
@@ -69,6 +69,7 @@ game.js
 | 文件 | 职责 |
 |---|---|
 | `js/utils/score.js` | 星级口径 `calcStars()`，**唯一来源** |
+| `js/utils/level-progress.js` | 关卡进度口径：主线 200 关 / 无尽段、`共 N 关` 文案，HUD / 结算 / 首页共用 |
 | `js/utils/food-manager.js` | 食物库存、入场费、通关奖励、自然恢复、免费补给 |
 | `js/utils/achievement-manager.js` | 15 个成就定义（含 `pose` / `prop` / `quote`）、统计与门槛 |
 | `js/utils/revive-manager.js` | 每日复活次数、每关一次标记、步数惩罚 |
@@ -242,3 +243,7 @@ node local-preview/server.js       # http://localhost:8080
   文档里引用它们的路径不要跟着改。
 - 分享卡片图带文字，改名必须重跑 `tools/gen-share-image.py`，只改文档会留下旧图。
 - 结算标题是「通关成功」，**不带感叹号**。
+- 玩家可见文案里**不出现「标准」**：`par` 一律写成「最短 N 步」（HUD、结算页都是）。
+  「标准」是内部字段名的直译，玩家读不出它等于最短路径，也就不知道为什么掉星。
+- 关卡总数只从 `js/utils/level-progress.js` 取：主线 200 关 + 无尽段，
+  别在页面里写死 200，也别给无尽段编一个假上限。

@@ -30,6 +30,7 @@ dist/
 dist-h5/
 # 微信小程序发布包（tools/build-weapp.mjs 生成，可随时重建）
 dist-weapp/
+marketing/
 # 预览二维码（tools/preview-weapp.mjs 生成）
 preview-qrcode.png
 
@@ -37,7 +38,6 @@ preview-qrcode.png
 *.wxss
 *.log
 *.tmp
-
 # ---------- 注意 ----------
 # docs/ local-preview/ tools/ 是开发期资料，需要入库，
 # 只是通过 project.config.json 的 packOptions.ignore 排除在上传包之外，

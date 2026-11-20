@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>结算页渲染检查</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #0d2233; }
+  #c { display: block; width: 375px; height: 667px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="375" height="667"></canvas>
+<script type="module">
+  // 只用于本地视觉检查：把 ResultScene 单独拎出来渲染，
+  // 不用真的打一局。页面在 design-preview/ 下，不进发布包。
+  const canvas = document.getElementById('c')
+  window.canvas = canvas
+
+  const { default: ResultScene } = await import('../js/ui/result-scene.js')
+  const ctx = canvas.getContext('2d')
+  const scene = new ResultScene({ switchTo() {} })
+
+  scene.setLevelTotal(200)
+  scene.setAchievements([
+    { id: 'first_win', name: '初出茅庐', icon: '🏆', reward: { fish: 3 } }
+  ])
+
+  window.__setAchievements = (count) => {
+    scene.setAchievements(count > 0
+      ? [{ id: 'first_win', name: '初出茅庐', icon: '🏆', reward: { fish: 3 } }]
+      : [])
+  }
+
+  window.__renderResult = (moves, par) => {
+    scene.setResult(12, moves, par, 84)
+    scene.setRewards({ fish: 3, shrimp: 1, squid: 0, goldfish: 0 }, {
+      firstClear: true,
+      firstThreeStar: moves <= par,
+      requested: { fish: 3, shrimp: 1, squid: 0, goldfish: 0 }
+    })
+    scene.show()
+    // 跳过入场动画，直接看终态
+    scene.titleScale = 1
+    scene.starScales = [1, 1, 1]
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.clearRect(0, 0, 375, 667)
+    // 铺一层假的对局背景，才能看出遮罩层次
+    ctx.fillStyle = '#BFE9FF'
+    ctx.fillRect(0, 0, 375, 667)
+
+    scene.render(ctx)
+    return { stars: scene.stars, status: scene.getStatusContent() }
+  }
+
+  window.__ready = true
+</script>
+</body>
+</html>

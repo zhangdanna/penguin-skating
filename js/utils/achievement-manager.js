@@ -96,7 +96,7 @@ export default class AchievementManager {
       {
         id: 'perfect_moves',
         name: '精准操作',
-        description: '以标准步数（正好等于 par）通关一次',
+        description: '以最短步数通关一次',
         icon: '🎯',
         pose: 'hold',
         prop: 'target',
@@ -110,7 +110,7 @@ export default class AchievementManager {
       {
         id: 'perfect_moves_10',
         name: '操作大师',
-        description: '10 次以标准步数通关',
+        description: '10 次以最短步数通关',
         icon: '🎪',
         pose: 'hold',
         prop: 'star',

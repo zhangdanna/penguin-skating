@@ -211,6 +211,22 @@ export default class Main {
   }
 
   /**
+   * 把主线总关数同步给三个展示位（HUD / 结算页 / 首页）
+   *
+   * 玩家反馈「不知道一共有多少关」。关卡是「烘焙主线 200 关 + 运行时无尽」
+   * 两段式，只有 level-manager 知道真实数量，所以由这里下发一次，
+   * 三个页面都读同一份数字（口径见 js/utils/level-progress.js）。
+   */
+  syncLevelTotal() {
+    const total = this.levelManager ? this.levelManager.getCampaignSize() : 0
+    if (!total) return
+
+    if (this.menuScene) this.menuScene.setLevelTotal(total)
+    if (this.resultScene) this.resultScene.setLevelTotal(total)
+    if (this.gameHUD) this.gameHUD.setLevelTotal(total)
+  }
+
+  /**
    * 读取窗口信息（新版基础库用 getWindowInfo，老版本回落到 getSystemInfoSync）
    * @returns {Object|null}
    */
@@ -734,6 +750,8 @@ export default class Main {
     this.resultScene = new ResultScene(this.sceneManager)
     this.resultScene.onNextLevel = () => this.nextLevel()
     this.resultScene.onReplay = () => this.restartLevel()
+    // 结算页直达首页：旧版只有「下一关 / 重玩」，玩家想回首页得先退到对局再点暂停
+    this.resultScene.onBackToMenu = () => this.backToMenu()
     // 星星逐颗亮起时各给一声"叮"，第三颗比第一颗高三个半音，形成上行
     this.resultScene.onStarReveal = (index) => {
       if (this.audioManager) {
@@ -754,7 +772,10 @@ export default class Main {
 
     // 用棋盘布局算出的锚点摆好 HUD（此时 HUD 才刚创建）
     this.syncHudLayout()
-    
+
+    // 三个展示位都建好了，下发主线总关数（HUD / 结算 / 首页共用一份）
+    this.syncLevelTotal()
+
     // 注册游戏主场景
     this.gameScene = new GameScene(this)
     this.sceneManager.register('game', this.gameScene)

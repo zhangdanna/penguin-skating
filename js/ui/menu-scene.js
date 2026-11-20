@@ -8,6 +8,7 @@ import {
   drawStickerText
 } from './theme'
 import { CENTER_X, stage } from './layout'
+import { DEFAULT_MAINLINE_TOTAL, formatLevelProgressText } from '../utils/level-progress'
 
 /**
  * 主菜单场景（极地海洋馆）
@@ -27,7 +28,19 @@ export default class MenuScene {
     this.titleTargetY = 118
     this.penguinAngle = 0
 
+    // 主线总关数（由 game.js 的 syncLevelTotal 下发）
+    this.totalLevels = DEFAULT_MAINLINE_TOTAL
+
     this.init()
+  }
+
+  /**
+   * 设置主线总关数
+   * @param {number} total
+   */
+  setLevelTotal(total) {
+    const n = Math.floor(Number(total))
+    if (Number.isFinite(n) && n > 0) this.totalLevels = n
   }
 
   init() {
@@ -194,6 +207,7 @@ export default class MenuScene {
     this.renderTitle(ctx)
     this.renderPenguin(ctx, time)
     this.buttons.forEach(btn => btn.render(ctx))
+    this.renderLevelProgress(ctx)
     this.renderInstructions(ctx)
 
     ctx.restore()
@@ -204,6 +218,25 @@ export default class MenuScene {
    */
   relayout() {
     this.init()
+  }
+
+  /**
+   * 首页进度：主按钮下方一行小字
+   *
+   * 主按钮只写「第12关」，玩家看不出总共有多少关（玩家反馈）。
+   * 这一行补上分母和已通关数，位置在「开始按钮」与次级按钮之间
+   * （454~500 的空白），不额外占高度。
+   */
+  renderLevelProgress(ctx) {
+    const level = this.getProgressLevel()
+    const text = formatLevelProgressText(level, this.totalLevels)
+
+    drawStickerText(ctx, text, CENTER_X, 476, {
+      size: 12,
+      color: COLORS.white,
+      stroke: COLORS.navyDeep,
+      strokeWidth: 3
+    })
   }
 
   /**

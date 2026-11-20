@@ -7,6 +7,7 @@ import {
 } from './theme'
 import { viewport } from '../env'
 import { HUD_PANEL_HEIGHT, HUD_BUTTON_HEIGHT } from './layout'
+import { DEFAULT_MAINLINE_TOTAL, getLevelProgress } from '../utils/level-progress'
 
 // 面板 / 按钮尺寸的唯一数据源在 layout.js（与 computeBoardLayout 共用），
 // 这里只做转出，保持既有引用路径不变
@@ -20,6 +21,30 @@ const BUTTON_RADIUS = 24
 const BUTTON_DEPTH = 4
 /** 「退一步」单步消耗 */
 export const UNDO_FOOD_COST = 2
+
+/**
+ * 选 HUD 左侧的关卡文案
+ *
+ * 平时写「第199关」+ 浅色「/200」，可 320 宽屏上这串会和中间的
+ * 「步数 12 · 最短 10」撞在一起（实测只剩 2px）。放不下时压成「199」
+ * 保留分母 —— 关数信息比措辞重要，玩家照样读得懂。
+ *
+ * 抽成纯函数是为了能直接断言，不用起画布。
+ *
+ * @param {{level:number, endless:boolean, endlessLevel:number, suffix:string,
+ *          availableWidth:number, measure:(text:string,size:number)=>number}} opts
+ * @returns {{label:string, labelSize:number}}
+ */
+export function pickLevelLabel({ level, endless, endlessLevel, suffix, availableWidth, measure }) {
+  const labelSize = 15
+  const full = endless ? `无尽 ${endlessLevel} 关` : `第${level}关`
+  const compact = endless ? `无尽${endlessLevel}` : `${level}`
+
+  const suffixWidth = suffix ? 2 + measure(suffix, 10) : 0
+  const fits = measure(full, labelSize) + suffixWidth <= availableWidth
+
+  return { label: fits ? full : compact, labelSize }
+}
 
 /**
  * 游戏内HUD
@@ -49,6 +74,9 @@ export default class GameHUD {
     // 本关重玩的入场费（由 game.js 每次加载关卡时同步）
     // 0 表示本关免费（教程关），角标显示「免费」，否则显示 -N🐟
     this.restartCost = 0
+
+    // 主线总关数（0 = 未知，不显示分母）
+    this.totalLevels = 0
 
     // 纵向锚点，未传入时退回默认（贴屏幕边缘）
     this.panelY = 6
@@ -209,6 +237,16 @@ export default class GameHUD {
   }
 
   /**
+   * 设置主线总关数（由 game.js 的 syncLevelTotal 下发）
+   * 0 / 非法值表示未知，HUD 只显示「第 N 关」不显示分母
+   * @param {number} total
+   */
+  setLevelTotal(total) {
+    const n = Math.floor(Number(total))
+    this.totalLevels = Number.isFinite(n) && n > 0 ? n : 0
+  }
+
+  /**
    * 更新步数
    */
   setMoves(moves) {
@@ -258,17 +296,56 @@ export default class GameHUD {
 
     const infoY = y + 64
 
-    // 第N关（不加背景色）
-    ctx.font = font(16)
+    // 第N关 + 主线总关数
+    //
+    // 只写「第12关」玩家不知道一共有多少关（玩家反馈原话）。分母用浅色
+    // 小字跟在后面，既不抢主信息，又让"走到哪了"一眼可见。
+    // 200 关之后是无尽段，改写成「无尽 N 关」，不硬凑一个假分母。
+    const progress = getLevelProgress(
+      this.level,
+      this.totalLevels > 0 ? this.totalLevels : DEFAULT_MAINLINE_TOTAL
+    )
+
+    // 中间那行先量宽度：左侧据此决定写全称还是压成纯数字。
+    // 320 宽屏上「第199关 /200」离中间文字只剩 2px，会挤在一起。
+    const vpWidth = viewport().width
+    const centerText = `步数 ${this.moves} · 最短 ${this.par}`
+    ctx.font = font(14)
+    const centerStart = vpWidth / 2 - ctx.measureText(centerText).width / 2
+
+    const suffix = progress.endless || this.totalLevels <= 0 ? '' : `/${this.totalLevels}`
+    const picked = pickLevelLabel({
+      level: this.level,
+      endless: progress.endless,
+      endlessLevel: progress.endlessLevel,
+      suffix,
+      availableWidth: centerStart - 8 - 20,
+      measure: (text, size) => {
+        ctx.font = font(size)
+        return ctx.measureText(text).width
+      }
+    })
+
     ctx.textAlign = 'left'
     ctx.fillStyle = COLORS.navy
-    ctx.fillText(`第${this.level}关`, 20, infoY)
+    ctx.font = font(picked.labelSize)
+    ctx.fillText(picked.label, 20, infoY)
 
-    // 步数与标准步数
+    if (suffix) {
+      const labelWidth = ctx.measureText(picked.label).width
+      ctx.font = font(10, 'normal')
+      ctx.fillStyle = COLORS.navySoft
+      ctx.fillText(suffix, 20 + labelWidth + 2, infoY + 2)
+    }
+
+    // 步数与最短步数
+    //
+    // 「标准」是内部术语（= par = 最优步数），玩家读不出含义。
+    // 改成「最短」直接点明：走到这个步数就是三星。
     ctx.font = font(14)
     ctx.textAlign = 'center'
     ctx.fillStyle = this.moves <= this.par ? COLORS.mintDeep : COLORS.coral
-    ctx.fillText(`步数 ${this.moves} · 标准 ${this.par}`, viewport().width / 2, infoY)
+    ctx.fillText(centerText, vpWidth / 2, infoY)
 
     // 计时
     ctx.font = font(16)

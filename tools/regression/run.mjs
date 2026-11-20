@@ -2385,5 +2385,176 @@ check('开放数据域按 level → stars → moves 三级排序（不按单值 
 check('未授权与加载失败分开提示（玩家能自己修的那种要说清）',
   /auth|deny|permission/.test(openDataRankSrc) && /还没有开启好友排行/.test(openDataRankSrc))
 
+// ---------- [30] 结算页可读性 + 关卡总数口径（玩家反馈 2026-11-20） ----------
+//
+// 三条反馈：① 没满星不知道为什么 ② 结算页没有返回首页 ③ 不知道一共多少关
+// 这三条都是「信息没给」而不是「功能坏了」，所以断言全部落在文案与版式上。
+console.log('\n[30] 结算页可读性 + 关卡总数口径')
+
+const lpMod = (await loadModule(path.join(ROOT, 'js/utils/level-progress.js'))).namespace
+const { getLevelProgress, formatLevelTotal, formatLevelProgressText } = lpMod
+
+const midProgress = getLevelProgress(12, 200)
+check('主线内进度 12/200、已通关 11 关',
+  midProgress.endless === false && midProgress.total === 200 &&
+  midProgress.cleared === 11 && Math.abs(midProgress.ratio - 12 / 200) < 1e-9,
+  JSON.stringify(midProgress))
+
+const endlessProgress = getLevelProgress(203, 200)
+check('201 关起转无尽（第 3 关），不硬凑假分母',
+  endlessProgress.endless === true && endlessProgress.endlessLevel === 3 &&
+  endlessProgress.ratio === 1,
+  JSON.stringify(endlessProgress))
+
+check('关卡总数文案「共 200 关」', formatLevelTotal(12, 200) === '共 200 关',
+  formatLevelTotal(12, 200))
+check('首页进度文案含已通关数与分母',
+  formatLevelProgressText(12, 200) === '已通关 11 关 · 共 200 关',
+  formatLevelProgressText(12, 200))
+check('无尽段首页文案不说「共 N 关」',
+  /主线 200 关已通关/.test(formatLevelProgressText(203, 200)),
+  formatLevelProgressText(203, 200))
+
+// --- 结算页按钮：必须能直接回首页 ---
+const resultScene = game.resultScene
+resultScene.setLevelTotal(200)
+const resultTexts = resultScene.buttons.map(b => b.text)
+check(`结算页有 3 个按钮（实际：${resultTexts.join(' / ')}）`,
+  resultScene.buttons.length === 3 &&
+  resultTexts[0] === '下一关' && resultTexts[1] === '重玩' && resultTexts[2] === '返回首页',
+  resultTexts.join(','))
+check('结算页 onBackToMenu 已接线', typeof resultScene.onBackToMenu === 'function')
+resultScene.relayout()
+check('重排后 onBackToMenu 仍存在（否则 resize 后回不了首页）',
+  typeof resultScene.onBackToMenu === 'function' &&
+  resultScene.buttons[2].text === '返回首页')
+
+const resultButtons = resultScene.buttons
+const buttonsInPanel = resultButtons.every(b => b.y >= 76 && b.y + b.height <= 630)
+const buttonsApart = resultButtons[0].y + resultButtons[0].height <= resultButtons[1].y &&
+  resultButtons[1].x + resultButtons[1].width <= resultButtons[2].x
+check('结算按钮不重叠且都在面板内', buttonsInPanel && buttonsApart,
+  JSON.stringify(resultButtons.map(b => [b.x, b.y, b.width, b.height])))
+
+// --- 状态卡：只排两行（结论 + 步数/用时），不再带建议语 ---
+resultScene.setResult(12, 10, 10, 30)
+const perfectStatus = resultScene.getStatusContent()
+check('三星 → 完美通关文案',
+  /完美通关/.test(perfectStatus.title),
+  JSON.stringify(perfectStatus))
+
+resultScene.setResult(12, 13, 10, 30)
+const twoStarStatus = resultScene.getStatusContent()
+check('二星 → 明写「差 3 步就是三星」',
+  twoStarStatus.title === '差 3 步就是三星',
+  JSON.stringify(twoStarStatus))
+
+resultScene.setResult(12, 30, 10, 30)
+const oneStarStatus = resultScene.getStatusContent()
+check('一星 → 明写「距离三星还差 20 步」',
+  oneStarStatus.title === '距离三星还差 20 步',
+  JSON.stringify(oneStarStatus))
+
+check('状态卡三行：结论之外还有一句可执行建议',
+  /最短路径/.test(perfectStatus.tip) &&
+  twoStarStatus.tip.length > 0 && oneStarStatus.tip.length > 0,
+  `${perfectStatus.tip} / ${twoStarStatus.tip} / ${oneStarStatus.tip}`)
+
+// 建议语变体必须确定性：同一局重绘两次不能换文案（随机挑会让结算页抖）
+resultScene.setResult(12, 14, 10, 30)
+const tipA = resultScene.getStatusContent().tip
+const tipB = resultScene.getStatusContent().tip
+check('建议语确定性（同一局两次取到同一条）', tipA === tipB, `${tipA} / ${tipB}`)
+
+check('未满星不给「sad」脸（鼓励而非指责）',
+  perfectStatus.pose === 'cheer' &&
+  twoStarStatus.mood !== 'sad' && oneStarStatus.mood !== 'sad',
+  `${twoStarStatus.mood}/${oneStarStatus.mood}`)
+
+// --- 奖励标签：首通不再标（主线推进时恒定），食物满只写结论 ---
+resultScene.setResult(12, 10, 10, 30)
+resultScene.setRewards({ fish: 3, shrimp: 1, squid: 0, goldfish: 0 }, {
+  firstClear: true,
+  firstThreeStar: true,
+  requested: { fish: 3, shrimp: 1, squid: 0, goldfish: 0 }
+})
+const tagsNormal = resultScene.getRewardTags()
+check('奖励不再标「首次通关」（每关都是首通，恒亮等于噪音）',
+  tagsNormal.indexOf('首次通关') === -1, tagsNormal.join(','))
+check('三星首通仍标「首次三星」',
+  tagsNormal.indexOf('首次三星') >= 0, tagsNormal.join(','))
+
+resultScene.setRewards({ fish: 1, shrimp: 0, squid: 0, goldfish: 0 }, {
+  firstClear: false,
+  firstThreeStar: false,
+  requested: { fish: 3, shrimp: 0, squid: 0, goldfish: 0 }
+})
+const tagsFull = resultScene.getRewardTags()
+check('食物已满只写结论，不列未入账明细（那些本来就没进背包）',
+  tagsFull.length === 1 && tagsFull[0] === '食物已满', tagsFull.join(','))
+
+// --- 没有成就时内容要下移居中，否则头重脚轻 ---
+resultScene.setAchievements([])
+const offsetNoAch = resultScene.contentOffset()
+resultScene.setAchievements([{ id: 't', name: '测试', icon: '🏆', reward: { fish: 1 } }])
+const offsetWithAch = resultScene.contentOffset()
+check('没有成就时内容下移居中，有成就时回到原位',
+  offsetNoAch > 0 && offsetWithAch === 0, `${offsetNoAch} / ${offsetWithAch}`)
+resultScene.setAchievements([])
+
+// --- HUD / 首页都拿到分母 ---
+game.gameHUD.setLevelTotal(200)
+game.gameHUD.setLevelInfo(12, 10)
+check('HUD 拿到主线总关数', game.gameHUD.totalLevels === 200,
+  String(game.gameHUD.totalLevels))
+check('首页拿到主线总关数', game.menuScene.totalLevels === 200,
+  String(game.menuScene.totalLevels))
+check('game.js 统一下发总关数给三处',
+  /syncLevelTotal\(\)/.test(allSources.find(({ file }) => file.endsWith('game.js')).src) &&
+  /menuScene\.setLevelTotal/.test(allSources.find(({ file }) => file.endsWith('game.js')).src) &&
+  /resultScene\.setLevelTotal/.test(allSources.find(({ file }) => file.endsWith('game.js')).src) &&
+  /gameHUD\.setLevelTotal/.test(allSources.find(({ file }) => file.endsWith('game.js')).src))
+
+// --- 源码层面：术语与禁用项 ---
+const resultSrcNow = allSources.find(({ file }) => file.endsWith('result-scene.js')).src
+const hudSrcNow = allSources.find(({ file }) => file.endsWith('game-hud.js')).src
+// 只看运行时字符串，注释里保留「旧版叫标准」这种说明是有价值的
+const stripComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+check('结算页 / HUD 不再用「标准」这个内部术语',
+  stripComments(resultSrcNow).indexOf('标准') === -1 &&
+  stripComments(hudSrcNow).indexOf('标准') === -1)
+check('结算页写明「最短 N 步」', /最短/.test(resultSrcNow) && /最短/.test(hudSrcNow))
+check('结算页徽章带总数（共 N 关）', /formatLevelTotal/.test(resultSrcNow))
+check('结算页不画 sad 企鹅', !/sad:\s*true/.test(resultSrcNow))
+check('首页显示关卡进度小字', /formatLevelProgressText/.test(
+  allSources.find(({ file }) => file.endsWith('menu-scene.js')).src))
+
+// HUD 左侧：320 宽屏 + 三位数关卡会撞到中间文字，必须降级成纯数字
+const hudMod = (await loadModule(path.join(ROOT, 'js/ui/game-hud.js'))).namespace
+const measureStub = (text, size) => {
+  let w = 0
+  for (const ch of String(text)) w += /[0-9/·\s.]/.test(ch) ? size * 0.55 : size
+  return w
+}
+const narrowLabel = hudMod.pickLevelLabel({
+  level: 199, endless: false, endlessLevel: 0, suffix: '/200',
+  availableWidth: 76, measure: measureStub
+})
+check('320 宽屏 + 第199关 → 左侧压成「199」保住分母',
+  narrowLabel.label === '199', narrowLabel.label)
+
+const wideLabel = hudMod.pickLevelLabel({
+  level: 12, endless: false, endlessLevel: 0, suffix: '/200',
+  availableWidth: 111, measure: measureStub
+})
+check('宽屏 + 第12关 → 保留「第12关」',
+  wideLabel.label === '第12关', wideLabel.label)
+
+const endlessLabel = hudMod.pickLevelLabel({
+  level: 203, endless: true, endlessLevel: 3, suffix: '',
+  availableWidth: 111, measure: measureStub
+})
+check('无尽段 HUD 写「无尽 3 关」', endlessLabel.label === '无尽 3 关', endlessLabel.label)
+
 console.log(`\n===== 结果：${passed} 通过 / ${failed} 失败 =====`)
 process.exit(failed === 0 ? 0 : 1)

@@ -75,6 +75,12 @@ game.js
 | `js/utils/revive-manager.js` | 每日复活次数、每关一次标记、步数惩罚 |
 | `js/utils/settlement-manager.js` | 累计统计与最佳记录 |
 | `js/utils/wechat-service.js` | 分享、云存档、排行榜四项上报 |
+| `js/utils/coin-manager.js` | 雪花钱余额与产出表（`COIN_REWARD`），不认识 FoodManager |
+| `js/utils/skin-manager.js` | 外观目录、拥有/穿戴、**给绘制层的模块级快照**（`getCurrentSkin` 等） |
+| `js/ui/skin-art.js` | 配件 / 托盘纹理 / 背景色卡的绘制，不含状态（叶子模块，谁都能 import） |
+| `js/ui/shop-scene.js` | 外观商城（三个页签 + 2 列商品卡 + 买/穿/卸） |
+| `js/utils/hint-manager.js` | 提示券余量、卡关补偿、`currentHintMove()`（吃运行时盘面）+ `firstHintMove()`（吃关卡初始盘面） |
+| `js/utils/hint-manager.js` | 提示券余量、卡关补偿、`currentHintMove()`（吃运行时盘面）+ `firstHintMove()`（吃关卡初始盘面） |
 | `js/utils/ad-manager.js` | 激励视频（未配置广告位时整条链路关闭） |
 | `js/utils/audio-manager.js` | 音频引擎：总线 / 声部池 / 冷却 / BGM 闪避与场景音量 / 前后台挂起恢复（设计见 `docs/AUDIO.md`） |
 | `js/utils/audio-cues.js` | 音效表：12 个 cue 的素材路径、总线、增益、并发、冷却、闪避（音频唯一数据源） |
@@ -143,7 +149,7 @@ game.js
 | 键 | 写入方 | 内容 |
 |---|---|---|
 | `gameProgress` | `game.js` | `{ unlockedLevel, currentLevel }` |
-| `level_N` | `game.js` | `{ stars, bestStars, moves, timestamp }`；`stars` 是本次成绩，`bestStars` 是历史最高（会覆盖写，但 `bestStars` 只增） |
+| `level_N` | `game.js` | `{ stars, bestStars, moves, bestMoves, timestamp }`；`stars` 是本次成绩，`bestStars` 是历史最高（会覆盖写，但 `bestStars` 只增）；`bestMoves` 是历史最少步数（只减，结算页「上次 9 步 → 这次 7 步」靠它） |
 | `tutorialSeen` | `game.js` | `{ [关卡号]: true }`，只记录真正有引导的关卡（当前 1~3） |
 | `levelReward_N` | `game.js` | `{ firstClear, threeStar }`，首通与三星首通只发一次 |
 | `playerFood` | `food-manager.js` | `{ fish, shrimp, squid, goldfish }` |
@@ -152,6 +158,15 @@ game.js
 | `unlockedAchievements` | `achievement-manager.js` | 已解锁成就 id 数组（加载时过滤已下线 id） |
 | `achievementStats` | `achievement-manager.js` | `uniqueWins / levelStars / perfectMoves / bestSpeedRatio / foodEarned / totalPlayTime` 等 |
 | `dailyRevive` | `revive-manager.js` | `{ date, watchAd, useFood }` |
+| `snowCoins` | `coin-manager.js` | 雪花钱余额（单个数字）。**只买外观**，永远不能换成鱼 |
+| `ownedSkins` | `skin-manager.js` | 已拥有外观 id 数组（加载时过滤已下架的 id） |
+| `equippedSkin` | `skin-manager.js` | `{ penguin, stage, bg }`，每个槽一位；穿戴后写完立刻 `syncCurrent()` |
+| `starterCoinBonus` | `game.js` | 新手礼（首通 3 关送 60❄）是否已发 |
+| `hintTickets` | `hint-manager.js` | 提示券余量 |
+| `hintGiftLevels` | `hint-manager.js` | 已经领过「连败补偿」的关卡 id（防刷） |
+| `hintTickets` | `hint-manager.js` | 提示券余量 |
+| `hintGiftLevels` | `hint-manager.js` | 已经领过「连败补偿」的关卡 id（防刷） |
+| `checkin` | `checkin-manager.js` | `{ lastDate, day, totalDays }`：`day` 是**本周期**最近一次领到第几档（1~7，会重置），`totalDays` 是**累计**签到天数（只增，断签不清零）；**「今天领没领」不在这里**，只认 `dailyGift` 一个口径 |
 | `audioSettings` | `audio-manager.js` | `{ soundEnabled, musicEnabled, soundVolume, musicVolume }` |
 | `totalStats` / `bestRecords` | `settlement-manager.js` | 累计统计与最佳记录 |
 | `cloudRecord` | `wechat-service.js` | 云端上报的本地镜像，用于「只升不降」比较 |
@@ -159,6 +174,11 @@ game.js
 > **口径已统一**：排行榜与成就的星数现在都取 `level_N.bestStars`（历史最高）。
 > 早期 `getTotalStars()` 读的是「最近一次」成绩，重玩打差会把总星数拉低；
 > `reportScore()` 的 `Math.max(prev.stars, …)` 只是兜住了云端，本地仍会漂。
+
+> **存档键口径**：`dailyGift`（`food-manager.js`）决定「今天领没领」，`checkin` 只记「连续到第几天」。
+> 两者共用同一套日期字符串（`CheckinManager` 内部调 `foodManager.getTodayDate()`），
+> 不要给签到另存一份日期 —— 两个键一定会漂。
+> 增长模块后续要加的键（雪花钱 / 外观 / 提示券）见 `docs/GROWTH.md` 附录，实现时补进上表。
 
 ---
 

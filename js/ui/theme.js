@@ -5,6 +5,8 @@
 
 import LayerCache from '../utils/layer-cache'
 import { viewport } from '../env'
+import { drawPenguinAccessory } from './skin-art'
+import { getEquippedAccessoryId, getCurrentBgId, getCurrentBgPalette } from '../utils/skin-manager'
 
 /**
  * 菜单 / 排行榜 / 对局三个界面用的是同一张海洋背景，
@@ -248,8 +250,10 @@ export function drawCandyButton(ctx, x, y, width, height, options = {}) {
  */
 export function drawOceanCached(ctx) {
   const { width, height } = viewport()
+  // key 里必须带背景皮肤 id：静态层是离屏缓存的，换了水色不换 key 就永远是旧图
+  const bgKey = getCurrentBgId() || 'default'
   const cached = oceanLayer.render(
-    ctx, `ocean@${width}x${height}`, width, height,
+    ctx, `ocean@${width}x${height}#${bgKey}`, width, height,
     (layerCtx) => drawOceanBase(layerCtx)
   )
   if (!cached) drawOceanBase(ctx)
@@ -262,11 +266,18 @@ export function drawOceanCached(ctx) {
 export function drawOceanBase(ctx) {
   const { width, height } = viewport()
 
-  // 水体渐变
+  // 水体渐变。默认三档写死在这里，穿了背景皮肤（极光 / 深海）时换成皮肤色标 ——
+  // 只换水色，沙底和海草不动，否则「糖果海洋馆」的底子就散了
+  const bg = getCurrentBgPalette()
   const water = ctx.createLinearGradient(0, 0, 0, height)
-  water.addColorStop(0, '#C9F4FF')
-  water.addColorStop(0.45, '#7FD8F7')
-  water.addColorStop(1, '#2C9CD6')
+  if (bg && Array.isArray(bg.stops)) {
+    // 多档色标（极光的青→紫→蓝、深海的亮蓝→靛黑）：档位多才有「换了天空」的感觉
+    bg.stops.forEach(([offset, color]) => water.addColorStop(offset, color))
+  } else {
+    water.addColorStop(0, bg ? bg.top : '#C9F4FF')
+    water.addColorStop(0.45, bg ? bg.mid : '#7FD8F7')
+    water.addColorStop(1, bg ? bg.bottom : '#2C9CD6')
+  }
   ctx.fillStyle = water
   ctx.fillRect(0, 0, width, height)
 
@@ -881,6 +892,27 @@ export function drawPenguin(ctx, cx, cy, scale = 1, options = {}) {
   if (prop) drawPenguinProp(ctx, prop)
 
   ctx.restore()
+
+  // ---- 配件（帽子 / 墨镜 / 耳机）----
+  //
+  // 必须在身体 restore 之后、单独一段 transform 里画：
+  //   - 沿用和身体完全相同的姿态变换（groundY → poseAngle → squashY → drop），
+  //     否则 slide 时帽子会飘在原地、peek 时浮在冰堆上方；
+  //   - `options.accessory === undefined` 时取当前穿戴（全局），
+  //     传 null 则强制不戴（成就详情卡要画「这个成就的造型」，不能掺玩家帽子）。
+  const accessory = options.accessory === undefined ? getEquippedAccessoryId() : options.accessory
+  if (accessory) {
+    ctx.save()
+    ctx.translate(cx, cy)
+    ctx.rotate(angle)
+    ctx.scale(scale, scale)
+    ctx.translate(0, groundY)
+    ctx.rotate(poseAngle)
+    ctx.scale(1, squashY)
+    ctx.translate(0, -groundY + drop)
+    drawPenguinAccessory(ctx, accessory)
+    ctx.restore()
+  }
 
   // ---- 姿态装饰：不跟随身体的倾斜 / 压扁 ----
   if (pose === 'peek' || pose === 'slide') {

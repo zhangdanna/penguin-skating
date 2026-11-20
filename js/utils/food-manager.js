@@ -203,9 +203,13 @@ export default class FoodManager {
    * 注意这个溢出通道只开给签到。通关奖励 / 恢复仍然严格截断 ——
    * 那是 F1 的口径，放开的话金鱼又能无限堆积。
    *
+   * `amount` 由 CheckinManager 按 7 日奖励表传进来；不传时退回
+   * `dailyGiftAmount`，老调用点（含回归）行为不变。
+   *
+   * @param {number} [amount] - 本次发放的鱼数
    * @returns {{claimed:boolean, amount:number, actual:number, total:number, max:number}}
    */
-  claimDailyGift() {
+  claimDailyGift(amount = this.dailyGiftAmount) {
     const snapshot = () => ({
       claimed: false,
       amount: 0,
@@ -216,12 +220,14 @@ export default class FoodManager {
 
     if (!this.canClaimDailyGift()) return snapshot()
 
-    const amount = this.dailyGiftAmount
-    const actual = this.addFood('fish', amount, { overflow: amount })
+    const grant = Math.max(0, Math.floor(Number(amount)) || 0)
+    if (grant <= 0) return snapshot()
+
+    const actual = this.addFood('fish', grant, { overflow: grant })
 
     // 一条都没发出去（容量异常）就不消耗今天的次数，下次打开还能领
     if (actual <= 0) {
-      return { ...snapshot(), amount }
+      return { ...snapshot(), amount: grant }
     }
 
     this.dailyGiftDate = this.getTodayDate()
@@ -229,7 +235,7 @@ export default class FoodManager {
 
     return {
       claimed: true,
-      amount,
+      amount: grant,
       actual,
       total: this.getTotalFood(),
       max: this.maxFood

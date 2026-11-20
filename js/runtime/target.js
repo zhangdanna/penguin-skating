@@ -1,5 +1,7 @@
 import Sprite from '../base/sprite'
 import { font, roundRectPath } from '../ui/theme'
+import { drawTrayTexture } from '../ui/skin-art'
+import { getCurrentTrayPalette, getCurrentTrayId } from '../utils/skin-manager'
 
 /**
  * 目标区域（鱼形展台）
@@ -18,13 +20,20 @@ import { font, roundRectPath } from '../ui/theme'
  * 冷蓝棋盘 + 暖橙展台的对比是这套方案的骨架，别把底板改回蓝色。
  */
 
-/** 展台底板（上浅下深的奶油渐变） */
-const PLATE_TOP = '#FFF4DD'
-const PLATE_BOTTOM = '#FFE3B9'
-/** 珊瑚色描边（orangeDeep 系） */
-const PLATE_EDGE = 'rgba(224, 124, 54, 0.92)'
+/**
+ * 默认展台：奶油渐变 + 琥珀金边
+ *
+ * 曾经默认就是珊瑚色，导致买了「珊瑚托盘」皮肤后画面几乎没变（用户原话：
+ * 「当前默认就是珊瑚托盘吧」）。默认必须更中性、更淡，皮肤才有升级感。
+ * 三档递进：默认金边奶油 → 珊瑚（浓橙红 + 珊瑚纹理）→ 贝壳（珠光暖白）。
+ * 仍然是暖色 R>G>B —— 冷色底板会被读成冰面，回归会拦。
+ */
+const PLATE_TOP = '#FFF6E6'
+const PLATE_BOTTOM = '#F7DFB4'
+/** 琥珀金描边（比皮肤的珊瑚/焦糖都更淡） */
+const PLATE_EDGE = 'rgba(201, 146, 58, 0.88)'
 /** 底板投影 */
-const PLATE_SHADOW = 'rgba(224, 124, 54, 0.16)'
+const PLATE_SHADOW = 'rgba(201, 146, 58, 0.14)'
 
 /**
  * 小鱼成长阶段
@@ -209,30 +218,37 @@ export default class Target extends Sprite {
 
     ctx.save()
 
+    // 展台皮肤：只换配色 + 纹理，**永远是暖色**（TRAY_PALETTES 里每一档都满足 R>G>B）。
+    // 默认（没穿皮肤）仍然用本文件顶部的 PLATE_*，别把这两组常量删了。
+    const skin = getCurrentTrayPalette()
+
     // 投影：向下偏移的浅色底，不用 shadowBlur（全项目禁用）
     roundRectPath(ctx, x, y + 2.5 * k, w, h, radius)
-    ctx.fillStyle = PLATE_SHADOW
+    ctx.fillStyle = skin ? skin.shadow : PLATE_SHADOW
     ctx.fill()
 
     const grad = ctx.createLinearGradient(0, y, 0, y + h)
-    grad.addColorStop(0, PLATE_TOP)
-    grad.addColorStop(1, PLATE_BOTTOM)
+    grad.addColorStop(0, skin ? skin.top : PLATE_TOP)
+    grad.addColorStop(1, skin ? skin.bottom : PLATE_BOTTOM)
     roundRectPath(ctx, x, y, w, h, radius)
     ctx.fillStyle = grad
     ctx.fill()
 
     // 内圈白线，糖果感
     roundRectPath(ctx, x + 3 * k, y + 3 * k, w - 6 * k, h - 6 * k, Math.max(1, radius - 3 * k))
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)'
+    ctx.strokeStyle = skin ? skin.inner : 'rgba(255, 255, 255, 0.9)'
     ctx.lineWidth = 1.6 * k
     ctx.stroke()
+
+    // 纹理画在白线之后、虚线之前：只做「有材质」的暗示，不许盖住虚线框
+    if (skin) drawTrayTexture(ctx, getCurrentTrayId(), x, y, w, h, k)
 
     // 外圈珊瑚虚线：虚线读作「待填的凹槽」，实线会被读成一块可以推的方块
     // 线宽和 dash 都比第一版细一档：2.4px + 6/4.5 的虚线放大看像警示胶带
     ctx.setLineDash([5 * k, 3.6 * k])
     ctx.lineDashOffset = -this.pulse * 2.4 * k
     roundRectPath(ctx, x, y, w, h, radius)
-    ctx.strokeStyle = PLATE_EDGE
+    ctx.strokeStyle = skin ? skin.edge : PLATE_EDGE
     ctx.lineWidth = 2 * k
     ctx.stroke()
     ctx.setLineDash([])

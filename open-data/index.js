@@ -54,6 +54,9 @@ const ROW_HEIGHT = 46
 const HEADER_HEIGHT = 34
 /** 底部「我的成绩」固定行 */
 const SELF_HEIGHT = 44
+/** 顶部「我的位置条」高度与下边距 */
+const BAR_HEIGHT = 40
+const BAR_GAP = 8
 
 // 监听主域消息
 wx.onMessage((data) => {
@@ -153,20 +156,101 @@ function renderRankList() {
     return
   }
 
-  drawHeader()
+  // 位置条在表头之上：「你和好友差多少」要在看到具体名次之前先说清楚
+  const listTop = drawPositionBar()
+
+  drawHeader(listTop)
 
   // 底部固定留出「我的成绩」一行
   const maxRows = Math.max(
     1,
-    Math.floor((layout.height - HEADER_HEIGHT - 8 - SELF_HEIGHT - 10) / ROW_HEIGHT)
+    Math.floor((layout.y + layout.height - listTop - HEADER_HEIGHT - 8 - SELF_HEIGHT - 10) / ROW_HEIGHT)
   )
   const rows = rankList.slice(0, maxRows)
 
   rows.forEach((item, index) => {
-    drawRow(item, index, index * ROW_HEIGHT)
+    drawRow(item, index, index * ROW_HEIGHT, listTop)
   })
 
   drawSelfRow()
+}
+
+/**
+ * 我的位置条
+ *
+ * 这是整页唯一「把数字翻译成人话」的地方。原来自己那一行只有「第 N 名」，
+ * 玩家要自己数上面还有几个人 —— 20 个好友时根本数不过来。
+ *
+ * 数据全部来自已拉到的好友列表，不需要任何额外接口：
+ *   - 比我强的有几个 → 我的名次
+ *   - 好友总数 - 名次 → 被我超过的有几个
+ *
+ * 一条都不满足（自己还没通关）时不画条，直接把表头顶到最上面。
+ *
+ * @returns {number} 列表内容的起始 y
+ */
+function drawPositionBar() {
+  if (!selfRecord || !selfRecord.level || !rankList.length) return layout.y
+
+  const rank = selfRankAmongFriends()
+  const total = rankList.length
+  const beaten = Math.max(0, total - rank + 1)
+
+  let text
+  if (rank === 1) {
+    text = `你是好友里第 1 名 · 超过了 ${total} 位好友`
+  } else {
+    text = `你超过了 ${beaten} 位好友（共 ${total} 位）`
+  }
+
+  const y = layout.y
+  const height = BAR_HEIGHT
+
+  roundRect(layout.x, y, layout.width, height, 14)
+  ctx.fillStyle = 'rgba(47, 191, 155, 0.16)'
+  ctx.fill()
+  ctx.strokeStyle = 'rgba(47, 191, 155, 0.45)'
+  ctx.lineWidth = 1.4
+  ctx.stroke()
+
+  // 奖牌改成矢量五角星：共享画布里 emoji 的字体不保证存在，
+  // 缺失时会画成方块，比没有图标更难看
+  const iconX = layout.x + 22
+  const iconY = y + height / 2
+  drawStarIcon(iconX, iconY, 8, STYLE.gold)
+
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'middle'
+  ctx.fillStyle = STYLE.text
+  ctx.font = `bold 12.5px ${STYLE.font}`
+
+  // 文字过长时缩字号，不截断（这是整页最重要的一句话）
+  let size = 12.5
+  while (size > 9 && ctx.measureText(text).width > layout.width - 52) {
+    size -= 0.5
+    ctx.font = `bold ${size}px ${STYLE.font}`
+  }
+  ctx.fillText(text, iconX + 15, iconY)
+
+  return y + height + BAR_GAP
+}
+
+/**
+ * 五角星（矢量，不依赖 emoji）
+ */
+function drawStarIcon(cx, cy, radius, color) {
+  ctx.beginPath()
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 === 0 ? radius : radius * 0.45
+    const angle = -Math.PI / 2 + (i * Math.PI) / 5
+    const x = cx + Math.cos(angle) * r
+    const y = cy + Math.sin(angle) * r
+    if (i === 0) ctx.moveTo(x, y)
+    else ctx.lineTo(x, y)
+  }
+  ctx.closePath()
+  ctx.fillStyle = color
+  ctx.fill()
 }
 
 /**
@@ -178,9 +262,10 @@ function clearCanvas() {
 
 /**
  * 表头
+ * @param {number} [top] - 列表起始 y（有位置条时会被顶下去）
  */
-function drawHeader() {
-  const y = layout.y
+function drawHeader(top = layout.y) {
+  const y = top
 
   roundRect(layout.x, y, layout.width, HEADER_HEIGHT, 12)
   ctx.fillStyle = STYLE.headerBg
@@ -206,10 +291,11 @@ function drawHeader() {
 
 /**
  * 单行排行项
+ * @param {number} [top] - 列表起始 y（有位置条时会比 layout.y 低一条）
  */
-function drawRow(item, index, offsetY) {
+function drawRow(item, index, offsetY, top = layout.y) {
   const rank = index + 1
-  const y = layout.y + HEADER_HEIGHT + 8 + offsetY
+  const y = top + HEADER_HEIGHT + 8 + offsetY
   const rowHeight = ROW_HEIGHT - 8
 
   roundRect(layout.x, y, layout.width, rowHeight, 12)

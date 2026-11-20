@@ -334,8 +334,8 @@ export default class AchievementManager {
     this.refreshStarStats()
 
     // 精准操作：步数正好等于 par
-    // 使用过「退一步」的关卡不计入 —— 否则等于用食物买成就
-    if (!result.undoUsed && safeMoves > 0 && safeMoves === safePar) {
+    // 使用过「退一步」或「提示」的关卡不计入 —— 否则等于用道具买成就
+    if (!result.undoUsed && !result.hintUsed && safeMoves > 0 && safeMoves === safePar) {
       this.stats.perfectMoves++
     }
 

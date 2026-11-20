@@ -65,6 +65,10 @@ export default class GameHUD {
     this.onPauseClick = null
     this.onRestartClick = null
     this.onUndoClick = null
+    this.onHintClick = null
+
+    // 提示券余量（由 game.js 同步）；0 时提示按钮置灰并写「无券」
+    this.hintTickets = 0
 
     // 退一步状态（由 game.js 每次移动后同步）
     this.undoCost = UNDO_FOOD_COST
@@ -105,9 +109,12 @@ export default class GameHUD {
       height: HUD_PANEL_HEIGHT
     }
 
-    // 底部三张卡片，整体水平居中
-    const size = HUD_BUTTON_HEIGHT
-    const totalWidth = size * 3 + BUTTON_GAP * 2
+    // 底部四张卡片，整体水平居中
+    // 375 设计稿下 76×76 + 14 间距 = 346，放得下；窄屏（320）按可用宽度缩小，
+    // 否则第 4 张会溢出屏幕边缘。回归在 375 下仍读到 76×76。
+    const count = 4
+    const size = Math.min(HUD_BUTTON_HEIGHT, Math.floor((vp.width - 24 - BUTTON_GAP * (count - 1)) / count))
+    const totalWidth = size * count + BUTTON_GAP * (count - 1)
     const startX = Math.round((vp.width - totalWidth) / 2)
     const buttonY = typeof this.buttonY === 'number'
       ? this.buttonY
@@ -141,6 +148,16 @@ export default class GameHUD {
         // （不写角标时，玩家在教程关重玩看不出任何扣费信号，会以为是 bug）
         badge: this.getRestartBadge(),
         onClick: () => this.onRestartClick && this.onRestartClick()
+      },
+      {
+        id: 'hint',
+        icon: 'hint',
+        label: '提示',
+        color: COLORS.yellow,
+        deepColor: COLORS.yellowDeep,
+        // 角标显示剩余券数（不足时显示「无」而不是「0」，更像提示而非计数）
+        badge: this.getHintBadge(),
+        onClick: () => this.onHintClick && this.onHintClick()
       }
     ]
 
@@ -186,6 +203,33 @@ export default class GameHUD {
   }
 
   /**
+   * 提示券角标文案
+   * @returns {string}
+   */
+  getHintBadge() {
+    return this.hintTickets > 0 ? `×${this.hintTickets}` : '无券'
+  }
+
+  /**
+   * 同步提示券余量（局中随时提示用）
+   *
+   * 只改文案 + 可用态，不重建按钮 —— 重建会丢按压态。
+   * @param {number} tickets
+   */
+  setHintState(tickets) {
+    const next = Math.max(0, Math.floor(Number(tickets) || 0))
+    if (next === this.hintTickets && this.actionButtons) return
+    this.hintTickets = next
+
+    if (!this.actionButtons) return
+    const hint = this.actionButtons.find(item => item.id === 'hint')
+    if (hint) {
+      hint.badge = this.getHintBadge()
+      hint.disabled = next <= 0
+    }
+  }
+
+  /**
    * 同步本关重玩的入场费（含 0 费教程关）
    *
    * 只改角标文案、不重建按钮：重建会丢掉按压态，也会在关卡切换时闪一下。
@@ -218,6 +262,12 @@ export default class GameHUD {
     const restart = this.actionButtons.find(item => item.id === 'restart')
     if (restart) {
       restart.disabled = this.moves <= 0
+    }
+
+    // 提示券：无券时置灰（券数变化由 setHintState 写入 this.hintTickets）
+    const hint = this.actionButtons.find(item => item.id === 'hint')
+    if (hint) {
+      hint.disabled = this.hintTickets <= 0
     }
   }
 
@@ -513,6 +563,40 @@ export default class GameHUD {
       ctx.lineTo(ax - dirX * 1.5 - perpX * half, ay - dirY * 1.5 - perpY * half)
       ctx.closePath()
       ctx.fill()
+    } else if (type === 'hint') {
+      // 提示：灯泡（玻璃罩 + 灯丝 + 底座）+ 三条短光线。
+      // 用矢量而非 emoji：低端机上 💡 会被画成方块，和其余三张矢量卡片不同风格。
+      ctx.strokeStyle = color
+      ctx.fillStyle = color
+
+      // 三条放射光线
+      ctx.lineWidth = 2.6
+      ;[[0, -1], [-0.87, -0.5], [0.87, -0.5]].forEach(([dx, dy]) => {
+        ctx.beginPath()
+        ctx.moveTo(cx + dx * 12, cy + dy * 12 - 1)
+        ctx.lineTo(cx + dx * 15.5, cy + dy * 15.5 - 1)
+        ctx.stroke()
+      })
+
+      // 玻璃罩
+      ctx.beginPath()
+      ctx.arc(cx, cy - 3, 9.4, Math.PI * 0.08, Math.PI * 0.92, true)
+      ctx.arc(cx, cy + 2.4, 3.4, 0, Math.PI)
+      ctx.closePath()
+      ctx.lineWidth = 2.8
+      ctx.stroke()
+
+      // 灯丝：一小段折线
+      ctx.beginPath()
+      ctx.moveTo(cx - 3, cy + 1)
+      ctx.lineTo(cx, cy - 3)
+      ctx.lineTo(cx + 3, cy + 1)
+      ctx.lineWidth = 2.2
+      ctx.stroke()
+
+      // 底座两横
+      fillRoundRect(ctx, cx - 5.2, cy + 6, 10.4, 2.6, 1, color)
+      fillRoundRect(ctx, cx - 4, cy + 9.4, 8, 2.6, 1, color)
     }
 
     ctx.restore()

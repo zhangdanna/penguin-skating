@@ -664,7 +664,10 @@ export default class AchievementScene {
     drawPenguin(ctx, x + width / 2, y + POPUP.penguinY + fit.offsetY, fit.scale, {
       pose,
       prop: achievement.prop || null,
-      mood
+      mood,
+      // 成就详情画的是「这个成就的造型」，不是「你的企鹅」：
+      // 默认会读玩家当前穿戴的配件，这里必须显式关掉，否则 15 组造型会串味
+      accessory: null
     })
 
     // 一句话（设计稿带书名号）

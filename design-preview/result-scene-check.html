@@ -31,8 +31,10 @@
       : [])
   }
 
-  window.__renderResult = (moves, par) => {
+  window.__renderResult = (moves, par, meta) => {
     scene.setResult(12, moves, par, 84)
+    // meta = { isFirstClear, lastMoves, bestMoves }；不传就是首通（第三行给建议语）
+    scene.setComparison(meta || null)
     scene.setRewards({ fish: 3, shrimp: 1, squid: 0, goldfish: 0 }, {
       firstClear: true,
       firstThreeStar: moves <= par,

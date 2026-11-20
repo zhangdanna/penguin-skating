@@ -21,6 +21,11 @@ export default class GameOverScene {
     this.onRestart = null
     this.onBackToMenu = null
     this.onWatchAd = null
+    /** 用提示重开（有券时第一个按钮走这条） */
+    this.onRestartWithHint = null
+
+    /** 提示券余量：> 0 时第一个按钮变成「用提示重开」 */
+    this.hintTickets = 0
 
     // 广告入口是否可用（未接入广告位时隐藏，避免点击未实现功能）
     this.adVisible = true
@@ -46,7 +51,10 @@ export default class GameOverScene {
     const buttonSpacing = this.buttonSpacing
     const startY = this.buttonStartY
 
-    // 重玩按钮
+    // 重玩按钮：有提示券时变成「用提示重开」
+    //
+    // 为什么不新增第四个按钮：失败页已经三颗按钮，再加一颗会挤到 620 以下，
+    // 而且「重开」和「带提示重开」是同一件事的两种强度，不该让玩家做两次选择。
     this.buttons.push(new Button({
       x: centerX - buttonWidth / 2,
       y: startY,
@@ -58,6 +66,10 @@ export default class GameOverScene {
       hoverColor: COLORS.mintDeep,
       borderColor: '#17876C',
       onClick: () => {
+        if (this.hintTickets > 0 && this.onRestartWithHint) {
+          this.onRestartWithHint()
+          return
+        }
         if (this.onRestart) this.onRestart()
       }
     }))
@@ -93,6 +105,24 @@ export default class GameOverScene {
         if (this.onBackToMenu) this.onBackToMenu()
       }
     }))
+  }
+
+  /**
+   * 同步提示券状态
+   *
+   * @param {number} tickets - 余量；> 0 时第一个按钮改成「用提示重开 · 剩 N 张」
+   */
+  setHintState(tickets) {
+    const count = Math.max(0, parseInt(tickets, 10) || 0)
+    if (count === this.hintTickets) return
+
+    this.hintTickets = count
+    const restart = this.buttons[0]
+    if (!restart) return
+
+    restart.setText(count > 0 ? `💡 用提示重开 · 剩 ${count} 张` : '🔄 重新挑战')
+    // 文案变长时缩字号，别让它顶出按钮
+    restart.fontSize = count > 0 ? 16 : 20
   }
 
   /**
@@ -206,7 +236,14 @@ export default class GameOverScene {
     if (this.adVisible) {
       ctx.font = font(13)
       ctx.fillStyle = COLORS.yellowDeep
-      ctx.fillText('看广告可以复活哦~', centerX, 396)
+      ctx.fillText('看广告可以复活哦~', centerX, 390)
+    }
+
+    // 有券时补一行：告诉玩家「这关不是过不去，是没看到那一步」
+    if (this.hintTickets > 0) {
+      ctx.font = font(11.5)
+      ctx.fillStyle = COLORS.mintDeep
+      ctx.fillText('用一张提示券，先看第一步怎么走', centerX, 412)
     }
   }
 

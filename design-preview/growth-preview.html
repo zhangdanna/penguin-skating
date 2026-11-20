@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>一企推推乐 · 增长设计原型</title>
+<style>
+  :root{
+    --cream:#FFF9EE; --paper:#FFFFFF;
+    --water:#5BC8F5; --waterDeep:#2C9CD6;
+    --navy:#1F3A5F; --navyDeep:#152A45; --navySoft:#4A6B8C;
+    --pink:#FF7FB0; --pinkDeep:#E85F97;
+    --mint:#2FBF9B; --mintDeep:#1FA383;
+    --lavender:#A78BFA; --lavenderDeep:#8B6BE8;
+    --yellow:#FFC94A; --yellowDeep:#E5A72B; --yellowInk:#B98A12;
+    --orange:#FF9F5A; --orangeDeep:#E07C36;
+    --coral:#FF7A6B;
+    --font:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0E1620;color:#DCE7F2;font-family:var(--font);padding:28px 24px 60px;min-height:100vh}
+  header{max-width:1120px;margin:0 auto 18px}
+  h1{font-size:20px;letter-spacing:.5px}
+  h1 span{color:var(--mint)}
+  .sub{color:#7A8FA4;font-size:12.5px;margin-top:6px;line-height:1.6}
+  nav{max-width:1120px;margin:18px auto 22px;display:flex;gap:8px;flex-wrap:wrap}
+  nav button{font-family:var(--font);font-size:13px;font-weight:700;color:#8FA6B8;background:#16222E;border:1px solid #22323F;
+    border-radius:999px;padding:9px 16px;cursor:pointer;transition:.15s}
+  nav button:hover{color:#DCE7F2;border-color:#385166}
+  nav button.on{background:var(--mint);color:#062B22;border-color:var(--mint)}
+
+  .stage{max-width:1120px;margin:0 auto;display:flex;gap:36px;align-items:flex-start}
+  .phone-wrap{flex:0 0 auto}
+  .notes{flex:1;min-width:280px;padding-top:8px}
+  .notes h2{font-size:15px;margin-bottom:12px;color:#EAF2FA}
+  .notes h3{font-size:12px;color:var(--mint);letter-spacing:.4px;margin:18px 0 6px}
+  .notes p,.notes li{font-size:13px;line-height:1.75;color:#93A8BC}
+  .notes ul{list-style:none}
+  .notes li{padding-left:14px;position:relative;margin-bottom:2px}
+  .notes li::before{content:"";position:absolute;left:0;top:9px;width:5px;height:5px;border-radius:50%;background:#3A5468}
+  .notes b{color:#DCE7F2;font-weight:700}
+  .notes code{background:#16222E;padding:1px 5px;border-radius:4px;font-size:12px;color:#8FD3C0}
+  .tag{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px;margin-right:5px;vertical-align:1px}
+  .tag.new{background:rgba(47,191,155,.16);color:#5FD9B9}
+  .tag.fix{background:rgba(255,201,74,.14);color:#FFC94A}
+  .tag.warn{background:rgba(255,122,107,.14);color:#FF9E93}
+
+  /* ---------- 手机屏 ---------- */
+  .phone{position:relative;width:375px;height:667px;border-radius:26px;overflow:hidden;
+    box-shadow:0 24px 60px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.06);font-family:var(--font);user-select:none}
+  .ocean{background:linear-gradient(180deg,#C9F4FF 0%,#7FD8F7 45%,#2C9CD6 100%)}
+  .glass{position:absolute;inset:0 0 auto;height:34%;background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0));pointer-events:none}
+  .sand{position:absolute;left:-10%;right:-10%;bottom:-40px;height:110px;border-radius:50% 50% 0 0/40px;
+    background:radial-gradient(120% 100% at 50% 0%,#FBEBCE 0%,#F0D9B0 55%,#E4C391 100%);
+    box-shadow:inset 0 6px 14px rgba(255,255,255,.7)}
+  .bubble{position:absolute;border-radius:50%;border:1px solid rgba(255,255,255,.75);background:rgba(255,255,255,.18);pointer-events:none}
+
+  .sticker{font-weight:900;color:#fff;letter-spacing:1px;
+    text-shadow:-1.5px -1.5px 0 var(--navyDeep),0 -1.5px 0 var(--navyDeep),1.5px -1.5px 0 var(--navyDeep),-1.5px 0 0 var(--navyDeep),1.5px 0 0 var(--navyDeep),-1.5px 1.5px 0 var(--navyDeep),0 1.5px 0 var(--navyDeep),1.5px 1.5px 0 var(--navyDeep)}
+  .sticker-thin{font-weight:800;color:#fff;
+    text-shadow:-1px -1px 0 rgba(21,42,69,.95),0 -1px 0 rgba(21,42,69,.95),1px -1px 0 rgba(21,42,69,.95),-1px 0 0 rgba(21,42,69,.95),1px 0 0 rgba(21,42,69,.95),-1px 1px 0 rgba(21,42,69,.95),0 1px 0 rgba(21,42,69,.95),1px 1px 0 rgba(21,42,69,.95)}
+
+  .candy{position:relative;border:none;border-radius:999px;font-family:var(--font);font-weight:800;color:#fff;cursor:pointer;white-space:nowrap;
+    background:linear-gradient(180deg,var(--mint) 0%,var(--mintDeep) 100%);
+    box-shadow:0 4px 0 #17876C,0 2px 6px rgba(21,42,69,.18);text-shadow:0 1px 0 rgba(21,42,69,.18)}
+  .candy::after{content:"";position:absolute;left:7px;right:7px;top:5px;height:34%;border-radius:999px;background:rgba(255,255,255,.4);pointer-events:none}
+  .candy.water{background:linear-gradient(180deg,var(--water),var(--waterDeep));box-shadow:0 4px 0 #1F7FAE,0 2px 6px rgba(21,42,69,.18)}
+  .candy.lav{background:linear-gradient(180deg,var(--lavender),var(--lavenderDeep));box-shadow:0 4px 0 #7255CC,0 2px 6px rgba(21,42,69,.18)}
+  .candy.yel{background:linear-gradient(180deg,var(--yellow),var(--yellowDeep));box-shadow:0 4px 0 #B8861C,0 2px 6px rgba(21,42,69,.18)}
+  .candy.pink{background:linear-gradient(180deg,var(--pink),var(--pinkDeep));box-shadow:0 4px 0 #CE4D80,0 2px 6px rgba(21,42,69,.18)}
+  .candy.orange{background:linear-gradient(180deg,var(--orange),var(--orangeDeep));box-shadow:0 4px 0 #C1651F,0 2px 6px rgba(21,42,69,.18)}
+
+  /* 弹窗容器：铺满 375×667，内部一律用设计稿坐标 */
+  .overlay{position:absolute;inset:0;background:rgba(8,22,38,.62);z-index:1}
+  .pwrap{position:absolute;inset:0;z-index:2}
+  .panel{position:absolute;background:rgba(255,249,238,.97);border:2px solid rgba(255,255,255,.95);border-radius:30px;
+    box-shadow:0 6px 0 rgba(31,58,95,.10),0 18px 54px rgba(31,58,95,.42);overflow:hidden;z-index:0}
+  .panel::before{content:"";position:absolute;left:3px;right:3px;top:3px;height:46%;border-radius:26px;
+    background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(255,255,255,0));pointer-events:none}
+
+  /* ---------- 首页 ---------- */
+  .float{position:absolute;width:44px;height:44px;border-radius:50%;border:2px solid rgba(255,255,255,.95);
+    background:linear-gradient(180deg,#FFFFFF,#EAF9FF);display:grid;place-items:center;cursor:pointer;
+    box-shadow:0 4px 0 rgba(31,58,95,.18),0 6px 16px rgba(31,58,95,.2);font-size:19px;z-index:3}
+  .float.left{left:16px;top:26px}
+  .float.right{right:16px;top:26px}
+  .float .dot{position:absolute;right:-1px;top:-1px;width:12px;height:12px;border-radius:50%;background:var(--coral);border:2px solid #fff}
+  .float .streak{position:absolute;right:-10px;bottom:-4px;background:linear-gradient(180deg,#FFD873,#E5A72B);color:#5C4408;
+    font-size:9.5px;font-weight:900;line-height:1;padding:3px 6px;border-radius:9px;white-space:nowrap;border:1.5px solid #fff;
+    box-shadow:0 1px 3px rgba(21,42,69,.25)}
+  .float .coin{position:absolute;right:-8px;bottom:-4px;background:linear-gradient(180deg,#7FD4F5,#2C9CD6);color:#fff;
+    font-size:10px;font-weight:800;padding:2px 6px;border-radius:9px;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(21,42,69,.3)}
+  .title-wrap{position:absolute;left:0;right:0;top:92px;text-align:center}
+  .title{font-size:50px;line-height:1}
+  .sub-pill{display:inline-block;margin-top:12px;padding:5px 18px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:1px;
+    color:#fff;background:linear-gradient(180deg,var(--water),var(--waterDeep));box-shadow:0 3px 0 #1F7FAE;text-shadow:0 1px 2px rgba(21,42,69,.4)}
+  .challenge{position:absolute;left:27px;top:461px;width:321px;height:36px;border-radius:18px;display:flex;align-items:center;
+    padding:0 4px 0 13px;gap:8px;background:rgba(255,255,255,.85);border:1.5px solid rgba(47,191,155,.55);box-shadow:0 3px 10px rgba(31,58,95,.14)}
+  .challenge .who{font-size:11.5px;font-weight:800;color:var(--navy);white-space:nowrap}
+  .challenge .who em{font-style:normal;color:var(--mintDeep)}
+  .challenge .go{margin-left:auto;font-size:11.5px;font-weight:800;color:#fff;padding:6px 13px;border-radius:999px;
+    background:linear-gradient(180deg,var(--mint),var(--mintDeep));box-shadow:0 3px 0 #17876C}
+  .penguin-stage{position:absolute;left:50%;top:210px;transform:translateX(-50%)}
+  .penguin-stage .shadow{position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);width:132px;height:26px;border-radius:50%;
+    background:rgba(255,255,255,.55);border:2px solid rgba(255,255,255,.9)}
+  .btn-main{position:absolute;left:77px;top:392px;width:221px;height:62px;font-size:20px;letter-spacing:1px}
+  .progress{position:absolute;left:0;right:0;top:470px;text-align:center;font-size:12px}
+  .sub-grid{position:absolute;left:75px;top:500px;width:225px;display:grid;grid-template-columns:104px 104px;gap:12px 16px}
+  .sub-grid .candy{height:46px;font-size:16px;border-radius:23px}
+  .hint{position:absolute;left:0;right:0;top:628px;text-align:center;font-size:12.5px}
+
+  /* ---------- 结算 ---------- */
+  .ribbon{position:absolute;left:87.5px;top:92px;width:200px;height:46px;border-radius:23px;display:grid;place-items:center;
+    background:linear-gradient(180deg,var(--mint),var(--mintDeep));box-shadow:0 4px 0 #17876C}
+  .ribbon::before,.ribbon::after{content:"";position:absolute;top:8px;width:0;height:0;border-top:15px solid transparent;border-bottom:15px solid transparent}
+  .ribbon::before{left:-18px;border-right:18px solid var(--mintDeep)}
+  .ribbon::after{right:-18px;border-left:18px solid var(--mintDeep)}
+  .ribbon span{font-size:29px;font-weight:900;color:#fff;
+    text-shadow:-1.5px -1.5px 0 var(--navyDeep),0 -1.5px 0 var(--navyDeep),1.5px -1.5px 0 var(--navyDeep),-1.5px 0 0 var(--navyDeep),1.5px 0 0 var(--navyDeep),-1.5px 1.5px 0 var(--navyDeep),0 1.5px 0 var(--navyDeep),1.5px 1.5px 0 var(--navyDeep)}
+  .badge{position:absolute;left:50%;transform:translateX(-50%);top:158px;height:24px;padding:0 18px;border-radius:12px;
+    display:grid;place-items:center;width:max-content;background:linear-gradient(180deg,var(--water),var(--waterDeep));
+    box-shadow:0 3px 0 #1F7FAE;font-size:12.5px;font-weight:800;color:#fff;white-space:nowrap;text-shadow:0 1px 1px rgba(21,42,69,.3)}
+  .stars{position:absolute;left:0;right:0;top:214px;display:flex;justify-content:center;align-items:center;gap:14px}
+  .star{width:44px;height:44px;position:relative}
+  .star.on::before{content:"";position:absolute;inset:-7px;border-radius:50%;background:rgba(255,201,74,.16)}
+  .card{position:absolute;left:38px;top:254px;width:299px;height:92px;border-radius:18px;
+    background:rgba(255,201,74,.20);border:1.5px solid rgba(229,167,43,.55)}
+  .card .p{position:absolute;left:8px;top:12px}
+  .card .l1{position:absolute;left:76px;top:14px;font-size:12px;color:var(--navySoft);font-weight:700;white-space:nowrap}
+  .card .l1 b{font-size:16px;color:var(--coral)}
+  .card .l2{position:absolute;left:76px;top:38px;font-size:15px;font-weight:800;color:var(--yellowInk);white-space:nowrap}
+  .card .l3{position:absolute;left:76px;top:61px;font-size:12.5px;font-weight:800;color:var(--mintDeep);
+    display:flex;align-items:center;gap:5px;white-space:nowrap}
+  .card .l3 .pin{font-size:9px;background:var(--mint);color:#fff;border-radius:5px;padding:1.5px 4px;font-weight:800;flex:none}
+  .reward{position:absolute;left:50%;transform:translateX(-50%);top:364px;height:38px;padding:0 16px;border-radius:19px;
+    display:flex;align-items:center;gap:11px;width:max-content;
+    background:rgba(47,191,155,.22);border:1.5px solid rgba(47,191,155,.45)}
+  .reward .num{font-size:16px;font-weight:800;color:var(--mintDeep);white-space:nowrap}
+  .reward .sep{width:1px;height:16px;background:rgba(47,191,155,.35);flex:none}
+  .reward .tagline{font-size:11px;color:var(--navySoft);font-weight:600;white-space:nowrap}
+  .btn-primary{position:absolute;left:55px;top:422px;width:265px;height:46px;font-size:18px}
+  .btn-row{position:absolute;left:55px;top:476px;width:265px;display:flex;gap:9px}
+  .btn-row .candy{flex:1;height:46px;font-size:18px}
+  .ach{position:absolute;left:55px;top:534px;width:265px;display:flex;flex-direction:column;gap:4px}
+  .ach div{height:25px;border-radius:13px;background:rgba(255,201,74,.18);display:flex;align-items:center;padding:0 12px;gap:7px;
+    font-size:12px;font-weight:700;color:var(--navy)}
+  .ach .r{margin-left:auto;font-size:11px;color:var(--yellowInk)}
+  .callout{position:absolute;border:1.5px dashed var(--coral);border-radius:10px;pointer-events:none;z-index:3}
+
+  /* ---------- 失败 ---------- */
+  .over-title{position:absolute;left:0;right:0;top:266px;text-align:center;font-size:33px;font-weight:900;letter-spacing:2px;color:var(--coral)}
+  .over-sub{position:absolute;left:0;right:0;top:319px;text-align:center;font-size:15px;font-weight:700;color:var(--navy)}
+  .over-tip{position:absolute;left:0;right:0;top:346px;text-align:center;font-size:12.5px;font-weight:800;color:var(--mintDeep)}
+  .over-ad{position:absolute;left:0;right:0;top:388px;text-align:center;font-size:12.5px;font-weight:700;color:var(--yellowInk)}
+  .over-btn{position:absolute;left:87px;width:201px;height:50px;font-size:19px}
+
+  /* ---------- 签到 ---------- */
+  .ck-head{position:absolute;left:0;right:0;text-align:center}
+  .ck-head h3{font-size:22px;color:var(--navy);letter-spacing:1px}
+  .ck-head p{margin-top:6px;font-size:12px;color:var(--navySoft);font-weight:600}
+  .ck-grid{position:absolute;left:52px;top:174px;width:271px;display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+  .ck-cell{height:62px;border-radius:14px;background:#fff;border:1.5px solid rgba(31,58,95,.10);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative}
+  .ck-cell .d{font-size:9.5px;font-weight:800;color:#9AAEC0;letter-spacing:.5px}
+  .ck-cell .v{font-size:13px;font-weight:900;color:var(--navy)}
+  .ck-cell.done{background:rgba(47,191,155,.14);border-color:rgba(47,191,155,.4)}
+  .ck-cell.done .v{color:var(--mintDeep)}
+  .ck-cell.today{background:linear-gradient(180deg,#FFF6DC,#FFEFC4);border-color:var(--yellowDeep);box-shadow:0 3px 10px rgba(229,167,43,.25)}
+  .ck-cell .check{position:absolute;right:5px;top:4px;font-size:10px;color:var(--mintDeep);font-weight:900}
+  .ck-big{position:absolute;left:52px;top:340px;width:271px;height:96px;border-radius:16px;
+    background:linear-gradient(135deg,#F3E9FF 0%,#FFE8F2 100%);border:1.5px solid rgba(139,107,232,.35);
+    display:flex;align-items:center;padding:0 10px 0 14px;gap:8px;overflow:hidden}
+  .ck-big .d7{font-size:9.5px;font-weight:900;color:#8B6BE8;letter-spacing:.5px}
+  .ck-big .name{font-size:14px;font-weight:900;color:var(--navy);margin-top:3px;white-space:nowrap}
+  .ck-big .extra{font-size:11px;font-weight:700;color:var(--lavenderDeep);margin-top:5px}
+  .ck-btn{position:absolute;left:74px;top:452px;width:227px;height:50px;font-size:17px}
+  .ck-note{position:absolute;left:0;right:0;top:512px;text-align:center;font-size:11px;color:var(--navySoft);font-weight:600}
+
+  /* ---------- 商城 ---------- */
+  .shop-head{position:absolute;left:34px;right:34px;top:82px;display:flex;align-items:center}
+  .shop-head h3{font-size:19px;color:var(--navy);letter-spacing:1px}
+  .wallet{margin-left:auto;display:flex;align-items:center;gap:5px;background:rgba(91,200,245,.16);
+    border:1.5px solid rgba(44,156,214,.35);border-radius:999px;padding:4px 11px 4px 8px}
+  .wallet .ic{font-size:13px;color:#2C9CD6}
+  .wallet .n{font-size:15px;font-weight:900;color:var(--waterDeep)}
+  .ad-btn{position:absolute;right:34px;top:120px;display:flex;align-items:center;gap:5px;font-size:11px;font-weight:800;
+    color:#7A5E10;background:rgba(255,201,74,.28);border:1.2px solid rgba(229,167,43,.5);border-radius:999px;padding:5px 10px}
+  .tabs2{position:absolute;left:34px;right:34px;top:158px;display:flex;gap:7px}
+  .tabs2 span{flex:1;text-align:center;font-size:12.5px;font-weight:800;padding:7px 0;border-radius:999px;color:var(--navySoft);background:rgba(31,58,95,.06)}
+  .tabs2 span.on{background:var(--navy);color:#fff;box-shadow:0 3px 0 rgba(21,42,69,.5)}
+  .shop-grid{position:absolute;left:34px;top:202px;width:307px;display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .item{height:158px;border-radius:18px;background:#fff;border:1.5px solid rgba(31,58,95,.09);position:relative;
+    display:flex;flex-direction:column;align-items:center;padding-top:8px;box-shadow:0 3px 8px rgba(31,58,95,.06)}
+  .item .pv{height:82px;display:grid;place-items:center;position:relative}
+  .item .nm{font-size:12.5px;font-weight:800;color:var(--navy);margin-top:2px}
+  .item .buy{position:absolute;bottom:9px;left:12px;right:12px;height:30px;border-radius:15px;font-size:12.5px;font-weight:800;
+    display:grid;place-items:center;color:#fff;background:linear-gradient(180deg,var(--water),var(--waterDeep));box-shadow:0 3px 0 #1F7FAE}
+  .item .buy.owned{background:rgba(47,191,155,.16);color:var(--mintDeep);box-shadow:none;border:1.5px solid rgba(47,191,155,.45)}
+  .item .buy.equipped{background:linear-gradient(180deg,var(--mint),var(--mintDeep));box-shadow:0 3px 0 #17876C}
+  .item .flag{position:absolute;left:-1px;top:-1px;background:var(--coral);color:#fff;font-size:9.5px;font-weight:800;
+    padding:3px 8px;border-radius:16px 0 12px 0;z-index:2}
+  .shop-more{position:absolute;left:34px;top:540px;width:307px;height:54px;border-radius:16px;
+    border:1.5px dashed rgba(31,58,95,.18);display:flex;align-items:center;justify-content:center;gap:7px;
+    font-size:12px;font-weight:700;color:#9AAEC0;background:rgba(255,255,255,.5)}
+  .shop-foot{position:absolute;left:34px;right:34px;bottom:37px;font-size:10.5px;color:#9AAEC0;text-align:center;line-height:1.5}
+
+  .legend{max-width:1120px;margin:34px auto 0;font-size:12px;color:#6F8598;line-height:1.9}
+  .legend b{color:#A9BCCC}
+  .legend code{background:#16222E;padding:1px 5px;border-radius:4px;font-size:11.5px;color:#8FD3C0}
+  @media (max-width:900px){ .stage{flex-direction:column} .notes{width:100%} }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>一企推推乐 · 增长设计<span>原型</span></h1>
+  <p class="sub">375×667 设计稿 1:1 还原，配色与控件样式取自 <code>js/ui/theme.js</code>。五屏对应 <code>docs/GROWTH.md</code> 的模块 A~D。</p>
+</header>
+
+<nav>
+  <button class="on" data-tab="home">① 首页 · 入口</button>
+  <button data-tab="result">② 结算 · 个人对比</button>
+  <button data-tab="over">③ 失败 · 提示券</button>
+  <button data-tab="checkin">④ 签到 · 7 日</button>
+  <button data-tab="shop">⑤ 商城 · 外观</button>
+</nav>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="penguin">
+      <ellipse cx="0" cy="25" rx="15" ry="3.8" fill="rgba(31,58,95,.16)"/>
+      <ellipse cx="-9.8" cy="21.6" rx="2.6" ry="1.9" fill="#FF9F5A" transform="rotate(7,-9.8,21.6)"/>
+      <ellipse cx="-6.8" cy="22.5" rx="2.8" ry="2.1" fill="#FF9F5A"/>
+      <ellipse cx="-3.8" cy="21.6" rx="2.6" ry="1.9" fill="#FF9F5A" transform="rotate(-7,-3.8,21.6)"/>
+      <ellipse cx="9.8" cy="21.6" rx="2.6" ry="1.9" fill="#FF9F5A" transform="rotate(-7,9.8,21.6)"/>
+      <ellipse cx="6.8" cy="22.5" rx="2.8" ry="2.1" fill="#FF9F5A"/>
+      <ellipse cx="3.8" cy="21.6" rx="2.6" ry="1.9" fill="#FF9F5A" transform="rotate(7,3.8,21.6)"/>
+      <ellipse cx="-16.4" cy="4" rx="3.2" ry="9.4" fill="#1F3A5F" transform="rotate(9,-16.4,4)"/>
+      <ellipse cx="16.4" cy="4" rx="3.2" ry="9.4" fill="#1F3A5F" transform="rotate(-9,16.4,4)"/>
+      <path d="M0 -25.5 C10 -25.5 14.5 -20 14.5 -12 C14.5 -7 17.5 -2.5 17.5 5 C17.5 15.5 10 22 0 22 C-10 22 -17.5 15.5 -17.5 5 C-17.5 -2.5 -14.5 -7 -14.5 -12 C-14.5 -20 -10 -25.5 0 -25.5 Z"
+            fill="#1F3A5F" stroke="#152A45" stroke-width="1.5" stroke-linejoin="round"/>
+      <ellipse cx="0" cy="7" rx="12.9" ry="11.6" fill="#FFF9EE"/>
+      <rect x="-13.2" y="-4" width="26.4" height="5.8" rx="2.9" fill="#FFC94A" stroke="#E5A72B" stroke-width="0.9"/>
+      <rect x="8.4" y="-3.6" width="6.4" height="6.2" rx="2.6" fill="#E5A72B"/>
+      <path d="M-2.4 0 L2.4 0 L1.8 8.4 Q0 10.2 -1.8 8.4 Z" fill="#E5A72B" transform="translate(11.6,1.8) rotate(14)"/>
+      <ellipse cx="-5.9" cy="-11.6" rx="4.3" ry="4.7" fill="#fff" transform="rotate(9,-5.9,-11.6)"/>
+      <ellipse cx="5.9" cy="-11.6" rx="4.3" ry="4.7" fill="#fff" transform="rotate(-9,5.9,-11.6)"/>
+      <circle cx="-5.3" cy="-11.2" r="2.2" fill="#152A45"/>
+      <circle cx="6.5" cy="-11.2" r="2.2" fill="#152A45"/>
+      <circle cx="-4.5" cy="-12.1" r="0.85" fill="#fff"/>
+      <circle cx="7.3" cy="-12.1" r="0.85" fill="#fff"/>
+      <path d="M0 -6.5 L3.3 -6.5 L0 -3.2 Z" fill="#FF9F5A" stroke="#E07C36" stroke-width=".7"/>
+      <path d="M0 -6.5 L-3.3 -6.5 L0 -3.2 Z" fill="#FF9F5A" stroke="#E07C36" stroke-width=".7"/>
+      <ellipse cx="-8.7" cy="-4.2" rx="2.5" ry="1.6" fill="rgba(255,150,190,.72)"/>
+      <ellipse cx="8.7" cy="-4.2" rx="2.5" ry="1.6" fill="rgba(255,150,190,.72)"/>
+    </g>
+
+    <g id="acc-hat">
+      <path d="M-15 -18 C-15 -30 15 -30 15 -18 Z" fill="#FF7FB0" stroke="#E85F97" stroke-width="1.1"/>
+      <rect x="-16.5" y="-19.6" width="33" height="6" rx="3" fill="#fff" stroke="#E85F97" stroke-width="1"/>
+      <circle cx="0" cy="-30" r="4.2" fill="#fff" stroke="#E85F97" stroke-width="1.1"/>
+    </g>
+
+    <g id="acc-glasses">
+      <path d="M-12.4 -12 h24.8" stroke="#0E1620" stroke-width="2"/>
+      <rect x="-12.6" y="-15.2" width="10.4" height="7.6" rx="3.4" fill="#20303F" stroke="#0E1620" stroke-width="1"/>
+      <rect x="2.2" y="-15.2" width="10.4" height="7.6" rx="3.4" fill="#20303F" stroke="#0E1620" stroke-width="1"/>
+      <path d="M-10.6 -13.6 l5 .8" stroke="rgba(255,255,255,.55)" stroke-width="1.4" stroke-linecap="round"/>
+      <path d="M4.2 -13.6 l5 .8" stroke="rgba(255,255,255,.55)" stroke-width="1.4" stroke-linecap="round"/>
+    </g>
+
+    <g id="acc-phones">
+      <path d="M-13 -12 C-13 -25 13 -25 13 -12" fill="none" stroke="#8B6BE8" stroke-width="3.4" stroke-linecap="round"/>
+      <rect x="-18" y="-14" width="8.4" height="12" rx="4.2" fill="#A78BFA" stroke="#8B6BE8" stroke-width="1.1"/>
+      <rect x="9.6" y="-14" width="8.4" height="12" rx="4.2" fill="#A78BFA" stroke="#8B6BE8" stroke-width="1.1"/>
+    </g>
+  </defs>
+</svg>
+
+<div class="stage">
+  <div class="phone-wrap"><div class="phone ocean" id="phone"></div></div>
+  <div class="notes" id="notes"></div>
+</div>
+
+<div class="legend">
+  <b>说明</b>：企鹅、按钮、面板都按 <code>theme.js</code> 的真实绘制参数重建（围巾必须黄、冰块必须蓝、目标区必须暖色）。
+  带 <span class="tag new">新</span> 的是新增元素，<span class="tag fix">改</span> 的是替换现有元素，<span class="tag warn">不做</span> 的是明确否掉的方案。
+</div>
+
+<script>
+const screens = {
+  home: {
+    html: `
+      <div class="glass"></div>
+      <div class="sand"></div>
+      <div class="bubble" style="left:40px;top:120px;width:9px;height:9px"></div>
+      <div class="bubble" style="left:320px;top:250px;width:6px;height:6px"></div>
+      <div class="bubble" style="left:60px;top:430px;width:12px;height:12px"></div>
+
+      <div class="float left">📅<span class="dot"></span><span class="streak">4天</span></div>
+      <div class="float right">🎁<span class="coin">84</span></div>
+
+      <div class="title-wrap">
+        <div class="title sticker">一企推推乐</div>
+        <div class="sub-pill">POLAR AQUARIUM</div>
+      </div>
+
+      <div class="penguin-stage">
+        <div class="shadow"></div>
+        <svg width="130" height="145" viewBox="-26 -28 52 58"><use href="#penguin"/></svg>
+      </div>
+
+      <button class="candy btn-main">第 12 关</button>
+
+      <div class="challenge">
+        <span class="who">小明用 <em>7 步</em> 过了第 12 关，你能更快吗</span>
+        <span class="go">应战</span>
+      </div>
+
+      <div class="sub-grid">
+        <button class="candy lav">音效 开</button>
+        <button class="candy yel">排行榜</button>
+        <button class="candy orange">成就</button>
+        <button class="candy pink">分享</button>
+      </div>
+
+      <div class="hint sticker-thin">滑动屏幕 · 用最短路径把冰块推到小鱼展台</div>
+    `,
+    notes: `
+      <h2>从"两天开一次"变成"一天开两次"</h2>
+      <h3>改了什么</h3>
+      <ul>
+        <li><span class="tag new">新</span><b>左上角签到浮标</b>：44px，右上角红点 + 「4天」连续天数。不占 2×2 按钮区，不打乱现有版式。</li>
+        <li><span class="tag new">新</span><b>右上角商城浮标</b>：带雪花币余额（84❄），让"钱要花掉"一直可见。</li>
+        <li><span class="tag new">新</span><b>挑战条</b>：好友从分享链接进来时，接管「已通关 N 关」那一行。平时不出现。</li>
+      </ul>
+
+      <h3>为什么是浮标而不是按钮</h3>
+      <p>2×2 区已经是 4 个功能，塞第 5 个只能缩小或加行，两者都让首页变挤。签到和商城是<b>低频但有红点驱动</b>的入口，做浮标最省面积，也最容易被看见。</p>
+
+      <h3>为什么挑战条接管进度行</h3>
+      <p>首页 176~220 只有 44px 空隙，塞横幅会顶到企鹅头顶（企鹅身体从 y=220 开始）。接管进度行是唯一不挤压任何元素的方案 —— 而且它就在「第 12 关」正下方，读完按钮就读到挑战，动线最短。</p>
+
+      <h3>为什么免入场费</h3>
+      <p>被邀请的人是新玩家，收他 1🐟 等于在裂变链路上设收费站。免单只给被邀请方，分享者拿不到任何东西 —— 既拉新，又不构成"诱导分享"。</p>
+    `
+  },
+
+  result: {
+    html: `
+      <div class="overlay"></div>
+      <div class="pwrap">
+        <div class="panel" style="left:30px;top:76px;width:315px;height:554px"></div>
+
+        <div class="ribbon"><span>通关成功</span></div>
+        <div class="badge">第 12 关 · 共 200 关</div>
+
+        <div class="stars">
+          <div class="star on"><svg width="44" height="44" viewBox="0 0 44 44"><path d="M22 4 L27.4 15.6 L40 17.2 L30.8 25.8 L33.2 38.4 L22 32.2 L10.8 38.4 L13.2 25.8 L4 17.2 L16.6 15.6 Z" fill="#FFC94A" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg></div>
+          <div class="star on"><svg width="44" height="44" viewBox="0 0 44 44"><path d="M22 4 L27.4 15.6 L40 17.2 L30.8 25.8 L33.2 38.4 L22 32.2 L10.8 38.4 L13.2 25.8 L4 17.2 L16.6 15.6 Z" fill="#FFC94A" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg></div>
+          <div class="star"><svg width="44" height="44" viewBox="0 0 44 44"><path d="M22 4 L27.4 15.6 L40 17.2 L30.8 25.8 L33.2 38.4 L22 32.2 L10.8 38.4 L13.2 25.8 L4 17.2 L16.6 15.6 Z" fill="rgba(31,58,95,.14)" stroke="rgba(255,255,255,.8)" stroke-width="2" stroke-linejoin="round"/></svg></div>
+        </div>
+
+        <div class="card">
+          <svg class="p" width="52" height="58" viewBox="-26 -28 52 58"><use href="#penguin"/></svg>
+          <div class="l1">步数 <b>7</b> · 最短 5 步 · 用时 00:24</div>
+          <div class="l2">差 2 步就是三星</div>
+          <div class="l3"><span class="pin">改</span>9 步 → 7 步，少走 2 步</div>
+        </div>
+
+        <div class="reward">
+          <span class="num">+3🐟 +1🦐</span>
+          <span class="sep"></span>
+          <span class="tagline">首次三星</span>
+        </div>
+
+        <button class="candy btn-primary">下一关</button>
+        <div class="btn-row">
+          <button class="candy water">重玩</button>
+          <button class="candy lav">返回首页</button>
+        </div>
+
+        <div class="ach">
+          <div>🏆 成就解锁 · 精准操作<span class="r">+5🐟</span></div>
+          <div>⚡ 成就解锁 · 闪电企鹅<span class="r">+5🐟</span></div>
+        </div>
+
+        <div class="callout" style="left:110px;top:311px;width:218px;height:24px"></div>
+      </div>
+    `,
+    notes: `
+      <h2>不加一平方像素，把"这一局"接上"上一局"</h2>
+      <h3>改了什么</h3>
+      <ul>
+        <li><span class="tag fix">改</span>状态卡第三行：<b>首次通关仍是建议语，重玩才换成个人对比</b>（虚线框内）。行数永远三行，不加高。</li>
+        <li>上一轮改版刚把这行建议语恢复回来，所以不删它 —— 第一次打这一关的人需要"怎么走"，重打的人需要"我这次是不是更好了"。</li>
+      </ul>
+
+      <h3>为什么不是「击败 XX% 玩家」</h3>
+      <p>没后端，算不出全服分母。而<b>好友对比也放不到这一页</b>：<code>getFriendCloudStorage</code> 只能在开放数据域调用，子域又没有回传主域的 API —— 主域拿不到"小明在这关走了几步"。</p>
+      <p>所以分工是：<b>好友百分比放排行榜页</b>（那里本来就在开放数据域里画），<b>结算页只做本地能算的自我对比</b>。</p>
+
+      <h3>版式余量</h3>
+      <p>面板 76~630 已经排满（成就区压到 620），所以这里的原则是<b>只换不加</b>。任何新行都必须从现有内容里赎回。</p>
+
+      <h3>实现成本</h3>
+      <p>存档加一个 <code>bestMoves</code>（只减不增，读旧档 fallback 到 <code>moves</code>），<code>result-scene.js</code> 的 <code>getStatusContent()</code> 加一个分支。零新增场景、零新增面积。</p>
+    `
+  },
+
+  over: {
+    html: `
+      <div class="overlay"></div>
+      <div class="pwrap">
+        <div class="panel" style="left:30px;top:76px;width:315px;height:560px"></div>
+        <svg style="position:absolute;left:187.5px;top:110px;transform:translateX(-50%)" width="115" height="128" viewBox="-26 -28 52 58"><use href="#penguin"/></svg>
+
+        <div class="over-title sticker">游戏结束</div>
+        <div class="over-sub">企鹅掉进冰冻的水洞了...</div>
+        <div class="over-tip">💡 这关有点难？看一步再试</div>
+        <div class="over-ad">看广告可以复活哦~</div>
+
+        <button class="candy over-btn" style="top:436px;font-size:16px">💡 用提示重开 · 剩 2 张</button>
+        <button class="candy yel over-btn" style="top:502px">📺 看广告复活</button>
+        <button class="candy lav over-btn" style="top:568px">🏠 返回菜单</button>
+
+        <div class="callout" style="left:78px;top:344px;width:220px;height:24px"></div>
+        <div class="callout" style="left:74px;top:432px;width:228px;height:58px"></div>
+      </div>
+    `,
+    notes: `
+      <h2>「分享复活」不能做，但卡关的人还是要救</h2>
+      <h3>红线在哪</h3>
+      <p>微信明令禁止「分享后获得游戏内奖励」。这条代码里已经下线过一次（<code>revive-manager.js</code> 顶部注释 B1），而且 <code>wx.shareAppMessage</code> 现在在部分账号上直接返回「小程序违规，不能使用分享功能」—— 用一次复活换整条分享链路被封，不划算。</p>
+
+      <h3>改了什么</h3>
+      <ul>
+        <li><span class="tag fix">改</span>第一个按钮：<b>重新挑战 → 用提示重开 · 剩 2 张</b>。不加按钮、不加决策点。</li>
+        <li><span class="tag new">新</span>按钮上方一行提示（虚线框），只在有券时出现；没券时整行消失、按钮文案回落为「重新挑战」。</li>
+      </ul>
+
+      <h3>为什么提示比复活有用</h3>
+      <p>掉洞的玩家分两类：手滑（知道怎么走）和真不会。后一类给十条命也会在同一步反复死。<b>卡关的根因是不确定解法，不是缺一条命。</b></p>
+      <p>解法现成：<code>solveBoard(board,{withSolution:true})</code> 能返回完整解，取 <code>solution[0]</code> 就是第一步。</p>
+
+      <h3>防滥用</h3>
+      <p>用过提示的关卡不计入「精准操作 / 操作大师」，与现有 <code>undoUsed</code> 完全同一口径 —— 否则等于用道具买成就。</p>
+    `
+  },
+
+  checkin: {
+    html: `
+      <div class="glass"></div>
+      <div class="sand"></div>
+      <div class="overlay" style="background:rgba(8,22,38,.42)"></div>
+      <div class="pwrap">
+        <div class="panel" style="left:30px;top:96px;width:315px;height:462px"></div>
+
+        <div class="ck-head" style="top:114px">
+          <h3>每日签到</h3>
+          <p>已连续 4 天 · 再签 3 天领限定皮肤</p>
+        </div>
+
+        <div class="ck-grid">
+          <div class="ck-cell done"><span class="check">✓</span><span class="d">第 1 天</span><span class="v">5🐟</span></div>
+          <div class="ck-cell done"><span class="check">✓</span><span class="d">第 2 天</span><span class="v">5🐟 + 🎫</span></div>
+          <div class="ck-cell done"><span class="check">✓</span><span class="d">第 3 天</span><span class="v">6🐟</span></div>
+          <div class="ck-cell today"><span class="d">第 4 天</span><span class="v">5🐟 + 20❄</span></div>
+          <div class="ck-cell"><span class="d">第 5 天</span><span class="v">6🐟 + ↩×2</span></div>
+          <div class="ck-cell"><span class="d">第 6 天</span><span class="v">8🐟</span></div>
+        </div>
+
+        <div class="ck-big">
+          <div>
+            <div class="d7">第 7 天</div>
+            <div class="name">当月限定 · 圣诞企鹅</div>
+            <div class="extra">40❄ · 再签 3 天到手</div>
+          </div>
+          <svg style="margin-left:auto" width="76" height="85" viewBox="-26 -28 52 58"><use href="#penguin"/><use href="#acc-hat"/></svg>
+        </div>
+
+        <button class="candy ck-btn">领取 5🐟 + 20❄</button>
+        <div class="ck-note">明天见 · 距下次签到 03:12:44</div>
+      </div>
+    `,
+    notes: `
+      <h2>现在的问题不是奖励少，是没有"领"这个动作</h2>
+      <h3>改了什么</h3>
+      <ul>
+        <li>首进自动发 5🐟 + 一个模态框 → <b>7 日卡 + 手动领取</b>。</li>
+        <li><span class="tag new">新</span>第 7 天是当月限定皮肤。第 6 天领完之后<b>弹层不关</b>，直接把皮肤大图怼到脸上：「再签 1 天到手」。</li>
+        <li><span class="tag new">新</span>底部倒计时：把"明天再来"从一句文案变成一个正在走的数字。</li>
+      </ul>
+
+      <h3>数值口径</h3>
+      <p>周合计 40🐟（现状 7×5=35，<b>只增不减</b>，老玩家不会觉得改版即降薪）+ 60❄ + 1 皮肤。D1 保持 5🐟 不变。</p>
+
+      <h3>断签</h3>
+      <p>已领的绝不收回，但连续天数回到 D1。不做补签 —— 付费补签会劝退休闲玩家，还多一个合规审查面。</p>
+
+      <h3>满仓怎么办</h3>
+      <p>现有 <code>claimDailyGift()</code> 的 overflow 通道已经能把鱼顶到 30 以上，这里不动逻辑，只在弹层标出真实余额，别让玩家以为签到被吞了。</p>
+    `
+  },
+
+  shop: {
+    html: `
+      <div class="glass"></div>
+      <div class="sand"></div>
+      <div class="pwrap">
+        <div class="panel" style="left:16px;top:64px;width:343px;height:580px"></div>
+
+        <div class="shop-head">
+          <h3>商城</h3>
+          <div class="wallet"><span class="ic">❄</span><span class="n">84</span></div>
+        </div>
+        <div class="ad-btn">📺 看广告 +10 · 1/3</div>
+
+        <div class="tabs2"><span class="on">企鹅</span><span>展台</span><span>背景</span></div>
+
+        <div class="shop-grid">
+          <div class="item">
+            <div class="pv"><svg width="74" height="82" viewBox="-26 -28 52 58"><use href="#penguin"/><use href="#acc-hat"/></svg></div>
+            <div class="nm">毛线帽</div>
+            <div class="buy equipped">已穿戴</div>
+          </div>
+          <div class="item">
+            <div class="pv"><svg width="74" height="82" viewBox="-26 -28 52 58"><use href="#penguin"/><use href="#acc-glasses"/></svg></div>
+            <div class="nm">墨镜</div>
+            <div class="buy">❄ 60</div>
+          </div>
+          <div class="item">
+            <div class="flag">限时 12 天</div>
+            <div class="pv"><svg width="74" height="82" viewBox="-26 -28 52 58"><use href="#penguin"/><use href="#acc-phones"/></svg></div>
+            <div class="nm">耳机 · 圣诞套装</div>
+            <div class="buy">❄ 150</div>
+          </div>
+          <div class="item">
+            <div class="pv">
+              <svg width="74" height="82" viewBox="-26 -28 52 58"><use href="#penguin"/></svg>
+              <div style="position:absolute;left:6px;bottom:4px;width:62px;height:12px;border-radius:6px;
+                background:linear-gradient(180deg,#FFD9A0,#F0B36A);border:1px solid #E07C36"></div>
+            </div>
+            <div class="nm">珊瑚托盘</div>
+            <div class="buy">❄ 90</div>
+          </div>
+        </div>
+
+        <div class="shop-more">✦ 更多外观制作中 · 下周上架</div>
+        <div class="shop-foot">外观只改样子，不影响关卡判定<br>企鹅的围巾、冰块、目标区底色不会变</div>
+      </div>
+    `,
+    notes: `
+      <h2>两条经济线必须物理隔离</h2>
+      <h3>为什么不用鱼当货币</h3>
+      <p>鱼是入场费，也是复活硬通货。一旦能拿鱼买皮肤，玩家在「买皮肤」和「再玩一局」之间就要做取舍 —— 休闲游戏里这种取舍的结果通常是<b>关掉游戏</b>，而不是多玩一局。所以新增 ❄ 雪花币：<b>只买外观，永远不能换成鱼</b>。</p>
+
+      <h3>定价节奏</h3>
+      <ul>
+        <li>单件 60 / 展台 90 / 限定套装 150</li>
+        <li>D1 预算约 90❄（新手任务 40 + 首通 6 + 三星 9 + 签到 5 + 广告 30）→ <b>首日必得一件</b>，收集线在建立之前不能断</li>
+        <li>活跃玩家 3~5 天添一件，长期由 200 关首通兜底</li>
+      </ul>
+
+      <h3>换肤的红线</h3>
+      <ul>
+        <li><span class="tag warn">不做</span>冰块换色 —— 蓝色是它唯一的识别特征</li>
+        <li><span class="tag warn">不做</span>目标区换色 —— 必须暖色 <code>R&gt;G&gt;B</code>，回归测试会查</li>
+        <li><span class="tag warn">不做</span>企鹅围巾换色 —— 必须黄色，与橙喙同色系，这是形象识别</li>
+        <li>能换的只有：头顶/眼部/颈部配件、目标区托盘形状、水体渐变</li>
+      </ul>
+
+      <h3>广告位没开通时</h3>
+      <p><code>AD_UNITS.rewardedVideo</code> 现在是空的，所以「看广告 +10」整颗按钮要<b>隐藏</b>，不留灰色死按钮 —— 与现有 <code>promptInsufficientFood()</code> 的判断保持一致。每日 3 次是硬上限。</p>
+    `
+  }
+};
+
+const phone = document.getElementById('phone');
+const notes = document.getElementById('notes');
+
+function render(key){
+  const s = screens[key];
+  phone.innerHTML = s.html;
+  notes.innerHTML = s.notes;
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on', b.dataset.tab===key));
+}
+
+document.querySelectorAll('nav button').forEach(btn=>{
+  btn.addEventListener('click', ()=>render(btn.dataset.tab));
+});
+
+render('home');
+</script>
+</body>
+</html>

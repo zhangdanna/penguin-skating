@@ -106,6 +106,14 @@ export default class ResultScene {
     this.rewards = null
     this.rewardMeta = {}
 
+    /**
+     * 个人对比（重玩时才有）
+     * 由 game.js 在通关瞬间、saveLevelProgress 覆盖存档之前读出，再传进来 ——
+     * 结算页自己读存档会读到「本次成绩」，对比永远等于零
+     * @type {{isFirstClear:boolean, lastMoves:number, bestMoves:number}|null}
+     */
+    this.comparison = null
+
     // 本次通关新解锁的成就（画在按钮下方的空白区，不再叠浮层通知）
     this.achievements = []
     this.achievementOverflow = 0
@@ -257,6 +265,44 @@ export default class ResultScene {
     this.achievementOverflow = Math.max(0, source.length - 3)
     // 有无成就决定内容是否居中，按钮位置要跟着重算（relayout 会保留回调）
     this.relayout()
+  }
+
+  /**
+   * 设置个人对比数据
+   *
+   * @param {{isFirstClear:boolean, lastMoves:number, bestMoves:number}} meta
+   */
+  setComparison(meta) {
+    this.comparison = meta || null
+  }
+
+  /**
+   * 状态卡第三行的个人对比句
+   *
+   * 只在**重玩**时出现：第一次见到这一关的玩家需要的是「怎么走」，
+   * 重打的人需要的是「我这次是不是更好了」。所以这一行是「按时机切换」，
+   * 不是把原来那句建议语删掉 —— 那行是上一轮改版专门恢复回来的。
+   *
+   * 优先级：刷新个人最佳 > 比上次少 > 比上次多 > 和上次一样。
+   * 三星满星时不参与对比（都走到最短路径了，庆祝话术比数据更有价值）。
+   *
+   * @returns {string} 空串表示沿用原来的建议语
+   */
+  getComparisonLine() {
+    const meta = this.comparison
+    if (!meta || meta.isFirstClear) return ''
+    if (this.stars >= 3) return ''
+
+    const moves = this.moves
+    const last = parseInt(meta.lastMoves, 10) || 0
+    const best = parseInt(meta.bestMoves, 10) || 0
+
+    if (best > 0 && moves < best) {
+      return `新的个人最佳 · 比之前少 ${best - moves} 步`
+    }
+    if (last <= 0 || moves === last) return ''
+    if (moves < last) return `${last} 步 → ${moves} 步，少走 ${last - moves} 步`
+    return `上次 ${last} 步，这次慢了 ${moves - last} 步`
   }
 
   /**
@@ -577,6 +623,9 @@ export default class ResultScene {
   getStatusContent() {
     const excess = Math.max(0, Math.round(this.moves - this.par))
 
+    // 重玩时第三行换成个人对比，没得比（首通 / 没有历史）就落回建议语
+    const comparison = this.getComparisonLine()
+
     if (this.stars >= 3) {
       return {
         title: '完美通关 · 一步没浪费',
@@ -597,7 +646,7 @@ export default class ResultScene {
       ]
       return {
         title: `差 ${excess} 步就是三星`,
-        tip: tips[excess % tips.length],
+        tip: comparison || tips[excess % tips.length],
         pose: 'wave',
         mood: 'idle',
         fill: 'rgba(91, 200, 245, 0.16)',
@@ -613,7 +662,7 @@ export default class ResultScene {
     ]
     return {
       title: `距离三星还差 ${excess} 步`,
-      tip: tips[excess % tips.length],
+      tip: comparison || tips[excess % tips.length],
       pose: 'stand',
       mood: 'idle',
       fill: 'rgba(167, 139, 250, 0.16)',
@@ -735,6 +784,11 @@ export default class ResultScene {
     if (this.rewards.squid > 0) items.push(`+${this.rewards.squid}🦑`)
     if (this.rewards.goldfish > 0) items.push(`+${this.rewards.goldfish}🐠`)
 
+    // 这一局赚到的雪花钱（首通 / 首三星 / 成就 / 新手任务）。
+    // 它和食物是两条线，但对玩家来说都是「这一局的收获」，放同一个胶囊里最好读。
+    const coins = Math.max(0, parseInt(this.rewardMeta && this.rewardMeta.coins, 10) || 0)
+    if (coins > 0) items.push(`+${coins}❄`)
+
     const midY = REWARD_Y + REWARD_HEIGHT / 2
     ctx.textBaseline = 'middle'
 
@@ -756,8 +810,16 @@ export default class ResultScene {
     const sepWidth = 1
     const maxWidth = PANEL.width - 12
 
-    ctx.font = font(16)
-    const amountWidth = ctx.measureText(amount).width
+    // 胶囊里现在可能同时有鱼/虾/金币三种东西，先缩数字字号再排标签 ——
+    // 数字被裁掉比字小一点更糟
+    let amountSize = 16
+    ctx.font = font(amountSize)
+    let amountWidth = ctx.measureText(amount).width
+    while (amountSize > 12 && amountWidth + padX * 2 + 78 > maxWidth) {
+      amountSize -= 1
+      ctx.font = font(amountSize)
+      amountWidth = ctx.measureText(amount).width
+    }
 
     const measureTag = size => {
       if (tags.length === 0) return 0
@@ -787,7 +849,7 @@ export default class ResultScene {
     ctx.textAlign = 'left'
     let cursor = CENTER_X - contentWidth / 2
 
-    ctx.font = font(16)
+    ctx.font = font(amountSize)
     ctx.fillStyle = COLORS.mintDeep
     ctx.fillText(amount, cursor, midY)
     cursor += amountWidth

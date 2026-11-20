@@ -1877,20 +1877,23 @@ game.history = []
 // ---------- 底部按钮 ----------
 console.log('\n[24] 底部按钮改版（F4）')
 const hudButtons = game.gameHUD.actionButtons
-check('三个按钮：暂停 / 退一步 / 重玩',
-  hudButtons.map(b => b.label).join(',') === '暂停,退一步,重玩',
+check('四个按钮：暂停 / 退一步 / 重玩 / 提示',
+  hudButtons.map(b => b.label).join(',') === '暂停,退一步,重玩,提示',
   hudButtons.map(b => b.label).join(','))
 check('按钮为 76×76 大图标卡片',
   hudButtons.every(b => b.width === 76 && b.height === 76),
   hudButtons.map(b => `${b.width}x${b.height}`).join(' '))
 check('退一步带消耗角标', hudButtons[1].badge === '-2🐟', hudButtons[1].badge)
-check('三个按钮水平居中且互不重叠', (() => {
+check('提示按钮带券数角标', hudButtons[3].id === 'hint' && typeof hudButtons[3].badge === 'string')
+check('四个按钮水平居中且互不重叠', (() => {
   const first = hudButtons[0]
-  const last = hudButtons[2]
+  const last = hudButtons[hudButtons.length - 1]
   const left = first.x
   const right = canvas.width - (last.x + last.width)
-  return Math.abs(left - right) <= 1 && hudButtons[1].x >= first.x + first.width
-})(), `${hudButtons[0].x}/${hudButtons[2].x}`)
+  const noOverlap = hudButtons.every((b, i) =>
+    i === 0 || b.x >= hudButtons[i - 1].x + hudButtons[i - 1].width)
+  return Math.abs(left - right) <= 1 && noOverlap
+})(), `${hudButtons[0].x}/${hudButtons[hudButtons.length - 1].x}`)
 check('HUD 不再暴露「返回」回调（退出统一走暂停面板）',
   typeof game.gameHUD.onBackClick === 'undefined' && typeof game.gameHUD.onUndoClick === 'function')
 
@@ -2253,7 +2256,7 @@ check('第 4 关起不再有引导', getTutorialHint(4, 0) === null)
 const targetSrc = fs.readFileSync(path.join(ROOT, 'js/runtime/target.js'), 'utf8')
 check('目标区带「目标」二字（不能只有一条小鱼）', /'目标'/.test(targetSrc))
 check('目标区用暖色展台 + 虚线（与冰块同色系会读成冰块）',
-  /setLineDash/.test(targetSrc) && /FFE3B9|FFF4DD/.test(targetSrc))
+  /setLineDash/.test(targetSrc) && /FFF6E6|F7DFB4/.test(targetSrc))
 
 // 小鱼随难度档成长：5 个阶段对应 5 个 difficulty，判定逻辑不参与
 const targetMod = await loadModule(path.join(ROOT, 'js/runtime/target.js'))
@@ -2555,6 +2558,720 @@ const endlessLabel = hudMod.pickLevelLabel({
   availableWidth: 111, measure: measureStub
 })
 check('无尽段 HUD 写「无尽 3 关」', endlessLabel.label === '无尽 3 关', endlessLabel.label)
+
+// ---------- [31] 增长 P0：签到 7 日卡 / 位置条 / 结算个人对比 ----------
+//
+// 三条都遵循同一个原则：**不加尺寸，只换内容**。
+// 结算页已经被排满（成就区压到 620），所以对比句是「替换第三行」而不是新增一行；
+// 首页已被 2×2 按钮排满，所以签到是浮标而不是第 5 个按钮。
+console.log('\n[31] 增长 P0（签到 7 日卡 / 排行榜位置条 / 结算个人对比）')
+
+const checkinMod = (await loadModule(path.join(ROOT, 'js/utils/checkin-manager.js'))).namespace
+const CheckinManagerClass = checkinMod.default
+const { CHECKIN_REWARDS, CHECKIN_CYCLE, daysBetween } = checkinMod
+
+check('奖励表正好 7 档', CHECKIN_REWARDS.length === 7 && CHECKIN_CYCLE === 7,
+  `${CHECKIN_REWARDS.length}/${CHECKIN_CYCLE}`)
+
+const weeklyFish = CHECKIN_REWARDS.reduce((sum, item) => sum + (item.fish || 0), 0)
+check('一周合计 40🐟（原自动签到 7×5=35，只增不减）', weeklyFish === 40, `${weeklyFish}`)
+check('第 1 天保持 5🐟（改版不降薪）', CHECKIN_REWARDS[0].fish === 5, `${CHECKIN_REWARDS[0].fish}`)
+check('第 7 天标了满签', CHECKIN_REWARDS[6].big === true)
+
+// 第 7 天必须是全周最贵的一档，否则「满签」在数值上不成立
+// （改版前第 7 天发 5🐟+1🦐 = 8，和第 6 天 8🐟 打平）
+const checkinValue = (r) => (r.fish || 0) * 1 + (r.shrimp || 0) * 3 + (r.squid || 0) * 10
+const dayValues = CHECKIN_REWARDS.map(checkinValue)
+check('第 7 天是全周最贵（价值 15 > 第 6 天 8）',
+  dayValues[6] === 15 && dayValues[6] > Math.max(...dayValues.slice(0, 6)),
+  `day7=${dayValues[6]} 其余最高=${Math.max(...dayValues.slice(0, 6))}`)
+check('第 7 天发鱿鱼不发虾（虾留给第 4 天）',
+  CHECKIN_REWARDS[6].squid === 1 && !CHECKIN_REWARDS[6].shrimp,
+  JSON.stringify(CHECKIN_REWARDS[6]))
+
+check('日期差按本地 0 点计算',
+  daysBetween('2026-11-20', '2026-11-21') === 1 &&
+  daysBetween('2026-11-20', '2026-11-23') === 3 &&
+  daysBetween('2026-03-01', '2026-02-28') === -1,
+  `${daysBetween('2026-11-20', '2026-11-23')}`)
+
+const ciBackup = {
+  record: { ...game.checkinManager.record },
+  food: { ...foodMgr.food },
+  date: foodMgr.dailyGiftDate
+}
+
+const ci = new CheckinManagerClass(foodMgr)
+const todayStr = foodMgr.getTodayDate()
+const dayShift = (offset) => {
+  const [y, m, d] = todayStr.split('-').map(Number)
+  const dt = new Date(y, m - 1, d + offset)
+  return `${dt.getFullYear()}-${dt.getMonth() + 1}-${dt.getDate()}`
+}
+
+// 新玩家：没有记录
+foodMgr.food = { fish: 0, shrimp: 0, squid: 0, goldfish: 0 }
+foodMgr.dailyGiftDate = ''
+ci.record = { lastDate: '', day: 0 }
+check('新玩家今天领第 1 天', ci.getTodayDay() === 1, `${ci.getTodayDay()}`)
+check('新玩家没有「已领」进度', ci.getClaimedDay() === 0, `${ci.getClaimedDay()}`)
+
+const firstClaim = ci.claim()
+check('第 1 天发 5🐟', firstClaim.claimed && firstClaim.day === 1 && firstClaim.fish === 5,
+  JSON.stringify(firstClaim))
+check('领完当天不能再领', ci.canClaim() === false && ci.claim().claimed === false)
+check('已领状态下今天仍是第 1 天', ci.getTodayDay() === 1 && ci.getClaimedDay() === 1)
+
+// 改版迁移：老存档只有 dailyGift.date（今天已发过 5🐟），没有 checkin 记录。
+// 这时不能显示「已领取 0 天」—— 鱼已经到账了。
+foodMgr.dailyGiftDate = todayStr
+ci.record = { lastDate: '', day: 0 }
+check('老存档今天已发过 → 按已领第 1 天显示',
+  ci.canClaim() === false && ci.getClaimedDay() === 1,
+  `canClaim=${ci.canClaim()} claimed=${ci.getClaimedDay()}`)
+foodMgr.dailyGiftDate = ''
+
+// 连续：昨天领到第 1 天 → 今天第 2 天
+foodMgr.dailyGiftDate = ''
+ci.record = { lastDate: dayShift(-1), day: 1 }
+check('昨天领过 → 今天第 2 天', ci.getTodayDay() === 2, `${ci.getTodayDay()}`)
+check('今天还没领时，✓ 只点亮到昨天那档', ci.getClaimedDay() === 1, `${ci.getClaimedDay()}`)
+
+// 断签：3 天前领到第 5 天 → 今天从头开始
+ci.record = { lastDate: dayShift(-3), day: 5 }
+check('断签 → 回到第 1 天', ci.getTodayDay() === 1, `${ci.getTodayDay()}`)
+check('断签 → 不显示上周的进度', ci.getClaimedDay() === 0, `${ci.getClaimedDay()}`)
+
+// 第 7 天领完 → 下一轮
+ci.record = { lastDate: dayShift(-1), day: 7 }
+check('第 7 天之后开新一周（第 1 天）', ci.getTodayDay() === 1, `${ci.getTodayDay()}`)
+// 新一周如果还返回「已领 7 天」，7 个格子会全部打勾、大卡写着「已拿到」，
+// 而按钮又是「领取 5🐟」—— 三处互相打架
+check('第 7 天之后新一周的 ✓ 从 0 重新计（不是 7）', ci.getClaimedDay() === 0,
+  `${ci.getClaimedDay()}`)
+
+// 累计天数（totalDays）：只增不减，断签不清零 —— 这是唯一能代表「玩家签了多少天」的数
+// day 只管本周期（1~7，会重置），所以副标题不能拿它拼「已连续 N 天」。
+ci.record = { lastDate: '', day: 0, totalDays: 30 }
+foodMgr.dailyGiftDate = ''
+foodMgr.food = { fish: 0, shrimp: 0, squid: 0, goldfish: 0 }
+const day31 = ci.claim()
+check('累计天数：领一次 +1（30 → 31）',
+  day31.claimed && day31.totalDays === 31 && ci.getTotalDays() === 31,
+  `${day31.totalDays}`)
+
+// 第 8 天（新一周第 1 档）时累计仍要继续涨
+foodMgr.dailyGiftDate = ''
+ci.record = { lastDate: dayShift(-1), day: 7, totalDays: 34 }
+const day8 = ci.claim()
+check('第 8 天（新一周）累计继续涨到 35，不被周期重置',
+  day8.claimed && day8.day === 1 && day8.totalDays === 35,
+  `day=${day8.day} total=${day8.totalDays}`)
+
+// 断签只重置本周期，累计不动
+foodMgr.dailyGiftDate = ''
+ci.record = { lastDate: dayShift(-4), day: 5, totalDays: 35 }
+const afterBreak = ci.claim()
+check('断签：本周期回到第 1 档，累计照涨',
+  afterBreak.claimed && afterBreak.day === 1 && afterBreak.totalDays === 36,
+  `day=${afterBreak.day} total=${afterBreak.totalDays}`)
+
+// 老存档（只有 lastDate / day）没有 totalDays：兜底不小于本周已领档位，别显示成 0
+const legacyCi = new CheckinManagerClass(foodMgr)
+legacyCi.record = { lastDate: dayShift(-1), day: 3 }
+check('老存档没有 totalDays → 兜底为本周已领档位（3），不是 0',
+  legacyCi.getTotalDays() === 3, `${legacyCi.getTotalDays()}`)
+
+// 副标题口径：不许出现「已连续」，第 8 天要明说「新一周开始」
+const csEarly = game.checkinScene
+check('字幕：全新玩家第 1 天 → 引导连签',
+  csEarly.getSubtitle({ canClaim: true, todayDay: 1, claimedDay: 0, totalDays: 0 }) ===
+  '第 1 天 · 连签 7 天领满签礼',
+  csEarly.getSubtitle({ canClaim: true, todayDay: 1, claimedDay: 0, totalDays: 0 }))
+check('字幕：第 8 天 → 先报累计，不写「第 1 天」',
+  csEarly.getSubtitle({ canClaim: true, todayDay: 1, claimedDay: 0, totalDays: 30 }) ===
+  '新一周开始 · 累计签到 30 天',
+  csEarly.getSubtitle({ canClaim: true, todayDay: 1, claimedDay: 0, totalDays: 30 }))
+check('字幕：周中 → 本周第 N 天 + 累计',
+  csEarly.getSubtitle({ canClaim: true, todayDay: 4, claimedDay: 3, totalDays: 12 }) ===
+  '本周第 4 天 · 累计 12 天',
+  csEarly.getSubtitle({ canClaim: true, todayDay: 4, claimedDay: 3, totalDays: 12 }))
+check('字幕：已领 → 本周已签 N/7',
+  csEarly.getSubtitle({ canClaim: false, todayDay: 4, claimedDay: 4, totalDays: 12 }) ===
+  '本周已签 4/7 · 明天再来',
+  csEarly.getSubtitle({ canClaim: false, todayDay: 4, claimedDay: 4, totalDays: 12 }))
+
+const sceneSrc = fs.readFileSync(path.join(ROOT, 'js/ui/checkin-scene.js'), 'utf8')
+check('签到文案不再出现「已连续」（7 天一轮回，那句话兑现不了）',
+  !/已连续/.test(sceneSrc), '仍有「已连续」字样')
+
+// 签到发的是「食物 + 雪花钱 + 首次满签外观」三样，用一个假钱包/假衣柜验证发放
+const fakeCoins = { total: 0, add(n) { this.total += n; return n }, get() { return this.total }, spend() { return true } }
+const fakeSkins = {
+  owned: [],
+  owns(id) { return this.owned.indexOf(id) >= 0 },
+  grant(id) { if (this.owns(id)) return false; this.owned.push(id); return true }
+}
+const ciWallet = new CheckinManagerClass(foodMgr, fakeCoins, fakeSkins)
+
+// 第 4 天带雪花钱
+foodMgr.food = { fish: 0, shrimp: 0, squid: 0, goldfish: 0 }
+foodMgr.dailyGiftDate = ''
+ciWallet.record = { lastDate: dayShift(-1), day: 3, totalDays: 3 }
+const day4Claim = ciWallet.claim()
+check('第 4 天按表发 5🐟 + 20❄',
+  day4Claim.claimed && day4Claim.fish === 5 && day4Claim.coins === 20 && fakeCoins.total === 20,
+  JSON.stringify({ fish: day4Claim.fish, coins: day4Claim.coins }))
+check('第 4 天不再发虾（虾改到成就）', !day4Claim.shrimp, `${day4Claim.shrimp}`)
+
+// 第 7 天（满签）：发鱿鱼 + 60❄ + 首次送限定外观
+foodMgr.food = { fish: 0, shrimp: 0, squid: 0, goldfish: 0 }
+foodMgr.dailyGiftDate = ''
+ciWallet.record = { lastDate: dayShift(-1), day: 6, totalDays: 6 }
+const day7Claim = ciWallet.claim()
+check('第 7 天按表发 5🐟 + 1🦑',
+  day7Claim.claimed && day7Claim.day === 7 && day7Claim.fish === 5 && day7Claim.squid === 1,
+  JSON.stringify({ day: day7Claim.day, fish: day7Claim.fish, squid: day7Claim.squid }))
+check('第 7 天再发 60❄', day7Claim.coins === 60 && fakeCoins.total === 80, `${day7Claim.coins}/${fakeCoins.total}`)
+check('第 7 天首次满签送圣诞帽', day7Claim.skin === 'hat_santa' && fakeSkins.owns('hat_santa'))
+check('第 7 天不额外发虾', !day7Claim.shrimp, `${day7Claim.shrimp}`)
+
+// 第二周满签：皮肤不重复发，钱照发（否则每周白送一件，商城就废了）
+foodMgr.dailyGiftDate = ''
+ciWallet.record = { lastDate: dayShift(-1), day: 6, totalDays: 13 }
+const day14Claim = ciWallet.claim()
+check('第二周满签：外观不重复发，雪花钱照发',
+  day14Claim.claimed && day14Claim.skin === null && day14Claim.coins === 60,
+  JSON.stringify({ skin: day14Claim.skin, coins: day14Claim.coins }))
+check('getPendingSkin：已拥有时不再提示送外观',
+  ciWallet.getPendingSkin() === null, `${ciWallet.getPendingSkin()}`)
+
+check('倒计时格式 HH:MM:SS', ci.formatCountdown(3725000) === '01:02:05', ci.formatCountdown(3725000))
+const nextResetMs = ci.getNextResetMs()
+check('距下次签到落在 (0, 24h]', nextResetMs > 0 && nextResetMs <= 86400000, `${nextResetMs}`)
+
+// 首页浮标与场景接线
+check('签到管理器已挂到 game 上', !!game.checkinManager)
+check('签到场景已注册', !!game.sceneManager.scenes.checkin)
+check('首页能读到签到状态',
+  typeof game.menuScene.getCheckinState === 'function' &&
+  typeof game.menuScene.getCheckinState() === 'object')
+
+const floatRect = game.menuScene.checkinRect
+check('浮标命中判定（圆心 + 外扩 6px）',
+  game.menuScene.hitCheckin({ clientX: floatRect.x + floatRect.size / 2, clientY: floatRect.y + floatRect.size / 2 }) === true &&
+  game.menuScene.hitCheckin({ clientX: 300, clientY: 600 }) === false)
+
+check('浮标不与标题重叠（标题从 62 起）',
+  floatRect.x + floatRect.size <= 62, `右边缘 ${floatRect.x + floatRect.size}`)
+
+// 商城浮标必须与签到同一条竖线，且在它正下方（用户明确要求）
+const shopRect = game.menuScene.shopRect
+check('商城浮标与签到浮标同一竖线（x 相同）',
+  shopRect.x === floatRect.x, `签到 x=${floatRect.x} 商城 x=${shopRect.x}`)
+check('商城浮标在签到正下方且不重叠',
+  shopRect.y >= floatRect.y + floatRect.size &&
+  shopRect.x + shopRect.size <= 62,
+  `签到底 ${floatRect.y + floatRect.size} 商城 y=${shopRect.y}`)
+check('商城浮标命中判定可用',
+  game.menuScene.hitShop({ clientX: shopRect.x + shopRect.size / 2, clientY: shopRect.y + shopRect.size / 2 }) === true)
+
+// 用户反馈「两个浮标太近 + 挡住首页标题」：整体抬到顶部并拉开间距，
+// 右边缘也要从标题首字描边（x≈55）里退出来
+check('签到浮标贴近顶部（不再压住标题）', floatRect.y <= 12, `签到 y=${floatRect.y}`)
+check('两枚浮标间距 ≥ 16px', shopRect.y - (floatRect.y + floatRect.size) >= 16,
+  `间距 ${shopRect.y - (floatRect.y + floatRect.size)}`)
+check('浮标不压标题首字（右边缘 ≤ 52）', floatRect.x + floatRect.size <= 52)
+
+// 「还差几天满签」必须只有一个口径：大卡和底部那行各算一次会差一天
+const cs = game.checkinScene
+check('距满签：第 1 天（今天还没领）→ 6 天',
+  cs.getDaysToBigReward({ canClaim: true, todayDay: 1, claimedDay: 0 }) === 6,
+  `${cs.getDaysToBigReward({ canClaim: true, todayDay: 1, claimedDay: 0 })}`)
+check('距满签：第 4 天（今天还没领）→ 3 天',
+  cs.getDaysToBigReward({ canClaim: true, todayDay: 4, claimedDay: 3 }) === 3,
+  `${cs.getDaysToBigReward({ canClaim: true, todayDay: 4, claimedDay: 3 })}`)
+check('距满签：第 4 天已领 → 3 天（与未领时一致）',
+  cs.getDaysToBigReward({ canClaim: false, todayDay: 4, claimedDay: 4 }) === 3,
+  `${cs.getDaysToBigReward({ canClaim: false, todayDay: 4, claimedDay: 4 })}`)
+check('距满签：第 7 天当天 → 0 天',
+  cs.getDaysToBigReward({ canClaim: true, todayDay: 7, claimedDay: 6 }) === 0,
+  `${cs.getDaysToBigReward({ canClaim: true, todayDay: 7, claimedDay: 6 })}`)
+
+const checkinSrc = fs.readFileSync(path.join(ROOT, 'js/ui/checkin-scene.js'), 'utf8')
+check('大卡与底部都用 getDaysToBigReward（不得各自写 CHECKIN_CYCLE - …）',
+  !/CHECKIN_CYCLE\s*-\s*(state\.|this\.state)/.test(checkinSrc),
+  '仍在场景里手算天数')
+
+// 结算页个人对比：重玩才有，首通保留建议语
+const rs = game.resultScene
+// 更快但没破纪录（历史最佳 5 步，这次 7 步）
+rs.setResult(12, 7, 5, 30)
+rs.setComparison({ isFirstClear: false, lastMoves: 9, bestMoves: 5 })
+check('重玩更快 → 「9 步 → 7 步，少走 2 步」',
+  rs.getStatusContent().tip === '9 步 → 7 步，少走 2 步', rs.getStatusContent().tip)
+
+rs.setComparison({ isFirstClear: false, lastMoves: 5, bestMoves: 5 })
+check('重玩更慢 → 明写慢了几步',
+  rs.getStatusContent().tip === '上次 5 步，这次慢了 2 步', rs.getStatusContent().tip)
+
+// 刷新最佳优先于「比上次快」：两种情况下都说更狠的那句
+rs.setResult(12, 6, 5, 30)
+rs.setComparison({ isFirstClear: false, lastMoves: 9, bestMoves: 9 })
+check('刷新最佳 → 「新的个人最佳」（优先于「比上次快」）',
+  rs.getStatusContent().tip === '新的个人最佳 · 比之前少 3 步', rs.getStatusContent().tip)
+
+rs.setResult(12, 7, 5, 30)
+rs.setComparison({ isFirstClear: true, lastMoves: 9, bestMoves: 9 })
+const firstTip = rs.getStatusContent().tip
+check('首通 → 保留建议语（这一行是上一轮改版专门恢复的）',
+  firstTip !== '9 步 → 7 步，少走 2 步' && firstTip.length > 0, firstTip)
+check('首通文案确定性（同一局两次取到同一条）',
+  rs.getStatusContent().tip === firstTip)
+
+rs.setComparison(null)
+check('没有对比数据 → 回落建议语', rs.getStatusContent().tip.length > 0)
+
+rs.setResult(12, 5, 5, 30)
+rs.setComparison({ isFirstClear: false, lastMoves: 9, bestMoves: 9 })
+check('三星不参与对比（庆祝话术优先）',
+  rs.getStatusContent().tip.indexOf('个人最佳') === -1 &&
+  rs.getStatusContent().tip.indexOf('步 →') === -1, rs.getStatusContent().tip)
+
+// 存档：bestMoves 只减不增 + 老存档兜底
+storage.set('level_77', { stars: 2, moves: 9, bestMoves: 6 })
+check('readLevelRecord 读出历史最佳', game.readLevelRecord(77).bestMoves === 6,
+  JSON.stringify(game.readLevelRecord(77)))
+storage.set('level_78', { stars: 2, moves: 9 })
+check('老存档没有 bestMoves 时用 moves 兜底',
+  game.readLevelRecord(78).bestMoves === 9 && game.readLevelRecord(78).moves === 9,
+  JSON.stringify(game.readLevelRecord(78)))
+
+const gameSrcForBest = fs.readFileSync(path.join(ROOT, 'game.js'), 'utf8')
+check('saveLevelProgress 写入 bestMoves 且只减不增',
+  /bestMoves: bestMoves,/.test(gameSrcForBest) &&
+  /Math\.min\(prevBestMoves, this\.moves\)/.test(gameSrcForBest),
+  '写入语句缺失')
+check('对比数据在存档被覆盖之前读取（否则「上次」永远等于「这次」）',
+  gameSrcForBest.indexOf('const prevRecord = this.readLevelRecord') <
+  gameSrcForBest.indexOf('this.saveLevelProgress()'))
+
+// 排行榜位置条：只在开放数据域里算，主域不碰好友数据
+const rankSrc = fs.readFileSync(path.join(ROOT, 'open-data/index.js'), 'utf8')
+check('排行榜位置条用的是已有好友数据（不新增接口）',
+  /drawPositionBar/.test(rankSrc) && /selfRankAmongFriends\(\)/.test(rankSrc))
+check('位置条写人话（超过 N 位好友 / 共 M 位）',
+  /你超过了 \$\{beaten\} 位好友（共 \$\{total\} 位）/.test(rankSrc), '文案没落到代码里')
+check('没有好友数据时不画空条', /if \(!selfRecord \|\| !selfRecord\.level \|\| !rankList\.length\) return layout\.y/.test(rankSrc))
+// 差一位就会把「超过 9 位」写成「超过 8 位」：名次 4 / 共 12 人 → 身后有 9 个
+check('「超过 N 位」按 total - rank + 1 算',
+  /const beaten = Math\.max\(0, total - rank \+ 1\)/.test(rankSrc))
+check('位置条占用行数已从 maxRows 里扣掉',
+  /layout\.y \+ layout\.height - listTop - HEADER_HEIGHT/.test(rankSrc))
+
+// 恢复现场
+game.checkinManager.record = ciBackup.record
+foodMgr.food = ciBackup.food
+foodMgr.dailyGiftDate = ciBackup.date
+rs.setComparison(null)
+
+
+// ---------- [32] P1：雪花钱 / 外观商城 / 皮肤真实生效 ----------
+//
+// 「真实生效」= 买了之后，绘制层拿到的颜色 / 配件真的变了。
+// 所以这里不测「有没有写进存档」，测的是 `getEquippedAccessoryId()` 这类快照函数。
+console.log('\n[32] P1（雪花钱 / 外观商城 / 皮肤真实生效）')
+
+const coinMod = (await loadModule(path.join(ROOT, 'js/utils/coin-manager.js'))).namespace
+const CoinManagerClass = coinMod.default
+const { COIN_REWARD } = coinMod
+
+const wallet = new CoinManagerClass()
+wallet.reset()
+check('新存档雪花钱为 0', wallet.get() === 0, `${wallet.get()}`)
+wallet.add(60, 'test')
+check('发放后到账', wallet.get() === 60, `${wallet.get()}`)
+check('非正数不发放', wallet.add(0) === 0 && wallet.add(-5) === 0 && wallet.get() === 60)
+check('单次发放封顶 500（防手滑多打一个 0）', wallet.add(99999) === 500, `${wallet.add(0)}`)
+
+wallet.reset()
+wallet.add(50)
+check('扣款：余额不足返回 false 且不动余额',
+  wallet.spend(60) === false && wallet.get() === 50, `${wallet.get()}`)
+check('扣款：余额足够时扣干净', wallet.spend(50) === true && wallet.get() === 0)
+
+check('产出表：首通 2 / 首三星 3 / 成就 20 / 新手 60',
+  COIN_REWARD.firstClear === 2 && COIN_REWARD.firstThreeStar === 3 &&
+  COIN_REWARD.achievement === 20 && COIN_REWARD.starter === 60,
+  JSON.stringify(COIN_REWARD))
+check('D1 预算够买最便宜的一件（新手礼 60 + 首通 3×2 ≥ 60，且不必打三星）',
+  COIN_REWARD.starter + COIN_REWARD.firstClear * 3 >= 60)
+
+const skinMod = (await loadModule(path.join(ROOT, 'js/utils/skin-manager.js'))).namespace
+const SkinManagerClass = skinMod.default
+const { SKIN_ITEMS, SKIN_CATEGORIES, TRAY_PALETTES, BG_PALETTES } = skinMod
+
+check('商品 id 唯一', new Set(SKIN_ITEMS.map(i => i.id)).size === SKIN_ITEMS.length)
+check('每件商品都落在合法分类里',
+  SKIN_ITEMS.every(i => SKIN_CATEGORIES.indexOf(i.category) >= 0))
+check('非限定商品都有正价格', SKIN_ITEMS.filter(i => !i.limited).every(i => i.price > 0))
+check('限定商品没有价格（商城不可购买）',
+  SKIN_ITEMS.filter(i => i.limited).every(i => !i.price))
+check('三个页签都有商品（不会点开是空的）',
+  SKIN_CATEGORIES.every(c => SKIN_ITEMS.some(i => i.category === c)))
+
+// 展台皮肤必须暖色（R > G > B 且 R-B 有差距），否则会被读成地板 / 冰块
+const rgb = (hex) => {
+  const h = hex.replace('#', '')
+  return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16))
+}
+const trayWarm = Object.keys(TRAY_PALETTES).every((id) => {
+  const p = TRAY_PALETTES[id]
+  return [p.top, p.bottom].every((hex) => {
+    const [r, g, b] = rgb(hex)
+    return r > g && g > b && r - b > 40
+  })
+})
+check('每套展台皮肤都是暖色（R>G>B）', trayWarm, Object.keys(TRAY_PALETTES).join(','))
+
+check('背景皮肤都有三档色标',
+  Object.keys(BG_PALETTES).every(id => {
+    const p = BG_PALETTES[id]
+    return !!p.top && !!p.mid && !!p.bottom
+  }))
+check('每套背景皮肤都有 4 档色标（青→紫→蓝 / 亮蓝→靛黑）',
+  Object.keys(BG_PALETTES).every(id => {
+    const stops = BG_PALETTES[id].stops
+    return Array.isArray(stops) && stops.length >= 4 &&
+      stops.every(s => s.length === 2 && s[0] >= 0 && s[0] <= 1 && /^#[0-9A-Fa-f]{6}$/.test(s[1]))
+  }))
+check('默认托盘不再是珊瑚色（买了珊瑚皮肤才有升级感）', (() => {
+  const src = fs.readFileSync(path.join(ROOT, 'js/runtime/target.js'), 'utf8')
+  return /const PLATE_TOP = '#FFF6E6'/.test(src) && /const PLATE_EDGE = 'rgba\(201, 146, 58/.test(src)
+})())
+check('珊瑚托盘有专属纹理（drawTrayTexture 认 tray_coral）',
+  /id !== 'tray_shell' && id !== 'tray_coral'/.test(
+    fs.readFileSync(path.join(ROOT, 'js/ui/skin-art.js'), 'utf8')))
+
+// ---- 购买 / 穿戴 ----
+const wallet2 = new CoinManagerClass()
+wallet2.reset()
+wallet2.add(100)
+
+const skins = new SkinManagerClass(wallet2)
+skins.reset()
+check('初始没有外观', skins.owns('hat_winter') === false)
+
+const buyResult = skins.buy('hat_winter')
+check('购买成功并扣款', buyResult.ok === true && wallet2.get() === 40, `余额 ${wallet2.get()}`)
+check('买完自动穿上（不然玩家会以为没生效）', skins.isEquipped('hat_winter'))
+check('绘制层快照立刻变成该配件',
+  skinMod.getEquippedAccessoryId() === 'hat_winter', `${skinMod.getEquippedAccessoryId()}`)
+check('已拥有再买 → owned', skins.buy('hat_winter').reason === 'owned')
+check('限定品买不到 → limited', skins.buy('hat_santa').reason === 'limited')
+check('钱不够 → poor', skins.buy('tray_shell').reason === 'poor')
+check('未拥有的不能穿', skins.equip('glasses_round') === false)
+
+skins.grant('glasses_round')
+check('同一分类换装：旧的不再算穿着',
+  skins.equip('glasses_round') && skins.isEquipped('glasses_round') === true)
+check('快照跟着换', skinMod.getEquippedAccessoryId() === 'glasses_round')
+check('卸下 → 快照变 null',
+  skins.unequip('penguin') === true && skinMod.getEquippedAccessoryId() === null,
+  `${skinMod.getEquippedAccessoryId()}`)
+
+// 展台与背景的快照
+skins.grant('tray_coral')
+skins.equip('tray_coral')
+check('展台快照给出暖色配色', skinMod.getCurrentTrayPalette() === TRAY_PALETTES.tray_coral)
+check('展台 id 传给纹理层', skinMod.getCurrentTrayId() === 'tray_coral')
+
+skins.grant('bg_aurora')
+skins.equip('bg_aurora')
+check('背景快照给出三档色标', skinMod.getCurrentBgPalette() === BG_PALETTES.bg_aurora)
+check('背景缓存 key 会变（换了水色不换 key 就永远是旧图）',
+  /const bgKey = getCurrentBgId\(\) \|\| 'default'/.test(
+    fs.readFileSync(path.join(ROOT, 'js/ui/theme.js'), 'utf8')) &&
+  /ocean@\$\{width\}x\$\{height\}#\$\{bgKey\}/.test(
+    fs.readFileSync(path.join(ROOT, 'js/ui/theme.js'), 'utf8')))
+
+// ---- 商城场景 ----
+const ShopSceneClass = (await loadModule(path.join(ROOT, 'js/ui/shop-scene.js'))).namespace.default
+const shop = new ShopSceneClass({ switchTo() {} }, skins, wallet2)
+shop.onEnter()
+
+check('默认停在企鹅页签', shop.activeTab === 'penguin')
+check('页签只返回本类商品',
+  shop.getVisibleItems().every(i => i.category === 'penguin'))
+check('卡片按 2 列排布', shop.getCardRect(1).x > shop.getCardRect(0).x)
+check('第二行在第一行下面', shop.getCardRect(2).y > shop.getCardRect(0).y)
+check('卡片不越出面板（右）',
+  shop.getCardRect(1).x + shop.getCardRect(1).w <= 16 + 343)
+check('卡片不越出面板（下）',
+  shop.getCardRect(3).y + shop.getCardRect(3).h <= 64 + 580)
+
+const santa = SKIN_ITEMS.find(i => i.id === 'hat_santa')
+check('限定未拥有 → 按钮写「满签获得」', shop.getCardState(santa).kind === 'limited')
+check('点限定不会扣钱', (() => {
+  const before = wallet2.get()
+  shop.handleItemTap(santa)
+  return wallet2.get() === before && !skins.owns('hat_santa')
+})())
+
+// 在商城里买一件（用耳机 —— 前面的用例没 grant 过它）
+wallet2.add(200)
+const headphones = SKIN_ITEMS.find(i => i.id === 'headphones')
+const beforeCoins = wallet2.get()
+shop.handleItemTap(headphones)
+check('商城点击能真的买到 + 扣款',
+  skins.owns('headphones') && wallet2.get() === beforeCoins - headphones.price,
+  `${beforeCoins} → ${wallet2.get()}`)
+check('买完立刻是「已穿戴」', shop.getCardState(headphones).kind === 'equipped')
+check('已穿戴卡片按钮写「恢复默认」（不用猜再点一下会怎样）',
+  shop.getCardState(headphones).text === '恢复默认')
+
+shop.handleItemTap(headphones)
+check('点「恢复默认」真的卸下并回到空快照',
+  shop.getCardState(headphones).kind === 'owned' &&
+  !skins.isEquipped('headphones') &&
+  skinMod.getEquippedAccessoryId() === null)
+
+// 页签切换 + 命中测试
+const tabHit = shop.hitTest({ clientX: 34 + 5, clientY: 126 + 16 })
+check('点页签能切分类', tabHit && tabHit.type === 'tab' && tabHit.key === 'penguin')
+shop.activeTab = 'stage'
+check('切到展台页签拿到展台商品',
+  shop.getVisibleItems().every(i => i.category === 'stage') && shop.getVisibleItems().length > 0)
+
+const cardHit = shop.hitTest({ clientX: 34 + 20, clientY: 172 + 20 })
+check('点卡片命中商品', cardHit && cardHit.type === 'item')
+
+const outsideHit = shop.hitTest({ clientX: 5, clientY: 5 })
+check('点面板外返回 outside（用于关闭）', outsideHit && outsideHit.type === 'outside')
+
+// 冒烟渲染：布局里的每一步都要能不抛错地画完（桩上下文接住所有绘制调用）
+try {
+  shop.render(makeCtx())
+  check('商城整屏渲染不抛错', true)
+} catch (e) {
+  check('商城整屏渲染不抛错', false, e.message)
+}
+
+const shopSrc = fs.readFileSync(path.join(ROOT, 'js/ui/shop-scene.js'), 'utf8')
+check('商城标题显示为「商城」', /ctx\.fillText\('商城', PANEL\.x \+ 28, TITLE_Y\)/.test(shopSrc))
+check('余额胶囊给关闭圆留出安全距（含判定外扩）', /CLOSE = \{[^}]*reserve: 50/.test(shopSrc))
+check('展台卡片预览放小鱼，不再放蓝色冰块菱形', !/#BEEDFF/.test(shopSrc))
+check('卡片预览有明确色系（不是浅色到白）',
+  /penguin: \['#CDEEFF', '#EAF8FF'\]/.test(shopSrc))
+check('钱不够的按钮是浅蓝不是灰', /poor: \{ bg: '#E6F4FF'/.test(shopSrc))
+check('已穿戴按钮是浅薄荷绿（与满签浅紫同明度）', /equipped: \{ bg: '#D8F5EA'/.test(shopSrc))
+check('可购买按钮也降到浅蓝', /buy: \{ bg: '#CFEBFF'/.test(shopSrc))
+check('背景页签渐变收敛为柔和蓝灰（不带突兀紫）', /bg: \['#DFE9FB', '#EFF4FF'\]/.test(shopSrc))
+check('三个页签各有浅色选中态（不再用深海军蓝）',
+  /\{ key: 'penguin'[^}]*active: '#C8EAFF'/.test(shopSrc) &&
+  /\{ key: 'stage'[^}]*active: '#FFDDBA'/.test(shopSrc) &&
+  /\{ key: 'bg'[^}]*active: '#D9E7FB'/.test(shopSrc))
+check('商城可见文案统一写「雪花币」',
+  !/fillText\('[^']*雪花钱/.test(shopSrc) && !/showToast\(`雪花钱/.test(shopSrc))
+check('页脚不再重复解释「恢复默认」（按钮已经写明）',
+  !/已穿戴的卡片再点一次/.test(shopSrc))
+check('两行页脚与引导卡之间留出匀称间距', /const FOOT_Y = 602/.test(shopSrc))
+check('贝壳托盘有立体珍珠高光', (() => {
+  const src = fs.readFileSync(path.join(ROOT, 'js/ui/skin-art.js'), 'utf8')
+  return /createRadialGradient/.test(src) && /珍珠高光/.test(src)
+})())
+
+// ---- 皮肤在企鹅绘制里真的生效 ----
+const themeSrcP1 = fs.readFileSync(path.join(ROOT, 'js/ui/theme.js'), 'utf8')
+check('drawPenguin 支持 accessory 参数（undefined = 用当前穿戴）',
+  /options\.accessory === undefined \? getEquippedAccessoryId\(\)/.test(themeSrcP1))
+check('配件沿用身体的姿态变换（否则 slide 时帽子会飘走）',
+  /ctx\.translate\(0, -groundY \+ drop\)\s*\n\s*drawPenguinAccessory/.test(themeSrcP1))
+check('展台皮肤走白名单配色，默认仍用 PLATE_*',
+  /skin \? skin\.top : PLATE_TOP/.test(fs.readFileSync(path.join(ROOT, 'js/runtime/target.js'), 'utf8')))
+
+// 恢复：别把测试里的外观留给后面的用例
+skins.reset()
+wallet2.reset()
+
+
+// ---------- [33] 提示券：卡关给解法，不给命 ----------
+console.log('\n[33] 提示券（卡关救助）')
+
+const hintMod = (await loadModule(path.join(ROOT, 'js/utils/hint-manager.js'))).namespace
+const HintManagerClass = hintMod.default
+const { firstHintMove, currentHintMove, levelToBoard: toBoardFromLevel } = hintMod
+
+const hints = new HintManagerClass()
+hints.reset()
+check('新存档没有提示券', hints.get() === 0)
+check('没券时用不出来', hints.use() === false)
+check('发券', hints.add(1, 'test') === 1 && hints.get() === 1)
+check('用掉一张', hints.use() === true && hints.get() === 0)
+check('非正数不发放', hints.add(0) === 0 && hints.add(-3) === 0 && hints.get() === 0)
+
+// 连败补偿：同一关 3 次才给，且每关只给一次
+hints.reset()
+check('失败 1 次不给券', hints.registerFail(7) === false && hints.get() === 0)
+check('失败 2 次不给券', hints.registerFail(7) === false && hints.get() === 0)
+check('同一关第 3 次失败给 1 张', hints.registerFail(7) === true && hints.get() === 1)
+check('同一关之后不再给（否则反复掉洞能刷券）',
+  hints.registerFail(7) === false && hints.get() === 1)
+check('换一关重新计数', hints.registerFail(8) === false && hints.get() === 1)
+
+// 全局上限
+hints.reset()
+for (let lv = 100; lv < 130; lv++) {
+  for (let i = 0; i < 3; i++) hints.registerFail(lv)
+}
+check('卡关补偿全局封顶 10 张', hints.get() === 10, `${hints.get()}`)
+
+// 求解器：提示必须是「真解的第一步」
+const hintLevelData = game.levelManager.getLevel(1)
+const board1 = toBoardFromLevel(hintLevelData)
+// 游戏里的换算与回归里那份手写实现必须一致 —— 两份不同步，提示会指到错的格子
+check('游戏侧 levelToBoard 与回归侧实现一致',
+  JSON.stringify(board1) === JSON.stringify(levelToBoard(hintLevelData)))
+const solvedHint = solveBoard(board1, { withSolution: true })
+const move1 = firstHintMove(hintLevelData)
+check('第 1 关给出第一步方向', ['up', 'down', 'left', 'right'].indexOf(move1) >= 0, `${move1}`)
+check('提示 = 最优解的第一步',
+  move1 === solvedHint.solution[0], `${move1} vs ${solvedHint.solution[0]}`)
+check('levelToBoard 换算后最优步数与原数据一致',
+  solveBoard(board1).optimal === hintLevelData.optimal,
+  `${solveBoard(board1).optimal}/${hintLevelData.optimal}`)
+check('无解关卡不硬给方向', firstHintMove({ penguin: { x: 0, y: 0 }, stones: [], target: { x: 9999, y: 9999, width: 50, height: 50 }, obstacles: [] }) === null)
+
+// 失败页：有券时第一个按钮变成「用提示重开」
+const overScene = game.gameOverScene
+overScene.setHintState(2)
+check('有券 → 按钮文案带张数',
+  /用提示重开 · 剩 2 张/.test(overScene.buttons[0].text), overScene.buttons[0].text)
+check('有券 → 字号缩到 16，避免顶出按钮', overScene.buttons[0].fontSize === 16)
+overScene.setHintState(0)
+check('没券 → 回落「重新挑战」',
+  /重新挑战/.test(overScene.buttons[0].text) && overScene.buttons[0].fontSize === 20,
+  overScene.buttons[0].text)
+
+// 成就口径：用过提示的关卡不计「精准操作」
+const achManager = game.achievementManager
+const statsBackup = JSON.parse(JSON.stringify(achManager.stats))
+const beforePerfect = achManager.stats.perfectMoves
+achManager.recordWin({ level: 9001, stars: 3, moves: 10, par: 10, time: 30, firstClear: true, hintUsed: true })
+check('用过提示 → 完美步数不涨（否则等于用券买成就）',
+  achManager.stats.perfectMoves === beforePerfect,
+  `${beforePerfect} → ${achManager.stats.perfectMoves}`)
+achManager.recordWin({ level: 9002, stars: 3, moves: 10, par: 10, time: 30, firstClear: true, undoUsed: false })
+check('没用提示 → 完美步数照涨',
+  achManager.stats.perfectMoves === beforePerfect + 1,
+  `${achManager.stats.perfectMoves}`)
+achManager.stats = statsBackup
+
+// 签到第 2 天要真的发券 —— 这条曾经因为构造器少一个参数而静默失效过
+const fakeHints = {
+  total: 0,
+  add(n) { this.total += n; return n },
+  get() { return this.total },
+  use() { return false }
+}
+const ciTicket = new CheckinManagerClass(foodMgr, null, null, fakeHints)
+foodMgr.dailyGiftDate = ''
+ciTicket.record = { lastDate: dayShift(-1), day: 1, totalDays: 1 }
+const day2Claim = ciTicket.claim()
+check('签到第 2 天发 1 张提示券',
+  day2Claim.claimed && day2Claim.ticket === 1 && fakeHints.total === 1,
+  JSON.stringify({ claimed: day2Claim.claimed, ticket: day2Claim.ticket, total: fakeHints.total }))
+check('CheckinManager 收下了 hintManager（少传就静默不发）',
+  new CheckinManagerClass(foodMgr).hintManager === null)
+
+// game.js 接线
+const gameSrcHint = fs.readFileSync(path.join(ROOT, 'game.js'), 'utf8')
+check('通关时把 hintUsed 传给成就系统', /hintUsed: this\.hintUsed/.test(gameSrcHint))
+check('走过一步后提示立刻消失（否则第二步会指错方向）',
+  /提示只指一步[\s\S]{0,80}this\.hint = null/.test(gameSrcHint))
+check('提示算不出来时把券退回（不能点了没反应还少一张）',
+  /hintManager\.add\(1, '提示不可用退回'\)/.test(gameSrcHint))
+
+// ---- 局中随时提示：基于当前局面、可连续用 ----
+await game.loadLevel(1)
+game.gameState = 'playing'
+game.isPaused = false
+game.hintManager = new HintManagerClass()
+game.hintManager.reset()
+
+// currentBoard 必须给出和初始盘面一致的格子布局（反算不能偏格）
+const initLevel = game.levelManager.getLevel(1)
+const rtBoard = game.currentBoard()
+const expectBoard = toBoardFromLevel(initLevel)
+check('currentBoard 企鹅格与初始盘面一致',
+  rtBoard.penguin.col === expectBoard.penguin.col && rtBoard.penguin.row === expectBoard.penguin.row,
+  JSON.stringify({ rt: rtBoard.penguin, expect: expectBoard.penguin }))
+check('currentBoard 冰块格与初始盘面一致',
+  JSON.stringify(rtBoard.stones) === JSON.stringify(expectBoard.stones))
+check('currentBoard 目标格与初始盘面一致',
+  JSON.stringify(rtBoard.target) === JSON.stringify(expectBoard.target),
+  JSON.stringify({ rt: rtBoard.target, expect: expectBoard.target }))
+check('currentBoard 障碍物只带 type + 格子',
+  rtBoard.obstacles.every(o => typeof o.type === 'string' &&
+    Number.isInteger(o.col) && Number.isInteger(o.row)))
+
+// 当前局面求解 = 初始盘面第一步
+check('currentHintMove 与 firstHintMove 在初始局面一致',
+  currentHintMove(rtBoard) === firstHintMove(initLevel),
+  `${currentHintMove(rtBoard)} / ${firstHintMove(initLevel)}`)
+
+// 无券时不能提示，也不该抛错
+check('无券时 useHint 返回 false', game.useHint() === false)
+
+// 发 3 张券，连续用 3 次：每次都基于当前局面，且券逐张减少
+game.hintManager.add(3, 'test')
+game.gameState = 'playing'
+const seq = []
+for (let i = 0; i < 3; i++) {
+  const ok = game.useHint()
+  seq.push({ ok, dir: game.hint && game.hint.dir, left: game.hintManager.get() })
+  // 不真的走棋，模拟「看完提示、企鹅站稳」——重复求解当前局面应当给同一方向
+}
+check('连续三次都能拿到提示（不止第一步）', seq.every(x => x.ok), JSON.stringify(seq))
+check('每次提示都是合法方向', seq.every(x => ['up', 'down', 'left', 'right'].indexOf(x.dir) >= 0))
+check('券逐张扣减 3→2→1→0',
+  seq.map(x => x.left).join(',') === '2,1,0', seq.map(x => x.left).join(','))
+check('无券后 useHint 再次失败', game.useHint() === false && game.hintManager.get() === 0)
+check('用过提示标记 hintUsed（不计精准操作）', game.hintUsed === true)
+
+// 动画中间态拒绝提示：不能被四舍五入到错误格子
+game.hintManager.add(1, 'test')
+game.gameState = 'playing'
+game.penguin.isMoving = true
+check('移动动画中不给提示', game.useHint() === false && game.hintManager.get() === 1)
+game.penguin.isMoving = false
+check('站稳后可提示', game.useHint() === true && game.hintManager.get() === 0)
+game.hint = null
+game.hintUsed = false
+
+// HUD 提示按钮状态
+check('HUD 提示按钮存在且读得到券数', (() => {
+  const btn = game.gameHUD.actionButtons.find(b => b.id === 'hint')
+  game.hintManager.add(2, 'test')
+  game.syncUndoButton()
+  const ok = btn && btn.badge === '×2' && btn.disabled === false
+  game.hintManager.use()
+  game.syncUndoButton()
+  return ok && btn.badge === '×1'
+})())
+check('无券时 HUD 提示按钮置灰并写「无券」', (() => {
+  game.hintManager.use()
+  game.syncUndoButton()
+  const btn = game.gameHUD.actionButtons.find(b => b.id === 'hint')
+  return btn.disabled === true && btn.badge === '无券'
+})())
+
+game.hintManager.reset()
+game.hint = null
+game.hintUsed = false
+
+hints.reset()
+overScene.setHintState(0)
 
 console.log(`\n===== 结果：${passed} 通过 / ${failed} 失败 =====`)
 process.exit(failed === 0 ? 0 : 1)

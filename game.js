@@ -15,6 +15,10 @@ import FoodManager from './js/utils/food-manager'
 import AchievementManager from './js/utils/achievement-manager'
 import ReviveManager from './js/utils/revive-manager'
 import SettlementManager from './js/utils/settlement-manager'
+import CheckinManager from './js/utils/checkin-manager'
+import CoinManager, { COIN_REWARD } from './js/utils/coin-manager'
+import SkinManager from './js/utils/skin-manager'
+import HintManager, { firstHintMove, currentHintMove } from './js/utils/hint-manager'
 import { calcStars } from './js/utils/score'
 import { AD_UNITS } from './js/config'
 
@@ -28,6 +32,8 @@ import RankScene from './js/ui/rank-scene'
 import AchievementScene from './js/ui/achievement-scene'
 import AchievementNotification from './js/ui/achievement-notification'
 import ReviveScene from './js/ui/revive-scene'
+import CheckinScene from './js/ui/checkin-scene'
+import ShopScene from './js/ui/shop-scene'
 import PrivacyScene from './js/ui/privacy-scene'
 import GameHUD, { UNDO_FOOD_COST } from './js/ui/game-hud'
 import { setButtonTapSound } from './js/ui/button'
@@ -40,6 +46,7 @@ import FoodDisplay from './js/ui/food-display'
 import TutorialHint from './js/ui/tutorial-hint'
 import { getTutorialHint } from './js/levels/tutorial-levels'
 import GameScene from './js/ui/game-scene'
+import { COLORS, roundRectPath } from './js/ui/theme'
 
 // 关卡数据使用的网格单位：levels/*.json 里的坐标按 50px 一格书写
 const LEVEL_CELL = 50
@@ -102,6 +109,11 @@ export default class Main {
     // 食物系统
     this.foodManager = null
     this.foodDisplay = null
+
+    // 提示券与当前这一关的提示（{ dir } = 下一步往哪走，null = 不显示）
+    this.hintManager = null
+    this.hint = null
+    this.hintUsed = false
 
     // 成就系统
     this.achievementManager = null
@@ -420,6 +432,7 @@ export default class Main {
       this.menuScene,
       this.rankScene,
       this.achievementScene,
+      this.checkinScene,
       this.pauseScene,
       this.resultScene,
       this.gameOverScene,
@@ -486,47 +499,32 @@ export default class Main {
     // 播放背景音乐
     this.audioManager.playBGM()
 
-    // 每日签到（当天第一次打开才发，只弹一次）
-    this.checkDailyGift()
+    // 签到用浮标入口，不自动弹窗（理由见 openCheckin 注释）
   }
 
   /**
-   * 每日签到
+   * 打开签到弹层（首页浮标 → 这里）
    *
-   * 当天第一次打开游戏自动发 5🐟，只弹一次提示。
-   * 不做签到面板 / 连续签到 / 补签 —— 需求就是「提示 + 给鱼」。
-   *
-   * 延迟 600ms 再弹：开局第一帧就盖一个 modal，玩家会以为进了什么广告页。
-   * 等菜单和海草动画先出来，提示才像是「附赠」而不是「拦截」。
+   * 为什么不在启动时自动弹：
+   *   1. 首次进入的注意力应该给「第 1 关」按钮和教程气泡，不是签到；
+   *   2. 每局回来都盖一层，会把「打开游戏」变成「关掉弹窗」；
+   *   3. 红点 + 呼吸已经足够指路（浮标就在标题左边，第一屏必见）。
+   * 所以入口只有浮标一处：**玩家不点，就不打扰**。
    */
-  checkDailyGift() {
-    if (!this.foodManager || !this.foodManager.canClaimDailyGift()) return
+  openCheckin() {
+    if (!this.checkinManager) return
+    this.sceneManager.switchTo('checkin')
+  }
 
-    const result = this.foodManager.claimDailyGift()
-    if (!result.claimed) return
-
-    setTimeout(() => {
-      if (typeof wx === 'undefined') return
-
-      const giftLine = `今天的第一份礼物：🐟 × ${result.actual}`
-      const totalLine = `当前食物 ${result.total}/${result.max}`
-
-      // showModal 在部分基础库 / 开发者工具里不可用，退回 toast
-      if (typeof wx.showModal !== 'function') {
-        if (typeof wx.showToast === 'function') {
-          wx.showToast({ title: `每日签到 +${result.actual}🐟`, icon: 'none', duration: 2500 })
-        }
-        return
-      }
-
-      wx.showModal({
-        title: '每日签到',
-        content: `${giftLine}\n${totalLine}`,
-        showCancel: false,
-        confirmText: '收下',
-        confirmColor: '#2FBF9B'
-      })
-    }, 600)
+  /**
+   * 打开商城（首页左上角签到浮标下方的商城浮标 → 这里）
+   *
+   * 商城只卖样子：不卖鱼、不卖复活、不卖提示券。原因见 `skin-manager.js` 顶部 ——
+   * 一旦外观货币能换体力，玩家就会在「买皮肤」和「再玩一局」之间做取舍。
+   */
+  openShop() {
+    if (!this.shopScene) return
+    this.sceneManager.switchTo('shop')
   }
 
   /**
@@ -680,6 +678,17 @@ export default class Main {
   initFood() {
     this.foodManager = new FoodManager()
     this.foodDisplay = new FoodDisplay(this.foodManager)
+
+    // 雪花钱与外观：两条独立线，CoinManager 不认识 FoodManager（见 coin-manager.js 顶部）
+    this.coinManager = new CoinManager()
+    this.skinManager = new SkinManager(this.coinManager)
+    this.hintManager = new HintManager()
+
+    // 签到只管「连续第几天」，「今天领没领」仍然由 FoodManager 的 dailyGift 键决定，
+    // 两者共用同一套日期字符串（CheckinManager 内部调 foodManager.getTodayDate()）
+    this.checkinManager = new CheckinManager(
+      this.foodManager, this.coinManager, this.skinManager, this.hintManager
+    )
     // 顶部信息面板内，与关卡信息上下排列（位置由 syncHudLayout 统一校准）
     this.syncHudLayout()
   }
@@ -717,6 +726,8 @@ export default class Main {
     this.gameOverScene.onRestart = () => this.onGameOverRestart()
     this.gameOverScene.onBackToMenu = () => this.onGameOverBackToMenu()
     this.gameOverScene.onWatchAd = () => this.onGameOverWatchAd()
+    // 有提示券时，第一个按钮直接走「带提示重开」，不再多问一次
+    this.gameOverScene.onRestartWithHint = () => this.restartLevelWithHint()
 
     // 广告位未接入 / 已失效时隐藏"看广告复活"，避免玩家点到未实现的入口
     this.applyAdAvailability()
@@ -731,11 +742,34 @@ export default class Main {
     this.menuScene = new MenuScene(this.sceneManager)
     this.menuScene.onToggleSound = () => this.toggleSound()
     this.menuScene.onShare = () => this.wechatService.share()
+    // 签到浮标：状态只有 CheckinManager 一个来源，首页只负责画
+    this.menuScene.onCheckin = () => this.openCheckin()
+    this.menuScene.getCheckinState = () => (this.checkinManager ? this.checkinManager.getBadge() : null)
+    // 商城浮标：余额只有 CoinManager 一个来源
+    this.menuScene.onShop = () => this.openShop()
+    this.menuScene.getCoinBalance = () => (this.coinManager ? this.coinManager.get() : 0)
     this.menuScene.setSoundEnabled(this.audioManager.soundEnabled)
     this.sceneManager.register('menu', this.menuScene)
 
     this.rankScene = new RankScene(this.sceneManager, this.wechatService)
     this.sceneManager.register('rank', this.rankScene)
+
+    // 签到弹层：整屏场景（绘制量接近半个成就页，塞进 menu 会把它撑成第二个 result-scene）
+    this.checkinScene = new CheckinScene(this.sceneManager, this.checkinManager)
+    this.checkinScene.onClaim = () => {
+      if (this.audioManager) this.audioManager.playAchievementSound({ gain: 0.7 })
+    }
+    // 关闭时回到首页并保留标题位置，避免标题从屏幕外重新掉一次（像整页重载）
+    this.checkinScene.onClose = () => this.sceneManager.switchTo('menu', { keepAnim: true })
+    this.sceneManager.register('checkin', this.checkinScene)
+
+    // 外观商城：买 / 换装后就地生效（绘制层读 skin-manager 的模块级快照）
+    this.shopScene = new ShopScene(this.sceneManager, this.skinManager, this.coinManager)
+    this.shopScene.onClose = () => this.sceneManager.switchTo('menu', { keepAnim: true })
+    this.shopScene.onBuy = () => {
+      if (this.audioManager) this.audioManager.playAchievementSound({ gain: 0.6 })
+    }
+    this.sceneManager.register('shop', this.shopScene)
 
     // 注册成就场景
     this.sceneManager.register('achievement', this.achievementScene)
@@ -766,6 +800,7 @@ export default class Main {
     this.gameHUD.onPauseClick = () => this.pauseGame()
     this.gameHUD.onRestartClick = () => this.restartLevel()
     this.gameHUD.onUndoClick = () => this.undoMove()
+    this.gameHUD.onHintClick = () => this.useHint()
 
     // 新手引导气泡（只在第 1~3 关、且该关还没看过时出现）
     this.tutorialHint = new TutorialHint()
@@ -866,6 +901,9 @@ export default class Main {
       this.moves = 0
       this.history = []
       this.undoUsed = false
+      // 提示是「这一关」的，重开必须清掉：上一关的箭头留在新盘面上就是错的
+      this.hint = null
+      this.hintUsed = false
       this.startTime = Date.now()
       this.pausedAccum = 0
       this.pauseStartedAt = 0
@@ -899,6 +937,70 @@ export default class Main {
     } catch (e) {
       console.error('加载关卡失败:', e)
     }
+  }
+
+  /**
+   * 提示箭头：企鹅头顶一个指向箭头 + 目标格一圈光
+   *
+   * 只画一步、不自动走 —— 玩家要的是「这一步往哪」，不是「帮我玩」。
+   * 箭头必须在企鹅头顶而不是脚下：脚下会和冰块的投影、目标区的光晕糊在一起。
+   *
+   * @param {CanvasRenderingContext2D} ctx
+   */
+  renderHint(ctx) {
+    const dir = this.hint && this.hint.dir
+    if (!dir || !this.penguin) return
+
+    const step = DIRECTION_STEP[dir]
+    const cell = this.getCell(this.penguin)
+    const size = this.cellSize
+    const cx = this.penguin.x + this.penguin.width / 2
+    const cy = this.penguin.y + this.penguin.height / 2
+    const t = Date.now() / 1000
+    const bob = Math.sin(t * 4) * 3
+
+    // 目标格：一圈呼吸的薄荷光，比箭头弱一档（箭头指方向，光圈指落点）
+    const destCol = cell.col + step.col
+    const destRow = cell.row + step.row
+    if (this.isCellInside(destCol, destRow)) {
+      const dx = this.boardOffsetX + destCol * size + 2
+      const dy = this.boardOffsetY + destRow * size + 2
+      const alpha = 0.28 + Math.sin(t * 3.2) * 0.12
+
+      ctx.save()
+      roundRectPath(ctx, dx, dy, size - 4, size - 4, 10)
+      ctx.fillStyle = `rgba(47, 191, 155, ${alpha * 0.5})`
+      ctx.fill()
+      ctx.strokeStyle = `rgba(47, 191, 155, ${alpha + 0.3})`
+      ctx.lineWidth = 2.4
+      ctx.stroke()
+      ctx.restore()
+    }
+
+    // 箭头：从企鹅中心朝「要去的方向」偏移大半个格子 ——
+    // 这样它永远落在企鹅与目标格之间，四个方向读起来一致，
+    // 也不能压在企鹅脸上（原先固定画在头顶，左右移动时会和光圈脱节）
+    const angle = { up: -Math.PI / 2, down: Math.PI / 2, left: Math.PI, right: 0 }[dir]
+    const offset = size * 0.6
+    const ax = cx + step.col * offset + (step.row !== 0 ? bob : 0)
+    const ay = cy + step.row * offset + (step.row === 0 ? bob : 0)
+
+    ctx.save()
+    ctx.translate(ax, ay)
+    ctx.rotate(angle)
+    ctx.beginPath()
+    ctx.moveTo(11, 0)
+    ctx.lineTo(-8.5, -11)
+    ctx.lineTo(-4.2, 0)
+    ctx.lineTo(-8.5, 11)
+    ctx.closePath()
+    ctx.fillStyle = COLORS.mint
+    ctx.fill()
+    ctx.strokeStyle = COLORS.white
+    ctx.lineWidth = 2.2
+    ctx.lineJoin = 'round'
+    ctx.stroke()
+    ctx.restore()
   }
 
   /**
@@ -1172,6 +1274,9 @@ export default class Main {
       this.penguin.moveTo(nextPixel.x, nextPixel.y, duration)
     }
 
+    // 提示只指一步：走过之后箭头立刻消失，不然第二步会指着错误的方向
+    this.hint = null
+
     if (typeof wx !== 'undefined') {
       wx.vibrateShort({ type: 'light' })
     }
@@ -1247,7 +1352,125 @@ export default class Main {
     if (this.reviveManager) {
       this.reviveManager.resetLevelRevive()
     }
-    this.loadLevel(this.currentLevel)
+    // 把 promise 交出去：带提示重开要等关卡真正加载完再画箭头，
+    // 否则箭头会被 loadLevel 里的 `this.hint = null` 清掉
+    return this.loadLevel(this.currentLevel)
+  }
+
+  /**
+   * 用提示重开：扣一张券 → 重开本关 → 在盘面上画出第一步
+   *
+   * 为什么提示是「重开后第一步」而不是「对局中随便看」：
+   *   求解器吃的是**初始盘面**。玩家已经走过几步之后，第一步的最优解已经失效，
+   *   要算就得把运行时局面转回盘面（stones / penguin 的格子下标），
+   *   而 `toBoardPixel()` 带了 boardOffsetX，反算容易偏一格。第一版不做这个风险。
+   */
+  async restartLevelWithHint() {
+    // 必须和 onGameOverRestart 一样先 hide()：只调 restartLevel 的话
+    // loadLevel 不会碰失败面板，玩家会看到「重开了但失败页还在最上面」
+    this.gameOverScene.hide()
+
+    if (!this.hintManager || !this.hintManager.use()) {
+      await this.restartLevel({ confirm: false, force: true })
+      return
+    }
+
+    // 必须等关卡加载完：loadLevel 会把 this.hint 清空，早一步画就等于没画
+    await this.restartLevel({ confirm: false, force: true })
+    this.showHint()
+  }
+
+  /**
+   * 局中用提示：随时可用，扣一张券，在当前局面画出「下一步往哪走」
+   *
+   * 与失败页的「带提示重开」区别：
+   *   - 那条路是重开本关、按初始盘面给第一步（盘面干净、求解最稳）
+   *   - 这条是在玩家**当前局面**上求解，走一步后可以接着点，直到解开或没券
+   *
+   * 当前局面 → 求解器盘面用 getCell() 反算：它减掉了 boardOffsetX，算出来
+   * 是整数格；绝不能用 x/cellSize 直接除（那是 MEMORY 里记的偏一格坑）。
+   * 移动动画未结束时拒绝提示 —— 中间态坐标四舍五入会落到错误格子。
+   *
+   * @returns {boolean} 是否成功给出提示
+   */
+  useHint() {
+    if (this.gameState !== 'playing' || this.isPaused) return false
+
+    if (!this.hintManager || this.hintManager.get() <= 0) {
+      wx.showToast({ title: '没有提示券了 · 签到或连败 3 次可得', icon: 'none' })
+      return false
+    }
+
+    // 动画中间态禁止求解
+    if (this.penguin && (this.penguin.isMoving || this.stones.some(s => s.isMoving))) {
+      wx.showToast({ title: '等企鹅站稳再提示哦', icon: 'none' })
+      return false
+    }
+
+    const board = this.currentBoard()
+    if (!board) return false
+
+    const dir = currentHintMove(board)
+    if (!dir) {
+      // 无解 / 已解开，都不扣券（点了没反应还少一张是最糟的体验）
+      wx.showToast({ title: '这步已经没有提示了', icon: 'none' })
+      return false
+    }
+
+    this.hintManager.use()
+    this.hint = { dir, start: Date.now() }
+    this.hintUsed = true
+    if (this.audioManager) this.audioManager.playCue('tap', { gain: 0.7 })
+    this.syncUndoButton()
+    return true
+  }
+
+  /**
+   * 把运行时局面转成求解器要的格子盘面
+   *
+   * 只给求解器看，不改任何游戏对象。障碍物只取 type + 格子坐标 ——
+   * 求解器不关心障碍物是像素画在哪，只关心哪一格是什么。
+   *
+   * @returns {Object|null}
+   */
+  currentBoard() {
+    if (!this.penguin || !this.target) return null
+    return {
+      penguin: this.getCell(this.penguin),
+      stones: this.stones.map(stone => this.getCell(stone)),
+      target: {
+        ...this.getCell(this.target),
+        w: Math.max(1, Math.round(this.target.width / this.cellSize)),
+        h: Math.max(1, Math.round(this.target.height / this.cellSize))
+      },
+      obstacles: (this.obstacles || []).map(o => ({
+        type: o.type,
+        ...this.getCell(o)
+      }))
+    }
+  }
+
+  /**
+   * 算并显示「下一步」（失败页重开后调用，按初始盘面）
+   *
+   * 无解 / 求解失败时不扣券（券已经被 use() 扣掉了，这里补回来），
+   * 否则玩家会遇到「点了提示，什么都没发生，券还少了」。
+   */
+  showHint() {
+    const levelData = this.levelManager.getLevel(this.currentLevel)
+    const dir = firstHintMove(levelData)
+
+    if (!dir) {
+      if (this.hintManager) this.hintManager.add(1, '提示不可用退回')
+      wx.showToast({ title: '本关暂无提示', icon: 'none' })
+      return false
+    }
+
+    this.hint = { dir, start: Date.now() }
+    // 用过提示的关卡不计「精准操作 / 操作大师」，与 undoUsed 同一口径
+    this.hintUsed = true
+    if (this.audioManager) this.audioManager.playCue('tap', { gain: 0.7 })
+    return true
   }
 
   /**
@@ -1285,6 +1508,10 @@ export default class Main {
       steps: this.history.length,
       food: this.foodManager ? this.foodManager.getTotalFood() : 0
     })
+    // 提示券余量也在这里同步：本函数已在 loadLevel / 每次移动 / 失败补偿后调用
+    if (this.gameHUD.setHintState) {
+      this.gameHUD.setHintState(this.hintManager ? this.hintManager.get() : 0)
+    }
   }
 
   /**
@@ -1674,6 +1901,11 @@ export default class Main {
       if (this.settlementManager) {
         this.settlementManager.failLevel()
       }
+      // 同一关连败 3 次补一张提示券：这是「卡住」变成「流失」的那个点
+      if (this.hintManager) {
+        this.hintManager.registerFail(this.currentLevel)
+      }
+      this.gameOverScene.setHintState(this.hintManager ? this.hintManager.get() : 0)
       this.gameOverScene.show()
     }
   }
@@ -1853,6 +2085,9 @@ export default class Main {
       this.settlementManager.completeLevel({ moves: this.moves, time, par, stars })
     }
 
+    // 上一次的成绩必须在存档被覆盖之前读出来（结算页的「上次 9 步」靠它）
+    const prevRecord = this.readLevelRecord(this.currentLevel)
+
     // 保存关卡进度
     this.saveLevelProgress()
 
@@ -1875,6 +2110,13 @@ export default class Main {
     console.log('获得食物奖励:', rewards.details)
     console.log('实际入账:', given)
 
+    // 雪花钱：首通 +2、首通三星 +3，与食物共用 firstClear / firstThreeStar 口径（都是一次性）。
+    // 重刷同一关不再给 —— 否则老玩家会靠刷第 1 关无限刷钱买空商城。
+    let coinGain = 0
+    if (firstClear) coinGain += this.coinManager.add(COIN_REWARD.firstClear, '首通')
+    if (firstThreeStar) coinGain += this.coinManager.add(COIN_REWARD.firstThreeStar, '首通三星')
+    coinGain += this.grantStarterCoins()
+
     // 显示奖励动画（用实际入账，避免飘字写着 +5🐟 而背包没变）
     this.foodDisplay.showRewardAnimation(given)
 
@@ -1886,7 +2128,8 @@ export default class Main {
       par,
       time,
       firstClear,
-      undoUsed: this.undoUsed
+      undoUsed: this.undoUsed,
+      hintUsed: this.hintUsed
     })
     this.achievementManager.recordStreak(this.foodManager.consecutiveWins)
     this.achievementManager.recordFoodEarned(given)
@@ -1894,6 +2137,8 @@ export default class Main {
     // 通关解锁的成就不走浮层通知，直接画进结算面板（见 ResultScene.renderAchievements）：
     // 一次通关可能解锁好几个，浮层同时弹会糊住标题，底部还会叠出多层阴影
     const newAchievements = this.flushAchievementRewards({ notify: false })
+    // 成就的 20❄ 已经在 flush 里入账，这里只把它并进「这一局赚了多少」的展示
+    coinGain += newAchievements.length * COIN_REWARD.achievement
 
     // 显示结算界面
     this.resultScene.setResult(this.currentLevel, this.moves, par, time)
@@ -1901,7 +2146,14 @@ export default class Main {
     this.resultScene.setRewards(given, {
       firstClear,
       firstThreeStar,
-      requested: rewards
+      requested: rewards,
+      coins: coinGain
+    })
+    // 重玩时第三行换成个人对比（`上次 9 步 → 这次 7 步`），首通仍给建议语
+    this.resultScene.setComparison({
+      isFirstClear: firstClear,
+      lastMoves: prevRecord.moves,
+      bestMoves: prevRecord.bestMoves
     })
     this.resultScene.setAchievements(newAchievements)
     this.resultScene.show()
@@ -1951,6 +2203,29 @@ export default class Main {
   }
 
   /**
+   * 读取某关的历史成绩（结算页对比用）
+   *
+   * **必须在 saveLevelProgress() 之前调用** —— 那个方法会用本次成绩覆盖 `moves`，
+   * 之后再来读，"上次"就永远等于"这次"。
+   *
+   * 老存档没有 `bestMoves`（本轮新加），用 `moves` 兜底：差一次，但不会报错，
+   * 也不会让老玩家第一次重玩时看到一条错得离谱的对比。
+   *
+   * @param {number} level
+   * @returns {{moves:number, bestMoves:number}}
+   */
+  readLevelRecord(level) {
+    try {
+      const saved = wx.getStorageSync(`level_${level}`) || {}
+      const moves = parseInt(saved.moves, 10) || 0
+      const best = parseInt(saved.bestMoves, 10) || 0
+      return { moves, bestMoves: best || moves }
+    } catch (e) {
+      return { moves: 0, bestMoves: 0 }
+    }
+  }
+
+  /**
    * 记录某关已发放过的奖励
    * @param {number} level
    * @param {{first?:boolean, three?:boolean}} patch
@@ -1988,6 +2263,8 @@ export default class Main {
       if (achievement.reward) {
         this.foodManager.giveRewards(achievement.reward)
       }
+      // 成就也给雪花钱：这是「不花钱的玩家」攒第一件外观的主要来源之一
+      if (this.coinManager) this.coinManager.add(COIN_REWARD.achievement, `成就 ${achievement.id}`)
     })
 
     // 只在"非结算"场景给成就音。
@@ -1998,6 +2275,28 @@ export default class Main {
     }
 
     return newAchievements
+  }
+
+  /**
+   * 新手任务：累计首通 3 关送 40❄（只发一次）
+   *
+   * 为什么需要这一笔：D1 预算必须够买第一件外观（60❄），否则「收集」这条线
+   * 在建立起来之前就断了。首通 3 关 + 一次三星约 9❄，加上这 40 正好过线。
+   *
+   * @returns {number} 实际发放
+   */
+  grantStarterCoins() {
+    if (!this.achievementManager || !this.coinManager) return 0
+    if (this.achievementManager.stats.uniqueWins < COIN_REWARD.starterWins) return 0
+
+    try {
+      if (wx.getStorageSync('starterCoinBonus')) return 0
+      wx.setStorageSync('starterCoinBonus', true)
+    } catch (e) {
+      return 0
+    }
+
+    return this.coinManager.add(COIN_REWARD.starter, '新手任务')
   }
 
   /**
@@ -2100,10 +2399,18 @@ export default class Main {
       // 「星星按各关历史最高累计」口径对不上。
       const prev = wx.getStorageSync(`level_${this.currentLevel}`) || {}
       const bestStars = Math.max(prev.bestStars || prev.stars || 0, stars)
+
+      // 历史最佳步数：只减不增。
+      // 老存档只有 moves（最近一次），拿它当起点 —— 差一次不影响趋势判断，
+      // 但绝不能拿 0 当起点，否则第一次重玩必报「新的个人最佳」。
+      const prevBestMoves = parseInt(prev.bestMoves, 10) || parseInt(prev.moves, 10) || 0
+      const bestMoves = prevBestMoves > 0 ? Math.min(prevBestMoves, this.moves) : this.moves
+
       wx.setStorageSync(`level_${this.currentLevel}`, {
         stars: stars,
         bestStars: bestStars,
         moves: this.moves,
+        bestMoves: bestMoves,
         timestamp: Date.now()
       })
 
@@ -2171,7 +2478,11 @@ export default class Main {
 
     // 根据当前场景渲染
     const currentSceneName = this.sceneManager.getCurrentSceneName()
-    const uiScenes = ['menu', 'rank', 'achievement']
+    // 「整屏 UI 场景」白名单：不在这里的场景一律按对局渲染（画棋盘 + HUD），
+    // 所以**新增整屏 UI 必须登记到这里**，否则画面会是一片空白
+    // （canvas 已被 clearRect 清过，只剩透明）。
+    // 回归里有一条断言用「sceneManager.render 有没有被调到」守住这件事。
+    const uiScenes = ['menu', 'rank', 'achievement', 'checkin', 'shop']
 
     if (uiScenes.includes(currentSceneName)) {
       // 渲染UI场景
@@ -2245,6 +2556,11 @@ export default class Main {
     // 渲染食物显示
     if (this.foodDisplay && (this.gameState === 'playing' || this.gameState === 'win')) {
       this.foodDisplay.render(this.ctx)
+    }
+
+    // 提示箭头：画在企鹅之后、HUD 之前
+    if (this.hint && this.gameState === 'playing') {
+      this.renderHint(this.ctx)
     }
 
     // 新手引导气泡：压在棋盘之上、暂停/结算覆盖层之下
